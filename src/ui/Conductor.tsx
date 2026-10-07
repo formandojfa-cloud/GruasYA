@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  calificar,
-  cancelarServicio,
-  confirmarPagoConductor,
-  pedirGrua,
-  registrarConductor,
-} from '../data/acciones';
+import { calificar, cancelarServicio, confirmarPagoConductor, pedirGrua, registrarConductor } from '../data/acciones';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
 import { distanciaKm, largoRutaKm } from '../domain/geo';
@@ -53,65 +47,67 @@ function Registro({ alTerminar }: { alTerminar: (id: string) => void }) {
 
   return (
     <div className="hoja alta">
-      <h2>Crea tu cuenta</h2>
-      <p className="tenue">Regístrate antes de una emergencia: así pedir la grúa toma segundos.</p>
-      {paso === 'telefono' && (
-        <>
-          <label>
-            Celular
-            <input inputMode="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="5555 5555" />
-          </label>
-          <button disabled={telefono.replace(/\D/g, '').length < 8} onClick={() => setPaso('codigo')}>
-            Enviar código por SMS
-          </button>
-        </>
-      )}
-      {paso === 'codigo' && (
-        <>
-          <p className="aviso">Demo: el código es {CODIGO_DEMO}.</p>
-          <label>
-            Código
-            <input inputMode="numeric" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
-          </label>
-          <button disabled={codigo !== CODIGO_DEMO} onClick={() => setPaso('identidad')}>
-            Verificar
-          </button>
-        </>
-      )}
-      {paso === 'identidad' && (
-        <>
-          <h3>Verifica tu identidad</h3>
-          <p className="tenue">
-            Foto de tu DPI por ambos lados y una selfie. Comparamos tu rostro con la foto del DPI.
-          </p>
-          <Foto etiqueta="DPI, frente" camara="environment" valor={dpiFrente} cambiar={setDpiFrente} />
-          <Foto etiqueta="DPI, reverso" camara="environment" valor={dpiReverso} cambiar={setDpiReverso} />
-          <Foto etiqueta="Selfie" camara="user" valor={selfie} cambiar={setSelfie} />
-          <button disabled={!dpiFrente || !dpiReverso || !selfie} onClick={() => setPaso('datos')}>
-            Continuar
-          </button>
-        </>
-      )}
-      {paso === 'datos' && (
-        <>
-          <label>
-            Nombre
-            <input value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          </label>
-          <label>
-            Placa de tu vehículo
-            <input value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} placeholder="P-123ABC" />
-          </label>
-          <button
-            disabled={!nombre.trim() || !placa.trim()}
-            onClick={() =>
-              alTerminar(registrarConductor({ telefono, nombre: nombre.trim(), placa: placa.trim(), dpiFrente, dpiReverso, selfie }))
-            }
-          >
-            Crear cuenta
-          </button>
-        </>
-      )}
+      <div className="hoja-cuerpo">
+        <h2>Crea tu cuenta</h2>
+        <p className="tenue">Regístrate antes de una emergencia: así pedir la grúa toma segundos.</p>
+        {paso === 'telefono' && (
+          <>
+            <label>
+              Celular
+              <input inputMode="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="5555 5555" />
+            </label>
+            <button disabled={telefono.replace(/\D/g, '').length < 8} onClick={() => setPaso('codigo')}>
+              Enviar código por SMS
+            </button>
+          </>
+        )}
+        {paso === 'codigo' && (
+          <>
+            <p className="aviso">Demo: el código es {CODIGO_DEMO}.</p>
+            <label>
+              Código
+              <input inputMode="numeric" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
+            </label>
+            <button disabled={codigo !== CODIGO_DEMO} onClick={() => setPaso('identidad')}>
+              Verificar
+            </button>
+          </>
+        )}
+        {paso === 'identidad' && (
+          <>
+            <h3>Verifica tu identidad</h3>
+            <p className="tenue">Foto de tu DPI por ambos lados y una selfie. Comparamos tu rostro con la foto del DPI.</p>
+            <Foto etiqueta="DPI, frente" camara="environment" valor={dpiFrente} cambiar={setDpiFrente} />
+            <Foto etiqueta="DPI, reverso" camara="environment" valor={dpiReverso} cambiar={setDpiReverso} />
+            <Foto etiqueta="Selfie" camara="user" valor={selfie} cambiar={setSelfie} />
+            <button disabled={!dpiFrente || !dpiReverso || !selfie} onClick={() => setPaso('datos')}>
+              Continuar
+            </button>
+          </>
+        )}
+        {paso === 'datos' && (
+          <>
+            <label>
+              Nombre
+              <input value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            </label>
+            <label>
+              Placa de tu vehículo
+              <input value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} placeholder="P-123ABC" />
+            </label>
+            <button
+              disabled={!nombre.trim() || !placa.trim()}
+              onClick={() =>
+                alTerminar(
+                  registrarConductor({ telefono, nombre: nombre.trim(), placa: placa.trim(), dpiFrente, dpiReverso, selfie }),
+                )
+              }
+            >
+              Crear cuenta
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -148,18 +144,20 @@ export function Foto({
 function EsperaVerificacion({ conductor, salir }: { conductor: TConductor; salir: () => void }) {
   return (
     <div className="hoja alta">
-      {conductor.verificacion === 'pendiente' ? (
-        <>
-          <h2>Revisando tu identidad</h2>
-          <p className="tenue">Esto toma unos momentos. En la demo, administración puede aprobarla a mano.</p>
-        </>
-      ) : (
-        <>
-          <h2>No pudimos verificar tu identidad</h2>
-          <p className="tenue">Vuelve a intentarlo con fotos claras de tu DPI y de tu rostro.</p>
-          <button onClick={salir}>Intentar de nuevo</button>
-        </>
-      )}
+      <div className="hoja-cuerpo">
+        {conductor.verificacion === 'pendiente' ? (
+          <>
+            <h2>Revisando tu identidad</h2>
+            <p className="tenue">Esto toma unos momentos. En la demo, administración puede aprobarla a mano.</p>
+          </>
+        ) : (
+          <>
+            <h2>No pudimos verificar tu identidad</h2>
+            <p className="tenue">Vuelve a intentarlo con fotos claras de tu DPI y de tu rostro.</p>
+            <button onClick={salir}>Intentar de nuevo</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -206,10 +204,9 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
       : null;
   const t = tarifa(vehiculo);
   const listo = !!cotizacion && !cargando;
-  const cercanas = enCeldas(
-    indicePorCelda(estado.grueros.filter((g) => g.disponible)),
-    celdasCercanas(origen, 10),
-  ).filter((g) => distanciaKm(g.ubicacion, origen) <= 10);
+  const cercanas = enCeldas(indicePorCelda(estado.grueros.filter((g) => g.disponible)), celdasCercanas(origen, 10)).filter(
+    (g) => distanciaKm(g.ubicacion, origen) <= 10,
+  );
   const eta = useEtaGrua(origen, cercanas);
 
   const usarMiUbicacion = () => {
@@ -258,110 +255,127 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
       />
       <div className="pista">Toca el mapa para mover {marcando === 'origen' ? 'la recogida' : 'el destino'}</div>
       <div className="hoja">
-        <div className="lugares">
-          <div className={`lugar ${marcando === 'origen' ? 'activo' : ''}`} onClick={() => setMarcando('origen')}>
-            <span className="marca-origen" />
-            <span className="texto">
-              <small>Recogida</small>
-              <span>{origenTexto}</span>
-            </span>
-            <button
-              className="mini"
-              onClick={(e) => {
-                e.stopPropagation();
-                usarMiUbicacion();
-              }}
-            >
-              📍 Mi ubicación
-            </button>
-          </div>
-          <div className={`lugar ${marcando === 'destino' ? 'activo' : ''}`} onClick={() => setMarcando('destino')}>
-            <span className="marca-destino" />
-            <span className="texto">
-              <small>Destino</small>
-              <select
-                aria-label="Destino"
-                value={destino.nombre}
-                onChange={(e) => {
-                  const d = DESTINOS_SUGERIDOS.find((x) => x.nombre === e.target.value);
-                  if (d) setDestino({ punto: d.punto, nombre: d.nombre });
+        <div className="hoja-cuerpo">
+          <div className="lugares">
+            <div className={`lugar ${marcando === 'origen' ? 'activo' : ''}`} onClick={() => setMarcando('origen')}>
+              <span className="marca-origen" />
+              <span className="texto">
+                <small>Recogida</small>
+                <span>{origenTexto}</span>
+              </span>
+              <button
+                className="mini"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  usarMiUbicacion();
                 }}
               >
-                {!DESTINOS_SUGERIDOS.some((d) => d.nombre === destino.nombre) && <option>{destino.nombre}</option>}
-                {DESTINOS_SUGERIDOS.map((d) => (
-                  <option key={d.nombre}>{d.nombre}</option>
-                ))}
-              </select>
-            </span>
-          </div>
-        </div>
-        {gps && <p className="tenue">{gps}</p>}
-        {cercanas.length > 0 && (
-          <p className="tenue chico">
-            {cercanas.length === 1 ? '1 grúa libre' : `${cercanas.length} grúas libres`} cerca de ti (zonas amarillas del mapa)
-          </p>
-        )}
-
-        <div className="chips" role="group" aria-label="Qué pasó">
-          {(Object.keys(NOMBRE_PROBLEMA) as Problema[]).map((k) => (
-            <button key={k} className={problema === k ? 'activo' : ''} onClick={() => setProblema(k)}>
-              {NOMBRE_PROBLEMA[k]}
-            </button>
-          ))}
-        </div>
-
-        <div className="opciones" role="radiogroup" aria-label="Vehículo">
-          {OPCIONES.map((o) => {
-            const to = tarifa(o.tipo);
-            return (
-              <button
-                key={o.tipo}
-                role="radio"
-                aria-checked={vehiculo === o.tipo}
-                className={`opcion ${vehiculo === o.tipo ? 'activo' : ''}`}
-                onClick={() => setVehiculo(o.tipo)}
-              >
-                <span className="icono">{o.icono}</span>
-                <span className="texto">
-                  <strong>GrúaYa {o.nombre}</strong>
-                  <span>
-                    {eta !== null && listo && cotizacion
-                      ? `${minutos(eta)} · llegas ${hora(eta + cotizacion.ruta.minutos)}`
-                      : o.detalle}
-                  </span>
-                </span>
-                <span className="precio">{to && listo ? quetzales(to.total + conductor.deudaCancelacion) : '…'}</span>
+                📍 Mi ubicación
               </button>
-            );
-          })}
-        </div>
-
-        {cotizacion && t && listo && (
-          <details className="desglose">
-            <summary>
-              Precio fijo · {km(cotizacion.ruta.distanciaKm)} y unos {minutos(cotizacion.ruta.minutos)}
-              {cotizacion.ruta.conTrafico ? ' con el tráfico actual' : ''}
-            </summary>
-            <div>
-              <span>Banderazo {quetzales(t.base)} (incluye {km(estado.tarifa.kmIncluidos)})</span>
-              {t.kmAdicionales > 0 && <span>{km(t.kmAdicionales)} más × {quetzales(estado.tarifa.precioKm)}</span>}
-              {t.minutosAdicionales > 0 && (
-                <span>{minutos(t.minutosAdicionales)} más por tráfico × {quetzales(estado.tarifa.precioMinuto)}</span>
-              )}
-              {t.factorVehiculo !== 1 && <span>{NOMBRE_VEHICULO[vehiculo]} ×{t.factorVehiculo}</span>}
-              {t.factorHorario !== 1 && <span>Horario nocturno ×{t.factorHorario}</span>}
-              {t.factorClima !== 1 && <span>Por {NOMBRE_CLIMA[cotizacion.clima]} ×{t.factorClima}</span>}
             </div>
-          </details>
-        )}
-        {cotizacion?.ruta.fuente === 'estimada' && listo && (
-          <div className="aviso">No pudimos consultar la ruta por calles; el precio usa una distancia estimada.</div>
-        )}
-        {conductor.deudaCancelacion > 0 && (
-          <div className="aviso">Incluye {quetzales(conductor.deudaCancelacion)} de una cancelación anterior.</div>
-        )}
-        {cercanas.length === 0 && <div className="aviso">No hay grúas libres cerca ahora. La central te llamará si pides.</div>}
+            <div className={`lugar ${marcando === 'destino' ? 'activo' : ''}`} onClick={() => setMarcando('destino')}>
+              <span className="marca-destino" />
+              <span className="texto">
+                <small>Destino</small>
+                <select
+                  aria-label="Destino"
+                  value={destino.nombre}
+                  onChange={(e) => {
+                    const d = DESTINOS_SUGERIDOS.find((x) => x.nombre === e.target.value);
+                    if (d) setDestino({ punto: d.punto, nombre: d.nombre });
+                  }}
+                >
+                  {!DESTINOS_SUGERIDOS.some((d) => d.nombre === destino.nombre) && <option>{destino.nombre}</option>}
+                  {DESTINOS_SUGERIDOS.map((d) => (
+                    <option key={d.nombre}>{d.nombre}</option>
+                  ))}
+                </select>
+              </span>
+            </div>
+          </div>
+          {gps && <p className="tenue">{gps}</p>}
+          {cercanas.length > 0 && (
+            <p className="tenue chico">
+              {cercanas.length === 1 ? '1 grúa libre' : `${cercanas.length} grúas libres`} cerca de ti (zonas amarillas del mapa)
+            </p>
+          )}
 
+          <div className="chips" role="group" aria-label="Qué pasó">
+            {(Object.keys(NOMBRE_PROBLEMA) as Problema[]).map((k) => (
+              <button key={k} className={problema === k ? 'activo' : ''} onClick={() => setProblema(k)}>
+                {NOMBRE_PROBLEMA[k]}
+              </button>
+            ))}
+          </div>
+
+          <div className="opciones" role="radiogroup" aria-label="Vehículo">
+            {OPCIONES.map((o) => {
+              const to = tarifa(o.tipo);
+              return (
+                <button
+                  key={o.tipo}
+                  role="radio"
+                  aria-checked={vehiculo === o.tipo}
+                  className={`opcion ${vehiculo === o.tipo ? 'activo' : ''}`}
+                  onClick={() => setVehiculo(o.tipo)}
+                >
+                  <span className="icono">{o.icono}</span>
+                  <span className="texto">
+                    <strong>GrúaYa {o.nombre}</strong>
+                    <span>
+                      {eta !== null && listo && cotizacion
+                        ? `${minutos(eta)} · llegas ${hora(eta + cotizacion.ruta.minutos)}`
+                        : o.detalle}
+                    </span>
+                  </span>
+                  <span className="precio">{to && listo ? quetzales(to.total + conductor.deudaCancelacion) : '…'}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {cotizacion && t && listo && (
+            <details className="desglose">
+              <summary>
+                Precio fijo · {km(cotizacion.ruta.distanciaKm)} y unos {minutos(cotizacion.ruta.minutos)}
+                {cotizacion.ruta.conTrafico ? ' con el tráfico actual' : ''}
+              </summary>
+              <div>
+                <span>
+                  Banderazo {quetzales(t.base)} (incluye {km(estado.tarifa.kmIncluidos)})
+                </span>
+                {t.kmAdicionales > 0 && (
+                  <span>
+                    {km(t.kmAdicionales)} más × {quetzales(estado.tarifa.precioKm)}
+                  </span>
+                )}
+                {t.minutosAdicionales > 0 && (
+                  <span>
+                    {minutos(t.minutosAdicionales)} más por tráfico × {quetzales(estado.tarifa.precioMinuto)}
+                  </span>
+                )}
+                {t.factorVehiculo !== 1 && (
+                  <span>
+                    {NOMBRE_VEHICULO[vehiculo]} ×{t.factorVehiculo}
+                  </span>
+                )}
+                {t.factorHorario !== 1 && <span>Horario nocturno ×{t.factorHorario}</span>}
+                {t.factorClima !== 1 && (
+                  <span>
+                    Por {NOMBRE_CLIMA[cotizacion.clima]} ×{t.factorClima}
+                  </span>
+                )}
+              </div>
+            </details>
+          )}
+          {cotizacion?.ruta.fuente === 'estimada' && listo && (
+            <div className="aviso">No pudimos consultar la ruta por calles; el precio usa una distancia estimada.</div>
+          )}
+          {conductor.deudaCancelacion > 0 && (
+            <div className="aviso">Incluye {quetzales(conductor.deudaCancelacion)} de una cancelación anterior.</div>
+          )}
+          {cercanas.length === 0 && <div className="aviso">No hay grúas libres cerca ahora. La central te llamará si pides.</div>}
+        </div>
         <div className="hoja-pie">
           <div className="pago">💵 Efectivo al gruero</div>
           <button
@@ -440,130 +454,140 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
     <>
       <Mapa centro={s.origen} marcadores={marcadores} ruta={s.estado === 'asignado' && s.rutaGrua ? s.rutaGrua : s.ruta} />
       <div className="hoja">
-        <div className="encabezado-viaje">
-          <div className="pila" style={{ gap: 2 }}>
-            <h2>{titulo}</h2>
-            {s.estado === 'buscando' && <span className="tenue">Ofreciendo tu servicio a la grúa más cercana</span>}
-            {s.estado === 'en_sitio' && <span className="tenue">Está tomando fotos de tu vehículo antes de subirlo</span>}
-            {s.estado === 'en_ruta' && restante !== null && <span className="tenue">Llegada aprox. {hora(restante)}</span>}
-            {s.estado === 'sin_grua' && (
-              <span className="tenue">No encontramos grúa libre a 10 km. La central de GrúaYa te va a llamar para coordinarla.</span>
+        <div className="hoja-cuerpo">
+          <div className="encabezado-viaje">
+            <div className="pila" style={{ gap: 2 }}>
+              <h2>{titulo}</h2>
+              {s.estado === 'buscando' && <span className="tenue">Ofreciendo tu servicio a la grúa más cercana</span>}
+              {s.estado === 'en_sitio' && <span className="tenue">Está tomando fotos de tu vehículo antes de subirlo</span>}
+              {s.estado === 'en_ruta' && restante !== null && <span className="tenue">Llegada aprox. {hora(restante)}</span>}
+              {s.estado === 'sin_grua' && (
+                <span className="tenue">
+                  No encontramos grúa libre a 10 km. La central de GrúaYa te va a llamar para coordinarla.
+                </span>
+              )}
+            </div>
+            {eta !== null && (
+              <div className="etiqueta-eta">
+                {Math.max(1, Math.round(eta))}
+                <small>min</small>
+              </div>
             )}
           </div>
-          {eta !== null && (
-            <div className="etiqueta-eta">
-              {Math.max(1, Math.round(eta))}
-              <small>min</small>
+          {s.estado === 'buscando' && <div className="progreso" />}
+
+          {conGrua && g && (
+            <div className="persona">
+              <div className="avatar">{iniciales(g.nombre)}</div>
+              <div className="texto">
+                <strong>{g.nombre}</strong>
+                <span className="tenue">
+                  ★ {g.calificacion.toFixed(1)} · Grúa {g.tipoGrua}
+                </span>
+              </div>
+              <div className="placa">
+                {g.placaGrua}
+                <small>Placa</small>
+              </div>
             </div>
           )}
-        </div>
-        {s.estado === 'buscando' && <div className="progreso" />}
 
-        {conGrua && g && (
-          <div className="persona">
-            <div className="avatar">{iniciales(g.nombre)}</div>
-            <div className="texto">
-              <strong>{g.nombre}</strong>
-              <span className="tenue">★ {g.calificacion.toFixed(1)} · Grúa {g.tipoGrua}</span>
+          {s.estado === 'entregado' && !s.pagoConfirmadoConductor && (
+            <>
+              <p>Paga {quetzales(s.tarifa)} en efectivo al gruero y confirma aquí.</p>
+            </>
+          )}
+          {s.estado === 'entregado' && s.pagoConfirmadoConductor && (
+            <p className="tenue">Esperando que el gruero confirme el cobro.</p>
+          )}
+          {s.estado === 'pagado' && !s.calificacion && (
+            <>
+              <h3>¿Cómo te fue con {g?.nombre}?</h3>
+              <div className="estrellas">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} aria-label={`${n} estrellas`} onClick={() => calificar(s.id, n)}>
+                    ★
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {conGrua && s.estado !== 'entregado' && (
+            <div className="acciones">
+              <button onClick={() => setVerChat(!verChat)}>
+                <span className="ico">💬</span>
+                {verChat ? 'Cerrar chat' : mensajesDelGruero ? `Chat (${mensajesDelGruero})` : 'Chat'}
+              </button>
+              <button onClick={compartir}>
+                <span className="ico">📤</span>
+                {copiado ? 'Compartido ✓' : 'Compartir viaje'}
+              </button>
+              {puedeCancelar && (
+                <button className="peligro" onClick={() => setCancelando(true)}>
+                  <span className="ico">✕</span>
+                  Cancelar
+                </button>
+              )}
             </div>
-            <div className="placa">
-              {g.placaGrua}
-              <small>Placa</small>
+          )}
+          {verChat && conGrua && <Chat servicio={s} yo="conductor" />}
+          {puedeCancelar && !conGrua && (
+            <BotonConfirmar
+              texto="Cancelar solicitud"
+              pregunta="¿Cancelar la solicitud? Es gratis porque ninguna grúa ha aceptado."
+              confirmar="Sí, cancelar"
+              alConfirmar={() => cancelarServicio(s.id)}
+            />
+          )}
+          {cancelando && puedeCancelar && conGrua && (
+            <div className="confirmacion">
+              <p>
+                {cancelarCobra
+                  ? `La grúa ya aceptó. Cancelar cuesta ${quetzales(cargoCancelacion(s.tarifa, estado.tarifa))}, que se cobra en tu siguiente servicio.`
+                  : '¿Cancelar el servicio?'}
+              </p>
+              <div className="fila">
+                <button onClick={() => setCancelando(false)}>No</button>
+                <button
+                  className="peligro"
+                  onClick={() => {
+                    setCancelando(false);
+                    cancelarServicio(s.id);
+                  }}
+                >
+                  Sí, cancelar
+                </button>
+              </div>
             </div>
+          )}
+
+          <div className="separador" />
+          <div className="detalle">
+            <div className="fila-dato">
+              <span className="marca-origen" />
+              <span>Recogida · {NOMBRE_PROBLEMA[s.problema]}</span>
+            </div>
+            <div className="fila-dato">
+              <span className="marca-destino" />
+              <span>{s.destinoTexto}</span>
+            </div>
+            <div className="fila-entre">
+              <span className="pago">💵 Efectivo</span>
+              <strong>{quetzales(s.tarifa)}</strong>
+            </div>
+            <span className="tenue chico">
+              {NOMBRE_VEHICULO[s.vehiculo]} · {km(s.distanciaKm)} · precio fijo
+            </span>
           </div>
-        )}
-
+        </div>
         {s.estado === 'entregado' && !s.pagoConfirmadoConductor && (
-          <>
-            <p>Paga {quetzales(s.tarifa)} en efectivo al gruero y confirma aquí.</p>
+          <div className="hoja-pie">
             <button className="principal" onClick={() => confirmarPagoConductor(s.id)}>
               Pagué {quetzales(s.tarifa)}
             </button>
-          </>
-        )}
-        {s.estado === 'entregado' && s.pagoConfirmadoConductor && (
-          <p className="tenue">Esperando que el gruero confirme el cobro.</p>
-        )}
-        {s.estado === 'pagado' && !s.calificacion && (
-          <>
-            <h3>¿Cómo te fue con {g?.nombre}?</h3>
-            <div className="estrellas">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} aria-label={`${n} estrellas`} onClick={() => calificar(s.id, n)}>
-                  ★
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {conGrua && s.estado !== 'entregado' && (
-          <div className="acciones">
-            <button onClick={() => setVerChat(!verChat)}>
-              <span className="ico">💬</span>
-              {verChat ? 'Cerrar chat' : mensajesDelGruero ? `Chat (${mensajesDelGruero})` : 'Chat'}
-            </button>
-            <button onClick={compartir}>
-              <span className="ico">📤</span>
-              {copiado ? 'Compartido ✓' : 'Compartir viaje'}
-            </button>
-            {puedeCancelar && (
-              <button className="peligro" onClick={() => setCancelando(true)}>
-                <span className="ico">✕</span>
-                Cancelar
-              </button>
-            )}
           </div>
         )}
-        {verChat && conGrua && <Chat servicio={s} yo="conductor" />}
-        {puedeCancelar && !conGrua && (
-          <BotonConfirmar
-            texto="Cancelar solicitud"
-            pregunta="¿Cancelar la solicitud? Es gratis porque ninguna grúa ha aceptado."
-            confirmar="Sí, cancelar"
-            alConfirmar={() => cancelarServicio(s.id)}
-          />
-        )}
-        {cancelando && puedeCancelar && conGrua && (
-          <div className="confirmacion">
-            <p>
-              {cancelarCobra
-                ? `La grúa ya aceptó. Cancelar cuesta ${quetzales(cargoCancelacion(s.tarifa, estado.tarifa))}, que se cobra en tu siguiente servicio.`
-                : '¿Cancelar el servicio?'}
-            </p>
-            <div className="fila">
-              <button onClick={() => setCancelando(false)}>No</button>
-              <button
-                className="peligro"
-                onClick={() => {
-                  setCancelando(false);
-                  cancelarServicio(s.id);
-                }}
-              >
-                Sí, cancelar
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="separador" />
-        <div className="detalle">
-          <div className="fila-dato">
-            <span className="marca-origen" />
-            <span>Recogida · {NOMBRE_PROBLEMA[s.problema]}</span>
-          </div>
-          <div className="fila-dato">
-            <span className="marca-destino" />
-            <span>{s.destinoTexto}</span>
-          </div>
-          <div className="fila-entre">
-            <span className="pago">💵 Efectivo</span>
-            <strong>{quetzales(s.tarifa)}</strong>
-          </div>
-          <span className="tenue chico">
-            {NOMBRE_VEHICULO[s.vehiculo]} · {km(s.distanciaKm)} · precio fijo
-          </span>
-        </div>
       </div>
     </>
   );
