@@ -15,6 +15,8 @@ export interface Estado {
   servicios: Servicio[];
 }
 
+export const CONDUCTOR_DEMO = 'c-demo';
+
 export const CENTRO_CIUDAD: Coordenada = { lat: 14.6211, lng: -90.5163 };
 
 export const DESTINOS_SUGERIDOS: { nombre: string; punto: Coordenada }[] = [
@@ -46,10 +48,20 @@ function gruero(id: string, nombre: string, ubicacion: Coordenada, extra: Partia
 
 export function estadoInicial(): Estado {
   return {
-    version: 2,
+    version: 3,
     tarifa: PARAMETROS_INICIALES,
     demo: { gruerosAutomaticos: true, aprobacionAutomatica: true },
-    conductores: [],
+    // Mientras el registro está desactivado, se entra directo con este conductor.
+    conductores: [
+      {
+        id: CONDUCTOR_DEMO,
+        telefono: '5555-1234',
+        nombre: 'Conductor Demo',
+        placa: 'P-123ABC',
+        verificacion: 'aprobada',
+        deudaCancelacion: 0,
+      },
+    ],
     grueros: [
       gruero('g-demo', 'Tu grúa (demo)', { lat: 14.6105, lng: -90.5205 }, {
         automatico: false,

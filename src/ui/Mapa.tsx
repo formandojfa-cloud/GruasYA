@@ -1,5 +1,5 @@
 import L from 'leaflet';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Coordenada } from '../domain/tipos';
 
 export interface Marcador {
@@ -33,14 +33,17 @@ export function Mapa({
   const tocar = useRef(alTocar);
   tocar.current = alTocar;
   const firmaAjuste = useRef('');
+  const [sinCalles, setSinCalles] = useState(false);
 
   useEffect(() => {
     if (!nodo.current) return;
     const m = L.map(nodo.current, { zoomControl: false }).setView([centro.lat, centro.lng], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const calles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap',
     }).addTo(m);
+    // Algunas vistas (como la vista previa dentro de Claude) bloquean las imágenes del mapa.
+    calles.once('tileerror', () => setSinCalles(true));
     L.control.zoom({ position: 'bottomright' }).addTo(m);
     m.on('click', (ev: L.LeafletMouseEvent) => tocar.current?.({ lat: ev.latlng.lat, lng: ev.latlng.lng }));
     capa.current = L.layerGroup().addTo(m);
@@ -77,5 +80,17 @@ export function Mapa({
     }
   }, [marcadores, ajustar]);
 
-  return <div ref={nodo} className="mapa" />;
+  return (
+    <div className="mapa-marco">
+      <div ref={nodo} className="mapa" />
+      {sinCalles && (
+        <div className="mapa-aviso">
+          Las calles no cargan en esta vista. Ábrela en{' '}
+          <a href="https://formandojfa-cloud.github.io/GruasYA/" target="_blank" rel="noreferrer">
+            formandojfa-cloud.github.io/GruasYA
+          </a>
+        </div>
+      )}
+    </div>
+  );
 }

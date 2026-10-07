@@ -6,7 +6,7 @@ import {
   pedirGrua,
   registrarConductor,
 } from '../data/acciones';
-import { CENTRO_CIUDAD, DESTINOS_SUGERIDOS } from '../data/semilla';
+import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
 import { distanciaRutaKm, minutosEstimados } from '../domain/geo';
 import { calcularTarifa, cargoCancelacion } from '../domain/tarifa';
@@ -18,11 +18,15 @@ import { Mapa, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
 
 const CODIGO_DEMO = '123456';
+// Registro con DPI y selfie desactivado por ahora: se entra como el conductor de demo.
+const REGISTRO_ACTIVO = false;
 
 export function Conductor() {
   const estado = useEstado();
-  const [id, setId] = useSesion('gruaya-conductor');
-  const conductor = estado.conductores.find((c) => c.id === id);
+  const [id, setId] = useSesion('gruaya-conductor', REGISTRO_ACTIVO ? null : CONDUCTOR_DEMO);
+  const conductor =
+    estado.conductores.find((c) => c.id === id) ??
+    (REGISTRO_ACTIVO ? undefined : estado.conductores.find((c) => c.id === CONDUCTOR_DEMO));
 
   if (!conductor) return <Registro alTerminar={setId} />;
   if (conductor.verificacion !== 'aprobada') return <EsperaVerificacion conductor={conductor} salir={() => setId(null)} />;
