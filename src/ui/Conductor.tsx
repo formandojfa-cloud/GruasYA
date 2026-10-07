@@ -8,7 +8,7 @@ import {
 } from '../data/acciones';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
-import { minutosEstimados } from '../domain/geo';
+import { largoRutaKm, minutosEstimados } from '../domain/geo';
 import { calcularTarifa, cargoCancelacion } from '../domain/tarifa';
 import type { Conductor as TConductor, Coordenada, Problema, Servicio, TipoVehiculo } from '../domain/tipos';
 import { BotonConfirmar } from './BotonConfirmar';
@@ -50,7 +50,7 @@ function Registro({ alTerminar }: { alTerminar: (id: string) => void }) {
   const [placa, setPlaca] = useState('');
 
   return (
-    <div className="tarjeta">
+    <div className="hoja alta">
       <h2>Crea tu cuenta</h2>
       <p className="tenue">Regístrate antes de una emergencia: así pedir la grúa toma segundos.</p>
       {paso === 'telefono' && (
@@ -145,7 +145,7 @@ export function Foto({
 
 function EsperaVerificacion({ conductor, salir }: { conductor: TConductor; salir: () => void }) {
   return (
-    <div className="tarjeta">
+    <div className="hoja alta">
       {conductor.verificacion === 'pendiente' ? (
         <>
           <h2>Revisando tu identidad</h2>
@@ -162,9 +162,27 @@ function EsperaVerificacion({ conductor, salir }: { conductor: TConductor; salir
   );
 }
 
+const OPCIONES: { tipo: TipoVehiculo; icono: string; nombre: string; detalle: string }[] = [
+  { tipo: 'moto', icono: '🏍️', nombre: 'Moto', detalle: 'Plataforma para motocicleta' },
+  { tipo: 'carro', icono: '🚗', nombre: 'Carro', detalle: 'Sedán, hatchback o SUV pequeña' },
+  { tipo: 'pickup', icono: '🛻', nombre: 'Pickup', detalle: 'Pickup, camioneta o SUV grande' },
+];
+
+const hora = (enMinutos: number) =>
+  new Date(Date.now() + enMinutos * 60_000).toLocaleTimeString('es-GT', { hour: 'numeric', minute: '2-digit' });
+
+const iniciales = (nombre: string) =>
+  nombre
+    .split(/\s+/)
+    .filter((p) => /^\p{L}/u.test(p))
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('');
+
 function PedirGrua({ conductor }: { conductor: TConductor }) {
   const estado = useEstado();
   const [origen, setOrigen] = useState<Coordenada>(CENTRO_CIUDAD);
+  const [origenTexto, setOrigenTexto] = useState('Punto marcado en el mapa');
   const [destino, setDestino] = useState<{ punto: Coordenada; nombre: string }>({
     punto: DESTINOS_SUGERIDOS[0].punto,
     nombre: DESTINOS_SUGERIDOS[0].nombre,
@@ -175,14 +193,17 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
   const [gps, setGps] = useState('');
 
   const { cotizacion, cargando } = useCotizacion(origen, destino.punto);
-  const t = cotizacion
-    ? calcularTarifa(
-        { distanciaKm: cotizacion.ruta.distanciaKm, minutos: cotizacion.ruta.minutos, clima: cotizacion.clima },
-        vehiculo,
-        new Date().getHours(),
-        estado.tarifa,
-      )
-    : null;
+  const tarifa = (v: TipoVehiculo) =>
+    cotizacion
+      ? calcularTarifa(
+          { distanciaKm: cotizacion.ruta.distanciaKm, minutos: cotizacion.ruta.minutos, clima: cotizacion.clima },
+          v,
+          new Date().getHours(),
+          estado.tarifa,
+        )
+      : null;
+  const t = tarifa(vehiculo);
+  const listo = !!cotizacion && !cargando;
   const cercanas = estado.grueros.filter((g) => g.disponible);
   const eta = cercanas.length ? Math.min(...cercanas.map((g) => minutosEstimados(g.ubicacion, origen))) : null;
 
@@ -192,6 +213,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setOrigen({ lat: p.coords.latitude, lng: p.coords.longitude });
+        setOrigenTexto('Tu ubicación actual');
         setGps('');
       },
       () => setGps('No se pudo obtener tu ubicación; márcala en el mapa.'),
@@ -200,7 +222,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
 
   const marcadores = useMemo<Marcador[]>(
     () => [
-      { id: 'origen', punto: origen, tipo: 'origen', texto: 'Tu vehículo' },
+      { id: 'origen', punto: origen, tipo: 'origen', texto: 'Recogida' },
       { id: 'destino', punto: destino.punto, tipo: 'destino', texto: destino.nombre },
       ...cercanas.map((g) => ({ id: g.id, punto: g.ubicacion, tipo: 'grua-libre' as const, texto: g.nombre })),
     ],
@@ -208,120 +230,145 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
   );
 
   return (
-    <div className="pila">
-      <div className="tarjeta">
-        <h2>Hola, {conductor.nombre.split(' ')[0]}</h2>
-        <div className="segmentos">
-          <button className={marcando === 'origen' ? 'activo' : ''} onClick={() => setMarcando('origen')}>
-            🚗 Dónde estás
-          </button>
-          <button className={marcando === 'destino' ? 'activo' : ''} onClick={() => setMarcando('destino')}>
-            🏁 A dónde vas
-          </button>
-        </div>
-        <p className="tenue">Toca el mapa para marcar {marcando === 'origen' ? 'tu vehículo' : 'el destino'}.</p>
-      </div>
+    <>
       <Mapa
         centro={CENTRO_CIUDAD}
         marcadores={marcadores}
         ajustar={false}
         ruta={cotizacion?.ruta.geometria}
-        alTocar={(p) =>
-          marcando === 'origen' ? setOrigen(p) : setDestino({ punto: p, nombre: 'Punto marcado en el mapa' })
-        }
+        hueco={0.62}
+        alTocar={(p) => {
+          if (marcando === 'origen') {
+            setOrigen(p);
+            setOrigenTexto('Punto marcado en el mapa');
+          } else setDestino({ punto: p, nombre: 'Punto marcado en el mapa' });
+        }}
       />
-      <div className="tarjeta">
-        <button className="secundario" onClick={usarMiUbicacion}>
-          📍 Usar mi ubicación
-        </button>
-        {gps && <p className="tenue">{gps}</p>}
-        <label>
-          Destino
-          <select
-            value={destino.nombre}
-            onChange={(e) => {
-              const d = DESTINOS_SUGERIDOS.find((x) => x.nombre === e.target.value);
-              if (d) setDestino({ punto: d.punto, nombre: d.nombre });
-            }}
-          >
-            {!DESTINOS_SUGERIDOS.some((d) => d.nombre === destino.nombre) && <option>{destino.nombre}</option>}
-            {DESTINOS_SUGERIDOS.map((d) => (
-              <option key={d.nombre}>{d.nombre}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Vehículo
-          <select value={vehiculo} onChange={(e) => setVehiculo(e.target.value as TipoVehiculo)}>
-            {Object.entries(NOMBRE_VEHICULO).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Qué pasó
-          <select value={problema} onChange={(e) => setProblema(e.target.value as Problema)}>
-            {Object.entries(NOMBRE_PROBLEMA).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="tarjeta precio">
-        <div className="fila-entre">
-          <span>Precio fijo</span>
-          <strong className="grande">{t && !cargando ? quetzales(t.total + conductor.deudaCancelacion) : '…'}</strong>
+      <div className="pista">Toca el mapa para mover {marcando === 'origen' ? 'la recogida' : 'el destino'}</div>
+      <div className="hoja">
+        <div className="lugares">
+          <div className={`lugar ${marcando === 'origen' ? 'activo' : ''}`} onClick={() => setMarcando('origen')}>
+            <span className="marca-origen" />
+            <span className="texto">
+              <small>Recogida</small>
+              <span>{origenTexto}</span>
+            </span>
+            <button
+              className="mini"
+              onClick={(e) => {
+                e.stopPropagation();
+                usarMiUbicacion();
+              }}
+            >
+              📍 Mi ubicación
+            </button>
+          </div>
+          <div className={`lugar ${marcando === 'destino' ? 'activo' : ''}`} onClick={() => setMarcando('destino')}>
+            <span className="marca-destino" />
+            <span className="texto">
+              <small>Destino</small>
+              <select
+                aria-label="Destino"
+                value={destino.nombre}
+                onChange={(e) => {
+                  const d = DESTINOS_SUGERIDOS.find((x) => x.nombre === e.target.value);
+                  if (d) setDestino({ punto: d.punto, nombre: d.nombre });
+                }}
+              >
+                {!DESTINOS_SUGERIDOS.some((d) => d.nombre === destino.nombre) && <option>{destino.nombre}</option>}
+                {DESTINOS_SUGERIDOS.map((d) => (
+                  <option key={d.nombre}>{d.nombre}</option>
+                ))}
+              </select>
+            </span>
+          </div>
         </div>
-        {cotizacion && t && (
-          <>
-            <div className="tenue">
-              {km(cotizacion.ruta.distanciaKm)} y unos {minutos(cotizacion.ruta.minutos)} de viaje
+        {gps && <p className="tenue">{gps}</p>}
+
+        <div className="chips" role="group" aria-label="Qué pasó">
+          {(Object.keys(NOMBRE_PROBLEMA) as Problema[]).map((k) => (
+            <button key={k} className={problema === k ? 'activo' : ''} onClick={() => setProblema(k)}>
+              {NOMBRE_PROBLEMA[k]}
+            </button>
+          ))}
+        </div>
+
+        <div className="opciones" role="radiogroup" aria-label="Vehículo">
+          {OPCIONES.map((o) => {
+            const to = tarifa(o.tipo);
+            return (
+              <button
+                key={o.tipo}
+                role="radio"
+                aria-checked={vehiculo === o.tipo}
+                className={`opcion ${vehiculo === o.tipo ? 'activo' : ''}`}
+                onClick={() => setVehiculo(o.tipo)}
+              >
+                <span className="icono">{o.icono}</span>
+                <span className="texto">
+                  <strong>GrúaYa {o.nombre}</strong>
+                  <span>
+                    {eta !== null && listo && cotizacion
+                      ? `${minutos(eta)} · llegas ${hora(eta + cotizacion.ruta.minutos)}`
+                      : o.detalle}
+                  </span>
+                </span>
+                <span className="precio">{to && listo ? quetzales(to.total + conductor.deudaCancelacion) : '…'}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {cotizacion && t && listo && (
+          <details className="desglose">
+            <summary>
+              Precio fijo · {km(cotizacion.ruta.distanciaKm)} y unos {minutos(cotizacion.ruta.minutos)}
               {cotizacion.ruta.conTrafico ? ' con el tráfico actual' : ''}
+            </summary>
+            <div>
+              <span>Banderazo {quetzales(t.base)} (incluye {km(estado.tarifa.kmIncluidos)})</span>
+              {t.kmAdicionales > 0 && <span>{km(t.kmAdicionales)} más × {quetzales(estado.tarifa.precioKm)}</span>}
+              {t.minutosAdicionales > 0 && (
+                <span>{minutos(t.minutosAdicionales)} más por tráfico × {quetzales(estado.tarifa.precioMinuto)}</span>
+              )}
+              {t.factorVehiculo !== 1 && <span>{NOMBRE_VEHICULO[vehiculo]} ×{t.factorVehiculo}</span>}
+              {t.factorHorario !== 1 && <span>Horario nocturno ×{t.factorHorario}</span>}
+              {t.factorClima !== 1 && <span>Por {NOMBRE_CLIMA[cotizacion.clima]} ×{t.factorClima}</span>}
             </div>
-            <div className="tenue">
-              Banderazo {quetzales(t.base)}
-              {t.kmAdicionales > 0 && ` + ${km(t.kmAdicionales)} × ${quetzales(estado.tarifa.precioKm)}`}
-              {t.minutosAdicionales > 0 && ` + ${minutos(t.minutosAdicionales)} × ${quetzales(estado.tarifa.precioMinuto)}`}
-              {t.factorVehiculo !== 1 && ` · ${NOMBRE_VEHICULO[vehiculo].toLowerCase()} ×${t.factorVehiculo}`}
-              {t.factorHorario !== 1 && ` · nocturno ×${t.factorHorario}`}
-              {t.factorClima !== 1 && ` · ${NOMBRE_CLIMA[cotizacion.clima]} ×${t.factorClima}`}
-            </div>
-            {cotizacion.ruta.fuente === 'estimada' && (
-              <div className="aviso">No pudimos consultar la ruta por calles; el precio usa una distancia estimada.</div>
-            )}
-          </>
+          </details>
+        )}
+        {cotizacion?.ruta.fuente === 'estimada' && listo && (
+          <div className="aviso">No pudimos consultar la ruta por calles; el precio usa una distancia estimada.</div>
         )}
         {conductor.deudaCancelacion > 0 && (
           <div className="aviso">Incluye {quetzales(conductor.deudaCancelacion)} de una cancelación anterior.</div>
         )}
-        <div className="tenue">
-          Pago en efectivo al gruero. {eta !== null ? `Grúa más cercana a unos ${minutos(eta)}.` : 'No hay grúas libres ahora.'}
+        {eta === null && <div className="aviso">No hay grúas libres cerca ahora. La central te llamará si pides.</div>}
+
+        <div className="hoja-pie">
+          <div className="pago">💵 Efectivo al gruero</div>
+          <button
+            className="principal"
+            disabled={!listo}
+            onClick={() =>
+              cotizacion &&
+              pedirGrua({
+                conductorId: conductor.id,
+                origen,
+                destino: destino.punto,
+                destinoTexto: destino.nombre,
+                vehiculo,
+                problema,
+                ruta: cotizacion.ruta,
+                clima: cotizacion.clima,
+              })
+            }
+          >
+            {listo ? `Pedir GrúaYa ${OPCIONES.find((o) => o.tipo === vehiculo)!.nombre}` : 'Calculando precio…'}
+          </button>
         </div>
-        <button
-          className="principal"
-          disabled={!cotizacion || cargando}
-          onClick={() =>
-            cotizacion &&
-            pedirGrua({
-              conductorId: conductor.id,
-              origen,
-              destino: destino.punto,
-              destinoTexto: destino.nombre,
-              vehiculo,
-              problema,
-              ruta: cotizacion.ruta,
-              clima: cotizacion.clima,
-            })
-          }
-        >
-          {cargando ? 'Calculando precio…' : 'Pedir grúa'}
-        </button>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -329,19 +376,25 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
   const estado = useEstado();
   const g = estado.grueros.find((x) => x.id === s.grueroId);
   const [copiado, setCopiado] = useState(false);
+  const [verChat, setVerChat] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   useEffect(() => setCopiado(false), [s.estado]);
 
   const marcadores: Marcador[] = [
-    { id: 'origen', punto: s.origen, tipo: 'origen', texto: 'Tu vehículo' },
+    { id: 'origen', punto: s.origen, tipo: 'origen', texto: 'Recogida' },
     { id: 'destino', punto: s.destino, tipo: 'destino', texto: s.destinoTexto },
     ...(g ? [{ id: 'grua', punto: g.ubicacion, tipo: 'grua' as const, texto: g.nombre }] : []),
   ];
   const eta = g && s.estado === 'asignado' ? minutosEstimados(g.ubicacion, s.origen) : null;
+  const largo = largoRutaKm(s.ruta) || s.distanciaKm;
+  const restante = s.estado === 'en_ruta' ? s.minutos * Math.max(0, 1 - (s.avanceKm ?? 0) / largo) : null;
   const puedeCancelar = ['buscando', 'asignado', 'en_sitio', 'sin_grua'].includes(s.estado);
   const cancelarCobra = s.estado === 'asignado' || s.estado === 'en_sitio';
+  const conGrua = !!g && ['asignado', 'en_sitio', 'en_ruta', 'entregado'].includes(s.estado);
+  const mensajesDelGruero = s.chat.filter((m) => m.de === 'gruero').length;
 
   const compartir = async () => {
-    const texto = `Voy en una grúa GruaYa: ${g?.nombre ?? ''}, placa ${g?.placaGrua ?? ''}, rumbo a ${s.destinoTexto}.`;
+    const texto = `Voy en una grúa GrúaYa: ${g?.nombre ?? ''}, placa ${g?.placaGrua ?? ''}, rumbo a ${s.destinoTexto}.`;
     try {
       if (navigator.share) await navigator.share({ text: texto });
       else await navigator.clipboard.writeText(texto);
@@ -351,69 +404,150 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
     }
   };
 
+  const titulo =
+    s.estado === 'buscando'
+      ? 'Buscando tu grúa'
+      : s.estado === 'asignado'
+        ? `Tu grúa llega en ${minutos(eta ?? 1)}`
+        : s.estado === 'en_sitio'
+          ? 'Tu grúa llegó'
+          : s.estado === 'en_ruta'
+            ? `Rumbo a ${s.destinoTexto}`
+            : s.estado === 'entregado'
+              ? 'Llegaste a tu destino'
+              : s.estado === 'pagado'
+                ? 'Viaje completado'
+                : NOMBRE_ESTADO[s.estado];
+
   return (
-    <div className="pila">
-      <div className={`tarjeta estado estado-${s.estado}`}>
-        <div className="tenue">{quetzales(s.tarifa)} en efectivo · {km(s.distanciaKm)}</div>
-        <h2>{NOMBRE_ESTADO[s.estado]}</h2>
-        {s.estado === 'buscando' && <p className="tenue">Ofreciendo tu servicio a la grúa más cercana…</p>}
-        {eta !== null && <p>Llega en unos {minutos(eta)}.</p>}
-        {s.estado === 'sin_grua' && (
-          <p>No encontramos grúa libre a 10 km. La central de GruaYa te va a llamar para coordinarla por teléfono.</p>
-        )}
-        {g && (
-          <div className="gruero">
-            <strong>{g.nombre}</strong>
-            <span>
-              Placa {g.placaGrua} · ★ {g.calificacion.toFixed(1)}
-            </span>
-          </div>
-        )}
-      </div>
+    <>
       <Mapa centro={s.origen} marcadores={marcadores} ruta={s.ruta} />
-      {s.estado === 'entregado' && !s.pagoConfirmadoConductor && (
-        <div className="tarjeta">
-          <p>Paga {quetzales(s.tarifa)} en efectivo al gruero y confirma aquí.</p>
-          <button className="principal" onClick={() => confirmarPagoConductor(s.id)}>
-            Pagué {quetzales(s.tarifa)}
-          </button>
-        </div>
-      )}
-      {s.estado === 'entregado' && s.pagoConfirmadoConductor && (
-        <div className="tarjeta tenue">Esperando que el gruero confirme el cobro.</div>
-      )}
-      {s.estado === 'pagado' && !s.calificacion && (
-        <div className="tarjeta">
-          <h3>¿Cómo te fue con {g?.nombre}?</h3>
-          <div className="estrellas">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} onClick={() => calificar(s.id, n)}>
-                ★
-              </button>
-            ))}
+      <div className="hoja">
+        <div className="encabezado-viaje">
+          <div className="pila" style={{ gap: 2 }}>
+            <h2>{titulo}</h2>
+            {s.estado === 'buscando' && <span className="tenue">Ofreciendo tu servicio a la grúa más cercana</span>}
+            {s.estado === 'en_sitio' && <span className="tenue">Está tomando fotos de tu vehículo antes de subirlo</span>}
+            {s.estado === 'en_ruta' && restante !== null && <span className="tenue">Llegada aprox. {hora(restante)}</span>}
+            {s.estado === 'sin_grua' && (
+              <span className="tenue">No encontramos grúa libre a 10 km. La central de GrúaYa te va a llamar para coordinarla.</span>
+            )}
           </div>
+          {eta !== null && (
+            <div className="etiqueta-eta">
+              {Math.max(1, Math.round(eta))}
+              <small>min</small>
+            </div>
+          )}
         </div>
-      )}
-      {g && !['pagado', 'cancelado'].includes(s.estado) && <Chat servicio={s} yo="conductor" />}
-      <div className="tarjeta">
-        {g && ['asignado', 'en_sitio', 'en_ruta'].includes(s.estado) && (
-          <button className="secundario" onClick={compartir}>
-            {copiado ? 'Compartido ✓' : 'Compartir viaje'}
-          </button>
+        {s.estado === 'buscando' && <div className="progreso" />}
+
+        {conGrua && g && (
+          <div className="persona">
+            <div className="avatar">{iniciales(g.nombre)}</div>
+            <div className="texto">
+              <strong>{g.nombre}</strong>
+              <span className="tenue">★ {g.calificacion.toFixed(1)} · Grúa {g.tipoGrua}</span>
+            </div>
+            <div className="placa">
+              {g.placaGrua}
+              <small>Placa</small>
+            </div>
+          </div>
         )}
-        {puedeCancelar && (
+
+        {s.estado === 'entregado' && !s.pagoConfirmadoConductor && (
+          <>
+            <p>Paga {quetzales(s.tarifa)} en efectivo al gruero y confirma aquí.</p>
+            <button className="principal" onClick={() => confirmarPagoConductor(s.id)}>
+              Pagué {quetzales(s.tarifa)}
+            </button>
+          </>
+        )}
+        {s.estado === 'entregado' && s.pagoConfirmadoConductor && (
+          <p className="tenue">Esperando que el gruero confirme el cobro.</p>
+        )}
+        {s.estado === 'pagado' && !s.calificacion && (
+          <>
+            <h3>¿Cómo te fue con {g?.nombre}?</h3>
+            <div className="estrellas">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} aria-label={`${n} estrellas`} onClick={() => calificar(s.id, n)}>
+                  ★
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {conGrua && s.estado !== 'entregado' && (
+          <div className="acciones">
+            <button onClick={() => setVerChat(!verChat)}>
+              <span className="ico">💬</span>
+              {verChat ? 'Cerrar chat' : mensajesDelGruero ? `Chat (${mensajesDelGruero})` : 'Chat'}
+            </button>
+            <button onClick={compartir}>
+              <span className="ico">📤</span>
+              {copiado ? 'Compartido ✓' : 'Compartir viaje'}
+            </button>
+            {puedeCancelar && (
+              <button className="peligro" onClick={() => setCancelando(true)}>
+                <span className="ico">✕</span>
+                Cancelar
+              </button>
+            )}
+          </div>
+        )}
+        {verChat && conGrua && <Chat servicio={s} yo="conductor" />}
+        {puedeCancelar && !conGrua && (
           <BotonConfirmar
-            texto="Cancelar"
-            pregunta={
-              cancelarCobra
-                ? `La grúa ya aceptó. Cancelar cuesta ${quetzales(cargoCancelacion(s.tarifa, estado.tarifa))}, que se cobra en tu siguiente servicio.`
-                : '¿Cancelar la solicitud? Es gratis porque ninguna grúa ha aceptado.'
-            }
+            texto="Cancelar solicitud"
+            pregunta="¿Cancelar la solicitud? Es gratis porque ninguna grúa ha aceptado."
             confirmar="Sí, cancelar"
             alConfirmar={() => cancelarServicio(s.id)}
           />
         )}
+        {cancelando && puedeCancelar && conGrua && (
+          <div className="confirmacion">
+            <p>
+              {cancelarCobra
+                ? `La grúa ya aceptó. Cancelar cuesta ${quetzales(cargoCancelacion(s.tarifa, estado.tarifa))}, que se cobra en tu siguiente servicio.`
+                : '¿Cancelar el servicio?'}
+            </p>
+            <div className="fila">
+              <button onClick={() => setCancelando(false)}>No</button>
+              <button
+                className="peligro"
+                onClick={() => {
+                  setCancelando(false);
+                  cancelarServicio(s.id);
+                }}
+              >
+                Sí, cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="separador" />
+        <div className="detalle">
+          <div className="fila-dato">
+            <span className="marca-origen" />
+            <span>Recogida · {NOMBRE_PROBLEMA[s.problema]}</span>
+          </div>
+          <div className="fila-dato">
+            <span className="marca-destino" />
+            <span>{s.destinoTexto}</span>
+          </div>
+          <div className="fila-entre">
+            <span className="pago">💵 Efectivo</span>
+            <strong>{quetzales(s.tarifa)}</strong>
+          </div>
+          <span className="tenue chico">
+            {NOMBRE_VEHICULO[s.vehiculo]} · {km(s.distanciaKm)} · precio fijo
+          </span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

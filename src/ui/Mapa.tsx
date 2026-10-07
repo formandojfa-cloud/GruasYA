@@ -9,12 +9,31 @@ export interface Marcador {
   texto?: string;
 }
 
-const ICONOS: Record<Marcador['tipo'], string> = {
-  origen: '🚗',
-  destino: '🏁',
-  grua: '🚚',
-  'grua-libre': '🚚',
-};
+const TOKEN_MAPBOX = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+const oscuro = () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+
+// Mapa claro y limpio: Mapbox si hay token; si no, el estilo gratuito de CARTO.
+function capaCalles(): L.TileLayer {
+  if (TOKEN_MAPBOX) {
+    const estilo = oscuro() ? 'dark-v11' : 'light-v11';
+    return L.tileLayer(
+      `https://api.mapbox.com/styles/v1/mapbox/${estilo}/tiles/512/{z}/{x}/{y}@2x?access_token=${TOKEN_MAPBOX}`,
+      { tileSize: 512, zoomOffset: -1, maxZoom: 20, attribution: '© Mapbox © OpenStreetMap' },
+    );
+  }
+  return L.tileLayer(`https://{s}.basemaps.cartocdn.com/${oscuro() ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`, {
+    maxZoom: 20,
+    attribution: '© OpenStreetMap © CARTO',
+  });
+}
+
+function icono(mk: Marcador): L.DivIcon {
+  if (mk.tipo === 'origen' || mk.tipo === 'destino') {
+    const etiqueta = mk.texto ? `<div class="pin-etiqueta">${mk.texto.replace(/</g, '&lt;')}</div>` : '';
+    return L.divIcon({ className: '', html: `<div class="pin-${mk.tipo}"></div>${etiqueta}`, iconSize: [18, 18], iconAnchor: [9, 9] });
+  }
+  return L.divIcon({ className: '', html: `<div class="pin-${mk.tipo}">🚚</div>`, iconSize: [36, 36], iconAnchor: [18, 18] });
+}
 
 export function Mapa({
   centro,
@@ -22,12 +41,14 @@ export function Mapa({
   alTocar,
   ajustar = true,
   ruta,
+  hueco = 0.55,
 }: {
   centro: Coordenada;
   marcadores: Marcador[];
   alTocar?: (p: Coordenada) => void;
   ajustar?: boolean;
   ruta?: Coordenada[]; // trazo por calles, recogida → destino
+  hueco?: number; // fracción de la altura tapada por la hoja inferior
 }) {
   const nodo = useRef<HTMLDivElement>(null);
   const mapa = useRef<L.Map | null>(null);
@@ -40,18 +61,19 @@ export function Mapa({
 
   useEffect(() => {
     if (!nodo.current) return;
-    const m = L.map(nodo.current, { zoomControl: false }).setView([centro.lat, centro.lng], 13);
-    const calles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap',
-    }).addTo(m);
+    const m = L.map(nodo.current, { zoomControl: false }).setView([centro.lat, centro.lng], 14);
+    const calles = capaCalles().addTo(m);
     // Algunas vistas (como la vista previa dentro de Claude) bloquean las imágenes del mapa.
     calles.once('tileerror', () => setSinCalles(true));
-    L.control.zoom({ position: 'bottomright' }).addTo(m);
     m.on('click', (ev: L.LeafletMouseEvent) => tocar.current?.({ lat: ev.latlng.lat, lng: ev.latlng.lng }));
     capa.current = L.layerGroup().addTo(m);
     mapa.current = m;
+    const obs = new ResizeObserver(() => m.invalidateSize());
+    obs.observe(nodo.current);
     return () => {
+      obs.disconnect();
+      // Leaflet termina la animación de zoom con un temporizador; si el mapa ya se quitó, falla.
+      (m as unknown as { _animatingZoom: boolean })._animatingZoom = false;
       m.remove();
       mapa.current = null;
     };
@@ -64,36 +86,35 @@ export function Mapa({
     const g = capa.current;
     if (!m || !g) return;
     g.clearLayers();
+    // Dejar libre la parte de abajo, donde va la hoja con los datos.
+    const abajo = Math.round(m.getSize().y * hueco) + 30;
+    const margen = { paddingTopLeft: [40, 90] as L.PointTuple, paddingBottomRight: [40, abajo] as L.PointTuple };
     if (ruta && ruta.length > 1) {
+      const color = getComputedStyle(document.documentElement).getPropertyValue('--ruta').trim() || '#000';
       const linea = L.polyline(
         ruta.map((p) => [p.lat, p.lng] as [number, number]),
-        { color: '#2f6fd1', weight: 5, opacity: 0.75 },
+        { color, weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
       ).addTo(g);
       // Encuadrar cuando llega una ruta nueva.
       const firmaRuta = `${ruta.length}|${ruta.at(0)!.lat}|${ruta.at(-1)!.lat}`;
       if (firmaRuta !== firmaRutaPrevia.current) {
         firmaRutaPrevia.current = firmaRuta;
-        m.fitBounds(linea.getBounds(), { padding: [40, 40] });
+        m.fitBounds(linea.getBounds(), { ...margen, animate: false });
       }
     }
     for (const mk of marcadores) {
-      const icono = L.divIcon({
-        className: '',
-        html: `<div class="pin pin-${mk.tipo}">${ICONOS[mk.tipo]}</div>`,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-      });
-      const marca = L.marker([mk.punto.lat, mk.punto.lng], { icon: icono }).addTo(g);
-      if (mk.texto) marca.bindTooltip(mk.texto, { direction: 'top', offset: [0, -16] });
+      L.marker([mk.punto.lat, mk.punto.lng], { icon: icono(mk), zIndexOffset: mk.tipo === 'grua' ? 1000 : 0 }).addTo(g);
     }
     // Reencuadrar solo cuando cambia qué se muestra, no cada vez que la grúa se mueve.
     const firma = marcadores.map((mk) => mk.id).join('|');
     if (ajustar && firma !== firmaAjuste.current && marcadores.length > 0) {
       firmaAjuste.current = firma;
-      if (marcadores.length === 1) m.setView([marcadores[0].punto.lat, marcadores[0].punto.lng], 14);
-      else m.fitBounds(L.latLngBounds(marcadores.map((mk) => [mk.punto.lat, mk.punto.lng])), { padding: [40, 40] });
+      if (marcadores.length === 1) {
+        m.setView([marcadores[0].punto.lat, marcadores[0].punto.lng], 15, { animate: false });
+        m.panBy([0, abajo / 2 - 45], { animate: false });
+      } else m.fitBounds(L.latLngBounds(marcadores.map((mk) => [mk.punto.lat, mk.punto.lng])), { ...margen, animate: false });
     }
-  }, [marcadores, ajustar, ruta]);
+  }, [marcadores, ajustar, ruta, hueco]);
 
   return (
     <div className="mapa-marco">
