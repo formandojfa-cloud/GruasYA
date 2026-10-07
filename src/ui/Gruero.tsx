@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   aceptarOferta,
   actualizarUbicacion,
@@ -47,6 +48,14 @@ function useGpsEnVivo(grueroId: string, activo: boolean, alFallar: (m: string) =
   }, [grueroId, activo]);
 }
 
+// Lleva los controles del gruero a la barra de arriba, junto al selector de papel,
+// para que el saldo siempre quede a la vista sin importar el tamaño de pantalla.
+function EnBarra({ children }: { children: ReactNode }) {
+  const [destino, setDestino] = useState<HTMLElement | null>(null);
+  useEffect(() => setDestino(document.getElementById('barra-extra')), []);
+  return destino ? createPortal(children, destino) : null;
+}
+
 export function Gruero() {
   const estado = useEstado();
   const [id, setId] = useSesion('gruaya-gruero', 'g-demo');
@@ -84,22 +93,27 @@ export function Gruero() {
 
   return (
     <>
+      <EnBarra>
+        <div className="ganancias">
+          <small>Ganancia</small> {quetzales(ganado)}
+        </div>
+        <button
+          className={`gps ${gps === 'si' ? 'en-vivo' : ''}`}
+          onClick={() => {
+            setErrorGps('');
+            setGps(gps === 'si' ? null : 'si');
+          }}
+        >
+          {gps === 'si' ? '● GPS en vivo' : '📍 Usar mi GPS'}
+        </button>
+      </EnBarra>
       <Mapa
         centro={g.ubicacion}
         marcadores={marcadores}
         ruta={servicio && servicio.estado === 'asignado' && servicio.rutaGrua ? servicio.rutaGrua : servicio?.ruta}
         hexagonos={hexagonos}
       />
-      <div className="ganancias">{quetzales(ganado)}</div>
-      <button
-        className={`gps ${gps === 'si' ? 'en-vivo' : ''}`}
-        onClick={() => {
-          setErrorGps('');
-          setGps(gps === 'si' ? null : 'si');
-        }}
-      >
-        {gps === 'si' ? '● GPS en vivo' : '📍 Usar mi GPS'}
-      </button>
+
       {oferta && !activo && <OfertaEntrante servicio={oferta} gruero={g} />}
       {activo && <ServicioActivo servicio={activo} gruero={g} />}
       {!oferta && !activo && (

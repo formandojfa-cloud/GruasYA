@@ -21,6 +21,8 @@ export function App() {
           </button>
         ))}
       </nav>
+      {/* Las pantallas ponen aquí sus controles de arriba (saldo y GPS del gruero). */}
+      <div id="barra-extra" className="barra-extra" />
     </div>
   );
 

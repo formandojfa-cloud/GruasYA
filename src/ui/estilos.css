@@ -257,12 +257,14 @@ button.conectar { background: var(--azul); color: #fff; }
 }
 
 /* Gruero */
+.barra { flex-wrap: wrap; row-gap: 8px; }
+.barra-extra { display: flex; gap: 8px; align-items: center; }
+.barra-extra:empty { display: none; }
 .ganancias {
-  position: absolute; z-index: 1000; left: 50%; transform: translateX(-50%);
-  top: calc(env(safe-area-inset-top, 0px) + 68px);
   background: var(--tinta); color: var(--sobre-tinta); border-radius: 999px;
-  padding: 8px 18px; font-weight: 700; font-size: 18px; box-shadow: var(--sombra-flotante);
+  padding: 8px 16px; font-weight: 700; font-size: 17px; box-shadow: var(--sombra-flotante); white-space: nowrap;
 }
+.ganancias small { font-weight: 500; font-size: 12px; opacity: 0.75; margin-right: 4px; }
 .boton-conectar {
   align-self: center; width: 88px; height: 88px; border-radius: 50%;
   background: var(--azul); color: #fff; font-size: 17px; font-weight: 800; letter-spacing: 0.5px;
@@ -306,9 +308,7 @@ button.conectar { background: var(--azul); color: #fff; }
 .estado-sin_grua, .estado-cancelado { border-left-color: var(--rojo); }
 .gruero { display: flex; flex-direction: column; background: var(--gris); border-radius: 8px; padding: 10px; }
 .gps {
-  position: absolute; z-index: 1000; right: 16px;
-  top: calc(env(safe-area-inset-top, 0px) + 128px);
-  min-height: 36px; padding: 6px 12px; border-radius: 999px; font-size: 13px;
+  min-height: 38px; padding: 6px 12px; border-radius: 999px; font-size: 13px;
   background: var(--hoja); box-shadow: var(--sombra-flotante);
 }
 .gps.en-vivo { color: var(--verde); }
@@ -325,7 +325,6 @@ button.conectar { background: var(--azul); color: #fff; }
   .hoja-cuerpo { padding-top: 16px; }
   .hoja-cuerpo:last-child, .hoja-pie { padding-bottom: 16px; }
   .hoja-pie { border-radius: 0 0 16px 16px; }
-  .pista, .ganancias { left: calc(50% + 212px); top: 20px; }
-  .gps { top: 20px; right: 24px; }
+  .pista { left: calc(50% + 212px); top: 20px; }
   .mapa-aviso { left: 448px; top: 20px; }
 }
