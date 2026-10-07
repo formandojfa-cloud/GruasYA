@@ -119,6 +119,22 @@ export function enviarMensaje(servicioId: string, de: 'conductor' | 'gruero', te
 
 // ---------- Gruero ----------
 
+// Ubicación en vivo desde el GPS del teléfono del gruero.
+export function actualizarUbicacion(grueroId: string, p: Coordenada) {
+  actualizar((e) => {
+    const g = gruero(e, grueroId);
+    g.ubicacion = p;
+    g.ubicacionEn = Date.now();
+    g.gpsEnVivo = true;
+  });
+}
+
+export function dejarGps(grueroId: string) {
+  actualizar((e) => {
+    gruero(e, grueroId).gpsEnVivo = false;
+  });
+}
+
 export function cambiarDisponible(grueroId: string, disponible: boolean) {
   actualizar((e) => {
     const g = gruero(e, grueroId);

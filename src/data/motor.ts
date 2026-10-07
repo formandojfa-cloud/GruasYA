@@ -12,7 +12,7 @@ const KM_POR_TICK = 0.25; // velocidad acelerada para que la demo no tarde
 
 export function tick(e: Estado, ahora: number) {
   for (const g of e.grueros) {
-    if (g.disponible || !g.automatico) g.ubicacionEn = ahora; // GPS simulado
+    if (!g.gpsEnVivo && (g.disponible || !g.automatico)) g.ubicacionEn = ahora; // GPS simulado
   }
 
   for (const c of e.conductores) {
@@ -48,7 +48,7 @@ export function tick(e: Estado, ahora: number) {
     const auto = g.automatico && e.demo.gruerosAutomaticos;
 
     if (s.estado === 'asignado') {
-      g.ubicacion = acercar(g.ubicacion, s.origen);
+      if (!g.gpsEnVivo) g.ubicacion = acercar(g.ubicacion, s.origen);
       if (auto && distanciaKm(g.ubicacion, s.origen) < 0.05) {
         s.estado = 'en_sitio';
         s.llegadaEn = ahora;
@@ -62,7 +62,7 @@ export function tick(e: Estado, ahora: number) {
     } else if (s.estado === 'en_ruta') {
       // La grúa avanza por las calles de la ruta cotizada.
       s.avanceKm = (s.avanceKm ?? 0) + KM_POR_TICK;
-      g.ubicacion = puntoEnRuta(s.ruta, s.avanceKm);
+      if (!g.gpsEnVivo) g.ubicacion = puntoEnRuta(s.ruta, s.avanceKm);
       if (auto && s.avanceKm >= largoRutaKm(s.ruta)) {
         s.estado = 'entregado';
         s.cobradoPorGruero = true;

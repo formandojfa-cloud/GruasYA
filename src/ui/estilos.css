@@ -301,3 +301,10 @@ button.texto { background: none; min-height: 40px; padding: 8px; }
 .estado-pagado { border-left-color: var(--verde); }
 .estado-sin_grua, .estado-cancelado { border-left-color: var(--rojo); }
 .gruero { display: flex; flex-direction: column; background: var(--gris); border-radius: 8px; padding: 10px; }
+.gps {
+  position: absolute; z-index: 1000; right: 16px;
+  top: calc(env(safe-area-inset-top, 0px) + 128px);
+  min-height: 36px; padding: 6px 12px; border-radius: 999px; font-size: 13px;
+  background: var(--hoja); box-shadow: var(--sombra-flotante);
+}
+.gps.en-vivo { color: var(--verde); }

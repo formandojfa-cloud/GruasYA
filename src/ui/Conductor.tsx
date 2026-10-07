@@ -8,14 +8,15 @@ import {
 } from '../data/acciones';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
-import { largoRutaKm, minutosEstimados } from '../domain/geo';
+import { distanciaKm, largoRutaKm, minutosEstimados } from '../domain/geo';
+import { celdaDe, celdasCercanas, enCeldas, indicePorCelda } from '../domain/h3';
 import { calcularTarifa, cargoCancelacion } from '../domain/tarifa';
 import type { Conductor as TConductor, Coordenada, Problema, Servicio, TipoVehiculo } from '../domain/tipos';
 import { BotonConfirmar } from './BotonConfirmar';
 import { Chat } from './Chat';
 import { useCotizacion } from './cotizacion';
 import { km, minutos, NOMBRE_CLIMA, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
-import { Mapa, type Marcador } from './Mapa';
+import { Mapa, type Hexagono, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
 
 const CODIGO_DEMO = '123456';
@@ -204,7 +205,10 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
       : null;
   const t = tarifa(vehiculo);
   const listo = !!cotizacion && !cargando;
-  const cercanas = estado.grueros.filter((g) => g.disponible);
+  const cercanas = enCeldas(
+    indicePorCelda(estado.grueros.filter((g) => g.disponible)),
+    celdasCercanas(origen, 10),
+  ).filter((g) => distanciaKm(g.ubicacion, origen) <= 10);
   const eta = cercanas.length ? Math.min(...cercanas.map((g) => minutosEstimados(g.ubicacion, origen))) : null;
 
   const usarMiUbicacion = () => {
@@ -228,6 +232,12 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
     ],
     [origen, destino, cercanas],
   );
+  // Celdas H3 donde hay grúas libres, como el mapa de oferta de las apps de viajes.
+  const firmaCeldas = cercanas.map((g) => celdaDe(g.ubicacion)).join(',');
+  const hexagonos = useMemo<Hexagono[]>(
+    () => [...new Set(firmaCeldas.split(',').filter(Boolean))].map((celda) => ({ celda, tipo: 'grua' })),
+    [firmaCeldas],
+  );
 
   return (
     <>
@@ -237,6 +247,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
         ajustar={false}
         ruta={cotizacion?.ruta.geometria}
         hueco={0.62}
+        hexagonos={hexagonos}
         alTocar={(p) => {
           if (marcando === 'origen') {
             setOrigen(p);
@@ -284,6 +295,11 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
           </div>
         </div>
         {gps && <p className="tenue">{gps}</p>}
+        {cercanas.length > 0 && (
+          <p className="tenue chico">
+            {cercanas.length === 1 ? '1 grúa libre' : `${cercanas.length} grúas libres`} cerca de ti (zonas amarillas del mapa)
+          </p>
+        )}
 
         <div className="chips" role="group" aria-label="Qué pasó">
           {(Object.keys(NOMBRE_PROBLEMA) as Problema[]).map((k) => (

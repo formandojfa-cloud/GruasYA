@@ -1,5 +1,5 @@
-import { minutosEstimados } from './geo';
-import { distanciaKm } from './geo';
+import { distanciaKm, minutosEstimados } from './geo';
+import { celdasCercanas, enCeldas, indicePorCelda } from './h3';
 import type { Coordenada, Gruero, Servicio } from './tipos';
 
 export interface ParametrosDespacho {
@@ -31,7 +31,10 @@ export function candidatos(
   ahora: number,
   p: ParametrosDespacho = DESPACHO_INICIAL,
 ): Candidato[] {
-  return grueros
+  // Primero el índice H3 descarta las grúas fuera de las celdas cercanas;
+  // después se mide la distancia exacta solo a las que quedan.
+  const cercanas = enCeldas(indicePorCelda(grueros), celdasCercanas(origen, radioKm));
+  return cercanas
     .filter(
       (g) =>
         g.disponible &&

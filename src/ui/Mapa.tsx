@@ -1,5 +1,6 @@
 import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
+import { bordeCelda } from '../domain/h3';
 import type { Coordenada } from '../domain/tipos';
 
 export interface Marcador {
@@ -7,6 +8,12 @@ export interface Marcador {
   punto: Coordenada;
   tipo: 'origen' | 'destino' | 'grua' | 'grua-libre';
   texto?: string;
+}
+
+// Hexágono H3 pintado sobre el mapa: dónde hay grúas o la zona del gruero.
+export interface Hexagono {
+  celda: string;
+  tipo: 'grua' | 'zona';
 }
 
 const TOKEN_MAPBOX = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
@@ -42,6 +49,7 @@ export function Mapa({
   ajustar = true,
   ruta,
   hueco = 0.55,
+  hexagonos,
 }: {
   centro: Coordenada;
   marcadores: Marcador[];
@@ -49,6 +57,7 @@ export function Mapa({
   ajustar?: boolean;
   ruta?: Coordenada[]; // trazo por calles, recogida → destino
   hueco?: number; // fracción de la altura tapada por la hoja inferior
+  hexagonos?: Hexagono[];
 }) {
   const nodo = useRef<HTMLDivElement>(null);
   const mapa = useRef<L.Map | null>(null);
@@ -89,6 +98,13 @@ export function Mapa({
     // Dejar libre la parte de abajo, donde va la hoja con los datos.
     const abajo = Math.round(m.getSize().y * hueco) + 30;
     const margen = { paddingTopLeft: [40, 90] as L.PointTuple, paddingBottomRight: [40, abajo] as L.PointTuple };
+    for (const h of hexagonos ?? []) {
+      const grua = h.tipo === 'grua';
+      L.polygon(
+        bordeCelda(h.celda).map((p) => [p.lat, p.lng] as [number, number]),
+        { color: grua ? '#f5b301' : '#276ef1', weight: 1, opacity: 0.8, fillOpacity: grua ? 0.3 : 0.12, interactive: false },
+      ).addTo(g);
+    }
     if (ruta && ruta.length > 1) {
       const color = getComputedStyle(document.documentElement).getPropertyValue('--ruta').trim() || '#000';
       const linea = L.polyline(
@@ -105,16 +121,20 @@ export function Mapa({
     for (const mk of marcadores) {
       L.marker([mk.punto.lat, mk.punto.lng], { icon: icono(mk), zIndexOffset: mk.tipo === 'grua' ? 1000 : 0 }).addTo(g);
     }
-    // Reencuadrar solo cuando cambia qué se muestra, no cada vez que la grúa se mueve.
-    const firma = marcadores.map((mk) => mk.id).join('|');
+    // Reencuadrar solo cuando cambia qué se muestra, no cada vez que la grúa se mueve;
+    // con un solo marcador (el gruero esperando) el mapa lo sigue.
+    const firma =
+      marcadores.length === 1
+        ? `${marcadores[0].id}|${marcadores[0].punto.lat.toFixed(4)}|${marcadores[0].punto.lng.toFixed(4)}`
+        : marcadores.map((mk) => mk.id).join('|');
     if (ajustar && firma !== firmaAjuste.current && marcadores.length > 0) {
       firmaAjuste.current = firma;
       if (marcadores.length === 1) {
-        m.setView([marcadores[0].punto.lat, marcadores[0].punto.lng], 15, { animate: false });
+        m.setView([marcadores[0].punto.lat, marcadores[0].punto.lng], 14, { animate: false });
         m.panBy([0, abajo / 2 - 45], { animate: false });
       } else m.fitBounds(L.latLngBounds(marcadores.map((mk) => [mk.punto.lat, mk.punto.lng])), { ...margen, animate: false });
     }
-  }, [marcadores, ajustar, ruta, hueco]);
+  }, [marcadores, ajustar, ruta, hueco, hexagonos]);
 
   return (
     <div className="mapa-marco">

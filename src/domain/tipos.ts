@@ -44,6 +44,7 @@ export interface Gruero {
   rechazosSeguidos: number;
   comisionAcumulada: number; // Q registrados (no cobrados en el piloto)
   automatico?: boolean; // gruero simulado de la demo
+  gpsEnVivo?: boolean; // la ubicación viene del GPS del teléfono, no de la simulación
 }
 
 export interface Oferta {

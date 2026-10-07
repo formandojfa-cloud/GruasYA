@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   aceptarOferta,
+  actualizarUbicacion,
   cambiarDisponible,
+  dejarGps,
   marcarCargado,
   marcarEntregadoYCobrado,
   marcarLlegada,
@@ -10,17 +12,51 @@ import {
 import { useEstado } from '../data/store';
 import { DESPACHO_INICIAL } from '../domain/despacho';
 import { distanciaKm, minutosEstimados } from '../domain/geo';
+import { celdaDe } from '../domain/h3';
+import { gridDisk } from 'h3-js';
 import type { Gruero as TGruero, Servicio } from '../domain/tipos';
 import { Chat } from './Chat';
 import { Foto } from './Conductor';
 import { km, minutos, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
-import { Mapa, type Marcador } from './Mapa';
+import { Mapa, type Hexagono, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
+
+// Envía la ubicación del teléfono mientras esté activo. En producción esto va al
+// servidor cada pocos segundos; en la demo se guarda en este navegador.
+function useGpsEnVivo(grueroId: string, activo: boolean, alFallar: (m: string) => void) {
+  const fallar = useRef(alFallar);
+  fallar.current = alFallar;
+  useEffect(() => {
+    if (!activo) return;
+    if (!navigator.geolocation) {
+      fallar.current('Este navegador no comparte ubicación.');
+      return;
+    }
+    const id = navigator.geolocation.watchPosition(
+      (p) => actualizarUbicacion(grueroId, { lat: p.coords.latitude, lng: p.coords.longitude }),
+      (err) => {
+        // Sin permiso no hay nada que hacer; otros errores (sin señal) se reintentan solos.
+        if (err.code === err.PERMISSION_DENIED) fallar.current('Sin permiso de ubicación. Actívalo en tu navegador.');
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
+    );
+    return () => {
+      navigator.geolocation.clearWatch(id);
+      dejarGps(grueroId);
+    };
+  }, [grueroId, activo]);
+}
 
 export function Gruero() {
   const estado = useEstado();
   const [id, setId] = useSesion('gruaya-gruero', 'g-demo');
   const g = estado.grueros.find((x) => x.id === id) ?? estado.grueros[0];
+  const [gps, setGps] = useSesion('gruaya-gps', null);
+  const [errorGps, setErrorGps] = useState('');
+  useGpsEnVivo(g.id, gps === 'si', (m) => {
+    setErrorGps(m);
+    setGps(null);
+  });
 
   const activo = estado.servicios.find(
     (s) => s.grueroId === g.id && ['asignado', 'en_sitio', 'en_ruta', 'entregado'].includes(s.estado),
@@ -39,11 +75,20 @@ export function Gruero() {
         { id: 'grua', punto: g.ubicacion, tipo: 'grua', texto: 'Tú' },
       ]
     : [{ id: 'grua', punto: g.ubicacion, tipo: 'grua', texto: 'Tú' }];
+  // Tu celda H3 y las vecinas: la zona donde te llegan las solicitudes más cercanas.
+  const miCelda = celdaDe(g.ubicacion);
+  const hexagonos = useMemo<Hexagono[]>(
+    () => (servicio ? [] : gridDisk(miCelda, 1).map((celda) => ({ celda, tipo: celda === miCelda ? 'grua' : 'zona' }))),
+    [miCelda, servicio],
+  );
 
   return (
     <>
-      <Mapa centro={g.ubicacion} marcadores={marcadores} ruta={servicio?.ruta} />
+      <Mapa centro={g.ubicacion} marcadores={marcadores} ruta={servicio?.ruta} hexagonos={hexagonos} />
       <div className="ganancias">{quetzales(ganado)}</div>
+      <button className={`gps ${gps === 'si' ? 'en-vivo' : ''}`} onClick={() => { setErrorGps(''); setGps(gps === 'si' ? null : 'si'); }}>
+        {gps === 'si' ? '● GPS en vivo' : '📍 Usar mi GPS'}
+      </button>
       {oferta && !activo && <OfertaEntrante servicio={oferta} gruero={g} />}
       {activo && <ServicioActivo servicio={activo} gruero={g} />}
       {!oferta && !activo && (
@@ -57,6 +102,12 @@ export function Gruero() {
             </div>
             <span className={`estado-punto ${g.disponible ? 'en-linea' : ''}`} />
           </div>
+          {errorGps && <p className="aviso">{errorGps}</p>}
+          {gps === 'si' && (
+            <p className="tenue chico">
+              Tu ubicación real se actualiza en vivo. Solo te llegan solicitudes a 10 km o menos de donde estás.
+            </p>
+          )}
           {!g.disponible && g.rechazosSeguidos >= DESPACHO_INICIAL.rechazosParaPausar && (
             <p className="aviso">Te pausamos por dejar pasar varias ofertas seguidas. Conéctate cuando puedas recibir trabajos.</p>
           )}
