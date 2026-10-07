@@ -46,7 +46,7 @@ function gruero(id: string, nombre: string, ubicacion: Coordenada, extra: Partia
 
 export function estadoInicial(): Estado {
   return {
-    version: 1,
+    version: 2,
     tarifa: PARAMETROS_INICIALES,
     demo: { gruerosAutomaticos: true, aprobacionAutomatica: true },
     conductores: [],

@@ -4,7 +4,7 @@
 import { useSyncExternalStore } from 'react';
 import { estadoInicial, type Estado } from './semilla';
 
-const CLAVE = 'gruaya-demo-v1';
+const CLAVE = 'gruaya-demo-v2';
 let cache: Estado | null = null;
 const oyentes = new Set<() => void>();
 
@@ -13,7 +13,7 @@ function leer(): Estado {
     const crudo = localStorage.getItem(CLAVE);
     if (crudo) {
       const e = JSON.parse(crudo) as Estado;
-      if (e.version === 1) return e;
+      if (e.version === 2) return e;
     }
   } catch {
     // almacenamiento bloqueado o dañado: se arranca de cero

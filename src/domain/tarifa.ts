@@ -14,9 +14,9 @@ export interface ParametrosTarifa {
 
 // Valores de ejemplo del documento de alcance; se ajustan desde administración.
 export const PARAMETROS_INICIALES: ParametrosTarifa = {
-  banderazo: 250,
+  banderazo: 350,
   kmIncluidos: 5,
-  precioKm: 15,
+  precioKm: 20,
   factorVehiculo: { moto: 0.8, carro: 1, pickup: 1.2 },
   recargoNocturno: 1.2,
   horaNocheInicio: 22,
