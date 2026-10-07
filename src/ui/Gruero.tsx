@@ -10,7 +10,7 @@ import {
   rechazarOferta,
 } from '../data/acciones';
 import { useEstado } from '../data/store';
-import { DESPACHO_INICIAL } from '../domain/despacho';
+import { DESPACHO_INICIAL, minutosParaLlegar } from '../domain/despacho';
 import { distanciaKm, minutosEstimados } from '../domain/geo';
 import { celdaDe } from '../domain/h3';
 import { gridDisk } from 'h3-js';
@@ -84,7 +84,7 @@ export function Gruero() {
 
   return (
     <>
-      <Mapa centro={g.ubicacion} marcadores={marcadores} ruta={servicio?.ruta} hexagonos={hexagonos} />
+      <Mapa centro={g.ubicacion} marcadores={marcadores} ruta={servicio && servicio.estado === 'asignado' && servicio.rutaGrua ? servicio.rutaGrua : servicio?.ruta} hexagonos={hexagonos} />
       <div className="ganancias">{quetzales(ganado)}</div>
       <button className={`gps ${gps === 'si' ? 'en-vivo' : ''}`} onClick={() => { setErrorGps(''); setGps(gps === 'si' ? null : 'si'); }}>
         {gps === 'si' ? '● GPS en vivo' : '📍 Usar mi GPS'}
@@ -191,7 +191,9 @@ function OfertaEntrante({ servicio: s, gruero: g }: { servicio: Servicio; gruero
         <div className="fila-dato">
           <span className="marca-origen" />
           <span>
-            Recogida a {minutos(minutosEstimados(g.ubicacion, s.origen))} ({km(distanciaKm(g.ubicacion, s.origen))}) ·{' '}
+            Recogida a {minutos(s.etas?.[g.id]?.minutos ?? minutosEstimados(g.ubicacion, s.origen))} (
+            {km(s.etas?.[g.id]?.km ?? distanciaKm(g.ubicacion, s.origen))}
+            {s.etas?.[g.id] ? ' por calle' : ''}) ·{' '}
             {NOMBRE_PROBLEMA[s.problema]}
           </span>
         </div>
@@ -227,7 +229,7 @@ function ServicioActivo({ servicio: s, gruero: g }: { servicio: Servicio; gruero
       <div>
         <h2>{s.estado === 'en_ruta' ? `Rumbo a ${s.destinoTexto}` : NOMBRE_ESTADO[s.estado]}</h2>
         <span className="tenue">
-          {s.estado === 'asignado' && `Cliente a ${minutos(minutosEstimados(g.ubicacion, s.origen))}`}
+          {s.estado === 'asignado' && `Cliente a ${minutos(minutosParaLlegar(s, g.ubicacion))} por calle`}
           {s.estado === 'en_sitio' && 'Revisa el vehículo antes de subirlo'}
           {s.estado === 'en_ruta' && `${km(s.distanciaKm)} de viaje`}
           {s.estado === 'entregado' && 'Esperando que el cliente confirme el pago'}

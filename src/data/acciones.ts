@@ -155,6 +155,9 @@ export function aceptar(e: Estado, servicioId: string, grueroId: string) {
   oferta.resultado = 'aceptada';
   s.grueroId = grueroId;
   s.estado = 'asignado';
+  s.asignadoEn = Date.now();
+  const eta = s.etas?.[grueroId];
+  if (eta) s.etaPrometido = eta.minutos;
   const g = gruero(e, grueroId);
   g.disponible = false;
   g.rechazosSeguidos = 0;

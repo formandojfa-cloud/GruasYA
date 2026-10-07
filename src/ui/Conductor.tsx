@@ -8,13 +8,14 @@ import {
 } from '../data/acciones';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
-import { distanciaKm, largoRutaKm, minutosEstimados } from '../domain/geo';
+import { distanciaKm, largoRutaKm } from '../domain/geo';
 import { celdaDe, celdasCercanas, enCeldas, indicePorCelda } from '../domain/h3';
+import { minutosParaLlegar } from '../domain/despacho';
 import { calcularTarifa, cargoCancelacion } from '../domain/tarifa';
 import type { Conductor as TConductor, Coordenada, Problema, Servicio, TipoVehiculo } from '../domain/tipos';
 import { BotonConfirmar } from './BotonConfirmar';
 import { Chat } from './Chat';
-import { useCotizacion } from './cotizacion';
+import { useCotizacion, useEtaGrua } from './cotizacion';
 import { km, minutos, NOMBRE_CLIMA, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
 import { Mapa, type Hexagono, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
@@ -209,7 +210,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
     indicePorCelda(estado.grueros.filter((g) => g.disponible)),
     celdasCercanas(origen, 10),
   ).filter((g) => distanciaKm(g.ubicacion, origen) <= 10);
-  const eta = cercanas.length ? Math.min(...cercanas.map((g) => minutosEstimados(g.ubicacion, origen))) : null;
+  const eta = useEtaGrua(origen, cercanas);
 
   const usarMiUbicacion = () => {
     if (!navigator.geolocation) return setGps('Tu navegador no comparte ubicación.');
@@ -359,7 +360,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
         {conductor.deudaCancelacion > 0 && (
           <div className="aviso">Incluye {quetzales(conductor.deudaCancelacion)} de una cancelación anterior.</div>
         )}
-        {eta === null && <div className="aviso">No hay grúas libres cerca ahora. La central te llamará si pides.</div>}
+        {cercanas.length === 0 && <div className="aviso">No hay grúas libres cerca ahora. La central te llamará si pides.</div>}
 
         <div className="hoja-pie">
           <div className="pago">💵 Efectivo al gruero</div>
@@ -401,7 +402,7 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
     { id: 'destino', punto: s.destino, tipo: 'destino', texto: s.destinoTexto },
     ...(g ? [{ id: 'grua', punto: g.ubicacion, tipo: 'grua' as const, texto: g.nombre }] : []),
   ];
-  const eta = g && s.estado === 'asignado' ? minutosEstimados(g.ubicacion, s.origen) : null;
+  const eta = g && s.estado === 'asignado' ? minutosParaLlegar(s, g.ubicacion) : null;
   const largo = largoRutaKm(s.ruta) || s.distanciaKm;
   const restante = s.estado === 'en_ruta' ? s.minutos * Math.max(0, 1 - (s.avanceKm ?? 0) / largo) : null;
   const puedeCancelar = ['buscando', 'asignado', 'en_sitio', 'sin_grua'].includes(s.estado);
@@ -437,7 +438,7 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
 
   return (
     <>
-      <Mapa centro={s.origen} marcadores={marcadores} ruta={s.ruta} />
+      <Mapa centro={s.origen} marcadores={marcadores} ruta={s.estado === 'asignado' && s.rutaGrua ? s.rutaGrua : s.ruta} />
       <div className="hoja">
         <div className="encabezado-viaje">
           <div className="pila" style={{ gap: 2 }}>

@@ -63,6 +63,11 @@ function Servicios() {
             <div className="tenue">
               Grúa: {g?.nombre ?? '—'} · ofertas: {s.ofertas.map((o) => `${o.grueroId.replace('g-', '')} ${o.resultado ?? 'pendiente'}`).join(', ') || '—'}
             </div>
+            {s.etaPrometido !== undefined && s.asignadoEn && s.llegadaEn && (
+              <div className="tenue">
+                Llegada: prometida {Math.round(s.etaPrometido)} min · real {Math.max(1, Math.round((s.llegadaEn - s.asignadoEn) / 60000))} min
+              </div>
+            )}
             {s.evidencias.length > 0 && <div className="tenue">Evidencias: {s.evidencias.join(', ')}</div>}
             {s.calificacion && <div className="tenue">Calificación: {'★'.repeat(s.calificacion)}</div>}
           </div>

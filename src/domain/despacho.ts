@@ -1,4 +1,4 @@
-import { distanciaKm, minutosEstimados } from './geo';
+import { distanciaKm, largoRutaKm, minutosEstimados } from './geo';
 import { celdasCercanas, enCeldas, indicePorCelda } from './h3';
 import type { Coordenada, Gruero, Servicio } from './tipos';
 
@@ -30,6 +30,7 @@ export function candidatos(
   yaOfrecidos: Set<string>,
   ahora: number,
   p: ParametrosDespacho = DESPACHO_INICIAL,
+  etas: Servicio['etas'] = {},
 ): Candidato[] {
   // Primero el índice H3 descarta las grúas fuera de las celdas cercanas;
   // después se mide la distancia exacta solo a las que quedan.
@@ -42,7 +43,7 @@ export function candidatos(
         ahora - g.ubicacionEn <= p.ubicacionVigenteMs &&
         distanciaKm(g.ubicacion, origen) <= radioKm,
     )
-    .map((gruero) => ({ gruero, minutos: minutosEstimados(gruero.ubicacion, origen) }))
+    .map((gruero) => ({ gruero, minutos: etas[gruero.id]?.minutos ?? minutosEstimados(gruero.ubicacion, origen) }))
     .sort(
       (a, b) =>
         a.minutos - b.minutos ||
@@ -71,7 +72,7 @@ export function siguientePaso(
   const yaOfrecidos = new Set(servicio.ofertas.map((o) => o.grueroId));
   const radios = p.radiosKm.filter((r) => r >= servicio.radioKm);
   for (const radioKm of radios) {
-    const [primero] = candidatos(grueros, servicio.origen, radioKm, yaOfrecidos, ahora, p);
+    const [primero] = candidatos(grueros, servicio.origen, radioKm, yaOfrecidos, ahora, p, servicio.etas);
     if (primero) return { tipo: 'ofrecer', grueroId: primero.gruero.id, radioKm };
   }
   return { tipo: 'sin_grua' };
@@ -80,4 +81,15 @@ export function siguientePaso(
 // Oferta sin respuesta que ya pasó su tiempo.
 export function ofertaVencida(servicio: Servicio, ahora: number, p: ParametrosDespacho = DESPACHO_INICIAL) {
   return servicio.ofertas.find((o) => !o.resultado && ahora - o.enviadaEn >= p.segundosParaAceptar * 1000);
+}
+
+// Minutos que le faltan a la grúa asignada para llegar al cliente: por la ruta
+// de calles si ya se calculó; si no, la estimación en línea recta.
+export function minutosParaLlegar(servicio: Servicio, grua: Coordenada): number {
+  if (servicio.rutaGrua && servicio.minutosGrua !== undefined) {
+    const largo = largoRutaKm(servicio.rutaGrua);
+    const falta = largo > 0 ? Math.max(0, 1 - (servicio.avanceGruaKm ?? 0) / largo) : 0;
+    return servicio.minutosGrua * falta;
+  }
+  return minutosEstimados(grua, servicio.origen);
 }

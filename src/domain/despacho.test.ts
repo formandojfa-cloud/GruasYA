@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { candidatos, ofertaVencida, siguientePaso } from './despacho';
+import { candidatos, minutosParaLlegar, ofertaVencida, siguientePaso } from './despacho';
 import type { Gruero, Servicio } from './tipos';
 
 const AHORA = 1_000_000_000;
@@ -120,5 +120,22 @@ describe('ofertaVencida', () => {
     const s = servicio({ ofertas: [{ grueroId: 'b', enviadaEn: AHORA - 91_000 }] });
     expect(ofertaVencida(s, AHORA)?.grueroId).toBe('b');
     expect(ofertaVencida(s, AHORA - 2_000)).toBeUndefined();
+  });
+});
+
+describe('tiempo por calle', () => {
+  it('ordena por el tiempo real por calle, no por la línea recta', () => {
+    // "cerca" está a 1 km en línea recta pero del otro lado de un barranco.
+    const lista = [gruero('cerca', 1), gruero('lejos', 3)];
+    const etas = { cerca: { minutos: 25, km: 9 }, lejos: { minutos: 9, km: 3.5 } };
+    const r = candidatos(lista, ORIGEN, 5, new Set(), AHORA, undefined, etas);
+    expect(r.map((c) => c.gruero.id)).toEqual(['lejos', 'cerca']);
+    expect(r[1].minutos).toBe(25);
+  });
+
+  it('descuenta lo recorrido de la ruta de la grúa', () => {
+    const s = servicio({ rutaGrua: [ORIGEN, aKm(2)], minutosGrua: 10, avanceGruaKm: 0 });
+    expect(minutosParaLlegar(s, aKm(2))).toBeCloseTo(10);
+    expect(minutosParaLlegar({ ...s, avanceGruaKm: 1 }, aKm(1))).toBeCloseTo(5, 0);
   });
 });

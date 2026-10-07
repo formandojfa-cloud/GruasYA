@@ -80,6 +80,16 @@ export interface Servicio {
   radioKm: number;
   ofertas: Oferta[];
   grueroId?: string;
+  // Tiempo por calle (con tráfico) de cada grúa candidata hasta el cliente. La
+  // línea recta no ve barrancos ni vueltas; esto sí.
+  etas?: Record<string, { minutos: number; km: number }>;
+  etasListas?: boolean;
+  asignadoEn?: number;
+  etaPrometido?: number; // minutos que se le dijeron al cliente al aceptar
+  rutaGrua?: Coordenada[]; // trazo por calles, grúa → cliente
+  minutosGrua?: number;
+  rutaGruaEn?: number; // cuándo se calculó (se recalcula con GPS en vivo)
+  avanceGruaKm?: number; // simulación: km recorridos hacia el cliente
   llegadaEn?: number; // cuando el gruero marcó que llegó
   evidencias: string[]; // fotos y video al cargar
   cobradoPorGruero: boolean;

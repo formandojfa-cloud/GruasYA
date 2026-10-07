@@ -3,12 +3,15 @@
 import { DESPACHO_INICIAL, ofertaVencida, siguientePaso } from '../domain/despacho';
 import { avanzar, distanciaKm, largoRutaKm, puntoEnRuta } from '../domain/geo';
 import { aceptar, cerrarSiPagado, contarRechazo } from './acciones';
+import { calcularEtas, calcularRutaGrua } from './eta';
 import type { Estado } from './semilla';
 import { actualizar } from './store';
 
 const SEGUNDOS_BOT_ACEPTA = 4;
 const SEGUNDOS_EN_SITIO = 6;
 const KM_POR_TICK = 0.25; // velocidad acelerada para que la demo no tarde
+const ESPERA_ETAS_MS = 6000; // tiempo máximo esperando rutas antes de ofrecer igual
+const RECALCULAR_GPS_MS = 30_000;
 
 export function tick(e: Estado, ahora: number) {
   for (const g of e.grueros) {
@@ -21,6 +24,11 @@ export function tick(e: Estado, ahora: number) {
 
   for (const s of e.servicios) {
     if (s.estado === 'buscando') {
+      // Antes de la primera oferta se piden los tiempos por calle de los candidatos.
+      if (!s.etasListas) {
+        void calcularEtas(s.id);
+        if (ahora - s.creadoEn < ESPERA_ETAS_MS) continue;
+      }
       const vencida = ofertaVencida(s, ahora);
       if (vencida) {
         vencida.resultado = 'vencida';
@@ -48,7 +56,15 @@ export function tick(e: Estado, ahora: number) {
     const auto = g.automatico && e.demo.gruerosAutomaticos;
 
     if (s.estado === 'asignado') {
-      if (!g.gpsEnVivo) g.ubicacion = acercar(g.ubicacion, s.origen);
+      if (!s.rutaGrua || (g.gpsEnVivo && ahora - (s.rutaGruaEn ?? 0) > RECALCULAR_GPS_MS)) void calcularRutaGrua(s.id);
+      if (!g.gpsEnVivo) {
+        if (s.rutaGrua) {
+          // La grúa simulada avanza por las calles hacia el cliente.
+          s.avanceGruaKm = Math.min((s.avanceGruaKm ?? 0) + KM_POR_TICK, largoRutaKm(s.rutaGrua));
+          g.ubicacion =
+            s.avanceGruaKm >= largoRutaKm(s.rutaGrua) ? s.origen : puntoEnRuta(s.rutaGrua, s.avanceGruaKm);
+        } else g.ubicacion = acercar(g.ubicacion, s.origen);
+      }
       if (auto && distanciaKm(g.ubicacion, s.origen) < 0.05) {
         s.estado = 'en_sitio';
         s.llegadaEn = ahora;
