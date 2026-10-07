@@ -1,4 +1,4 @@
-import type { EstadoServicio, Problema, TipoVehiculo } from '../domain/tipos';
+import type { Clima, EstadoServicio, Problema, TipoVehiculo } from '../domain/tipos';
 
 export const quetzales = (n: number) => {
   const decimales = Number.isInteger(n) ? 0 : 2;
@@ -31,4 +31,10 @@ export const NOMBRE_ESTADO: Record<EstadoServicio, string> = {
   pagado: 'Pagado',
   sin_grua: 'Sin grúa: la central te llama',
   cancelado: 'Cancelado',
+};
+
+export const NOMBRE_CLIMA: Record<Clima, string> = {
+  seco: 'sin lluvia',
+  lluvia: 'lluvia',
+  lluvia_fuerte: 'lluvia fuerte',
 };

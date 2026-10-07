@@ -2,6 +2,8 @@ export type Coordenada = { lat: number; lng: number };
 
 export type TipoVehiculo = 'moto' | 'carro' | 'pickup';
 export type TipoGrua = 'plataforma' | 'arrastre';
+export type Clima = 'seco' | 'lluvia' | 'lluvia_fuerte';
+export type FuenteRuta = 'mapbox' | 'osrm' | 'estimada';
 export type Problema = 'no_arranca' | 'choque' | 'llanta' | 'otro';
 
 export type EstadoServicio =
@@ -66,6 +68,11 @@ export interface Servicio {
   vehiculo: TipoVehiculo;
   problema: Problema;
   distanciaKm: number;
+  minutos: number; // duración estimada del viaje al aceptar el precio
+  clima: Clima;
+  ruta: Coordenada[]; // trazo por calles, recogida → destino
+  fuenteRuta: FuenteRuta;
+  avanceKm?: number; // simulación: km recorridos en la ruta
   tarifa: number;
   comision: number;
   estado: EstadoServicio;

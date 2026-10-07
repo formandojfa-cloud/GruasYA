@@ -163,7 +163,7 @@ function ServicioActivo({ servicio: s, gruero: g }: { servicio: Servicio; gruero
           </a>
         </div>
       </div>
-      <Mapa centro={s.origen} marcadores={marcadores} />
+      <Mapa centro={s.origen} marcadores={marcadores} ruta={s.ruta} />
       <div className="tarjeta">
         {s.estado === 'asignado' && (
           <button className="principal" onClick={() => marcarLlegada(s.id)}>

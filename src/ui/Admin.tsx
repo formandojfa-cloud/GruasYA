@@ -150,6 +150,10 @@ function Ajustes() {
         {campo('banderazo', 'Banderazo (Q)')}
         {campo('kmIncluidos', 'Km incluidos')}
         {campo('precioKm', 'Precio por km adicional (Q)')}
+        {campo('minutosIncluidos', 'Minutos de viaje incluidos')}
+        {campo('precioMinuto', 'Precio por minuto adicional (Q)', 0.5)}
+        {campo('recargoLluvia', 'Recargo con lluvia (multiplicador)', 0.05)}
+        {campo('recargoLluviaFuerte', 'Recargo con lluvia fuerte (multiplicador)', 0.05)}
         {campo('recargoNocturno', 'Recargo nocturno (multiplicador)', 0.05)}
         {campo('comision', 'Comisión GruaYa (fracción)', 0.01)}
         {campo('fraccionCancelacion', 'Cargo por cancelar tras aceptar (fracción)', 0.05)}

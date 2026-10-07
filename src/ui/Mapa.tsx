@@ -21,11 +21,13 @@ export function Mapa({
   marcadores,
   alTocar,
   ajustar = true,
+  ruta,
 }: {
   centro: Coordenada;
   marcadores: Marcador[];
   alTocar?: (p: Coordenada) => void;
   ajustar?: boolean;
+  ruta?: Coordenada[]; // trazo por calles, recogida → destino
 }) {
   const nodo = useRef<HTMLDivElement>(null);
   const mapa = useRef<L.Map | null>(null);
@@ -33,6 +35,7 @@ export function Mapa({
   const tocar = useRef(alTocar);
   tocar.current = alTocar;
   const firmaAjuste = useRef('');
+  const firmaRutaPrevia = useRef('');
   const [sinCalles, setSinCalles] = useState(false);
 
   useEffect(() => {
@@ -61,6 +64,18 @@ export function Mapa({
     const g = capa.current;
     if (!m || !g) return;
     g.clearLayers();
+    if (ruta && ruta.length > 1) {
+      const linea = L.polyline(
+        ruta.map((p) => [p.lat, p.lng] as [number, number]),
+        { color: '#2f6fd1', weight: 5, opacity: 0.75 },
+      ).addTo(g);
+      // Encuadrar cuando llega una ruta nueva.
+      const firmaRuta = `${ruta.length}|${ruta.at(0)!.lat}|${ruta.at(-1)!.lat}`;
+      if (firmaRuta !== firmaRutaPrevia.current) {
+        firmaRutaPrevia.current = firmaRuta;
+        m.fitBounds(linea.getBounds(), { padding: [40, 40] });
+      }
+    }
     for (const mk of marcadores) {
       const icono = L.divIcon({
         className: '',
@@ -78,7 +93,7 @@ export function Mapa({
       if (marcadores.length === 1) m.setView([marcadores[0].punto.lat, marcadores[0].punto.lng], 14);
       else m.fitBounds(L.latLngBounds(marcadores.map((mk) => [mk.punto.lat, mk.punto.lng])), { padding: [40, 40] });
     }
-  }, [marcadores, ajustar]);
+  }, [marcadores, ajustar, ruta]);
 
   return (
     <div className="mapa-marco">

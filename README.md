@@ -29,4 +29,13 @@ npm run build
 
 ### Simulado en esta versión
 
-Código SMS (siempre `123456`), verificación de identidad (pensada para Didit), rutas reales (se estima la distancia por calle con un factor sobre la línea recta) y grueros automáticos para probar sin otra persona.
+Código SMS (siempre `123456`), verificación de identidad (pensada para Didit) y grueros automáticos para probar sin otra persona. El registro de conductor está desactivado por ahora (`REGISTRO_ACTIVO` en `src/ui/Conductor.tsx`).
+
+### Rutas, tráfico y clima
+
+El precio usa la ruta por calles y su duración, más un recargo si llueve en el punto de recogida:
+
+- **Con tráfico en vivo:** crea una cuenta gratis en [Mapbox](https://account.mapbox.com/) (100,000 rutas al mes sin costo) y pon el token en un archivo `.env.local` como `VITE_MAPBOX_TOKEN=pk...`. En GitHub, guárdalo como secreto `VITE_MAPBOX_TOKEN` para que la demo lo use.
+- **Sin token:** se usa [OSRM](https://project-osrm.org/) (gratis, calles reales pero sin tráfico en vivo) y se alarga la duración en horas pico (6 a 9 y 16 a 20).
+- **Clima:** [Open-Meteo](https://open-meteo.com/), gratis y sin clave.
+- Si ningún servicio responde, se estima con línea recta y se avisa al conductor.

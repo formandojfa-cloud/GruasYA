@@ -1,7 +1,7 @@
 // Corre el despacho y la simulación de la demo una vez por segundo. Solo una
 // pestaña lo ejecuta a la vez (Web Locks); en producción esto vive en el servidor.
 import { DESPACHO_INICIAL, ofertaVencida, siguientePaso } from '../domain/despacho';
-import { avanzar, distanciaKm } from '../domain/geo';
+import { avanzar, distanciaKm, largoRutaKm, puntoEnRuta } from '../domain/geo';
 import { aceptar, cerrarSiPagado, contarRechazo } from './acciones';
 import type { Estado } from './semilla';
 import { actualizar } from './store';
@@ -60,8 +60,10 @@ export function tick(e: Estado, ahora: number) {
         s.estado = 'en_ruta';
       }
     } else if (s.estado === 'en_ruta') {
-      g.ubicacion = acercar(g.ubicacion, s.destino);
-      if (auto && distanciaKm(g.ubicacion, s.destino) < 0.05) {
+      // La grúa avanza por las calles de la ruta cotizada.
+      s.avanceKm = (s.avanceKm ?? 0) + KM_POR_TICK;
+      g.ubicacion = puntoEnRuta(s.ruta, s.avanceKm);
+      if (auto && s.avanceKm >= largoRutaKm(s.ruta)) {
         s.estado = 'entregado';
         s.cobradoPorGruero = true;
         cerrarSiPagado(e, s);

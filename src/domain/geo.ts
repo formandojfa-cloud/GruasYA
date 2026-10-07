@@ -29,3 +29,28 @@ export function avanzar(desde: Coordenada, hacia: Coordenada, fraccion: number):
   const f = Math.min(1, Math.max(0, fraccion));
   return { lat: desde.lat + (hacia.lat - desde.lat) * f, lng: desde.lng + (hacia.lng - desde.lng) * f };
 }
+
+export function largoRutaKm(ruta: Coordenada[]): number {
+  let total = 0;
+  for (let i = 1; i < ruta.length; i++) total += distanciaKm(ruta.at(i - 1)!, ruta.at(i)!);
+  return total;
+}
+
+// Punto a cierta distancia desde el inicio de la ruta, para mover la grúa por las calles.
+export function puntoEnRuta(ruta: Coordenada[], km: number): Coordenada {
+  let resta = km;
+  for (let i = 1; i < ruta.length; i++) {
+    const a = ruta.at(i - 1)!;
+    const b = ruta.at(i)!;
+    const tramo = distanciaKm(a, b);
+    if (resta <= tramo) return tramo === 0 ? b : avanzar(a, b, resta / tramo);
+    resta -= tramo;
+  }
+  return ruta.at(-1)!;
+}
+
+// Horas pico de la capital; se usan cuando el servicio de rutas no da tráfico en vivo.
+export const FACTOR_HORA_PICO = 1.6;
+export function esHoraPico(hora: number): boolean {
+  return (hora >= 6 && hora < 9) || (hora >= 16 && hora < 20);
+}

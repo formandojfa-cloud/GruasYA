@@ -48,7 +48,7 @@ function gruero(id: string, nombre: string, ubicacion: Coordenada, extra: Partia
 
 export function estadoInicial(): Estado {
   return {
-    version: 3,
+    version: 4,
     tarifa: PARAMETROS_INICIALES,
     demo: { gruerosAutomaticos: true, aprobacionAutomatica: true },
     // Mientras el registro está desactivado, se entra directo con este conductor.

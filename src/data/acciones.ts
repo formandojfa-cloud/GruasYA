@@ -1,6 +1,6 @@
 import { cargoCancelacion, calcularTarifa } from '../domain/tarifa';
-import { distanciaRutaKm } from '../domain/geo';
-import type { Conductor, Coordenada, Gruero, Problema, Servicio, TipoVehiculo } from '../domain/tipos';
+import type { Clima, Conductor, Coordenada, Gruero, Problema, Servicio, TipoVehiculo } from '../domain/tipos';
+import type { Ruta } from './rutas';
 import type { Estado } from './semilla';
 import { actualizar, nuevoId } from './store';
 
@@ -35,22 +35,28 @@ export interface Solicitud {
   destinoTexto: string;
   vehiculo: TipoVehiculo;
   problema: Problema;
+  ruta: Ruta; // cotizada al mostrar el precio, para cobrar exactamente lo mostrado
+  clima: Clima;
 }
 
 export function pedirGrua(sol: Solicitud): string {
   const id = nuevoId('s');
   actualizar((e) => {
     const conductor = e.conductores.find((c) => c.id === sol.conductorId);
-    const distanciaKm = distanciaRutaKm(sol.origen, sol.destino);
-    const t = calcularTarifa(distanciaKm, sol.vehiculo, new Date().getHours(), e.tarifa);
+    const { ruta, clima, ...resto } = sol;
+    const t = calcularTarifa({ distanciaKm: ruta.distanciaKm, minutos: ruta.minutos, clima }, sol.vehiculo, new Date().getHours(), e.tarifa);
     // La cancelación tardía pendiente se cobra junto con este servicio.
     const deuda = conductor?.deudaCancelacion ?? 0;
     if (conductor) conductor.deudaCancelacion = 0;
     const s: Servicio = {
       id,
-      ...sol,
+      ...resto,
       creadoEn: Date.now(),
-      distanciaKm,
+      distanciaKm: ruta.distanciaKm,
+      minutos: ruta.minutos,
+      clima,
+      ruta: ruta.geometria,
+      fuenteRuta: ruta.fuente,
       tarifa: t.total + deuda,
       comision: t.comision,
       estado: 'buscando',

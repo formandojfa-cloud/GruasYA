@@ -8,12 +8,13 @@ import {
 } from '../data/acciones';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
-import { distanciaRutaKm, minutosEstimados } from '../domain/geo';
+import { minutosEstimados } from '../domain/geo';
 import { calcularTarifa, cargoCancelacion } from '../domain/tarifa';
 import type { Conductor as TConductor, Coordenada, Problema, Servicio, TipoVehiculo } from '../domain/tipos';
 import { BotonConfirmar } from './BotonConfirmar';
 import { Chat } from './Chat';
-import { km, minutos, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
+import { useCotizacion } from './cotizacion';
+import { km, minutos, NOMBRE_CLIMA, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
 import { Mapa, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
 
@@ -173,8 +174,15 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
   const [problema, setProblema] = useState<Problema>('no_arranca');
   const [gps, setGps] = useState('');
 
-  const distancia = distanciaRutaKm(origen, destino.punto);
-  const t = calcularTarifa(distancia, vehiculo, new Date().getHours(), estado.tarifa);
+  const { cotizacion, cargando } = useCotizacion(origen, destino.punto);
+  const t = cotizacion
+    ? calcularTarifa(
+        { distanciaKm: cotizacion.ruta.distanciaKm, minutos: cotizacion.ruta.minutos, clima: cotizacion.clima },
+        vehiculo,
+        new Date().getHours(),
+        estado.tarifa,
+      )
+    : null;
   const cercanas = estado.grueros.filter((g) => g.disponible);
   const eta = cercanas.length ? Math.min(...cercanas.map((g) => minutosEstimados(g.ubicacion, origen))) : null;
 
@@ -217,6 +225,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
         centro={CENTRO_CIUDAD}
         marcadores={marcadores}
         ajustar={false}
+        ruta={cotizacion?.ruta.geometria}
         alTocar={(p) =>
           marcando === 'origen' ? setOrigen(p) : setDestino({ punto: p, nombre: 'Punto marcado en el mapa' })
         }
@@ -265,14 +274,27 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
       <div className="tarjeta precio">
         <div className="fila-entre">
           <span>Precio fijo</span>
-          <strong className="grande">{quetzales(t.total + conductor.deudaCancelacion)}</strong>
+          <strong className="grande">{t && !cargando ? quetzales(t.total + conductor.deudaCancelacion) : '…'}</strong>
         </div>
-        <div className="tenue">
-          {km(distancia)} · banderazo {quetzales(t.base)}
-          {t.kmAdicionales > 0 && ` + ${km(t.kmAdicionales)} × ${quetzales(estado.tarifa.precioKm)}`}
-          {t.factorVehiculo !== 1 && ` · ${NOMBRE_VEHICULO[vehiculo].toLowerCase()} ×${t.factorVehiculo}`}
-          {t.factorHorario !== 1 && ` · nocturno ×${t.factorHorario}`}
-        </div>
+        {cotizacion && t && (
+          <>
+            <div className="tenue">
+              {km(cotizacion.ruta.distanciaKm)} y unos {minutos(cotizacion.ruta.minutos)} de viaje
+              {cotizacion.ruta.conTrafico ? ' con el tráfico actual' : ''}
+            </div>
+            <div className="tenue">
+              Banderazo {quetzales(t.base)}
+              {t.kmAdicionales > 0 && ` + ${km(t.kmAdicionales)} × ${quetzales(estado.tarifa.precioKm)}`}
+              {t.minutosAdicionales > 0 && ` + ${minutos(t.minutosAdicionales)} × ${quetzales(estado.tarifa.precioMinuto)}`}
+              {t.factorVehiculo !== 1 && ` · ${NOMBRE_VEHICULO[vehiculo].toLowerCase()} ×${t.factorVehiculo}`}
+              {t.factorHorario !== 1 && ` · nocturno ×${t.factorHorario}`}
+              {t.factorClima !== 1 && ` · ${NOMBRE_CLIMA[cotizacion.clima]} ×${t.factorClima}`}
+            </div>
+            {cotizacion.ruta.fuente === 'estimada' && (
+              <div className="aviso">No pudimos consultar la ruta por calles; el precio usa una distancia estimada.</div>
+            )}
+          </>
+        )}
         {conductor.deudaCancelacion > 0 && (
           <div className="aviso">Incluye {quetzales(conductor.deudaCancelacion)} de una cancelación anterior.</div>
         )}
@@ -281,11 +303,22 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
         </div>
         <button
           className="principal"
+          disabled={!cotizacion || cargando}
           onClick={() =>
-            pedirGrua({ conductorId: conductor.id, origen, destino: destino.punto, destinoTexto: destino.nombre, vehiculo, problema })
+            cotizacion &&
+            pedirGrua({
+              conductorId: conductor.id,
+              origen,
+              destino: destino.punto,
+              destinoTexto: destino.nombre,
+              vehiculo,
+              problema,
+              ruta: cotizacion.ruta,
+              clima: cotizacion.clima,
+            })
           }
         >
-          Pedir grúa
+          {cargando ? 'Calculando precio…' : 'Pedir grúa'}
         </button>
       </div>
     </div>
@@ -337,7 +370,7 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
           </div>
         )}
       </div>
-      <Mapa centro={s.origen} marcadores={marcadores} />
+      <Mapa centro={s.origen} marcadores={marcadores} ruta={s.ruta} />
       {s.estado === 'entregado' && !s.pagoConfirmadoConductor && (
         <div className="tarjeta">
           <p>Paga {quetzales(s.tarifa)} en efectivo al gruero y confirma aquí.</p>
