@@ -96,8 +96,11 @@ export function Mapa({
     if (!m || !g) return;
     g.clearLayers();
     // Dejar libre la parte de abajo, donde va la hoja con los datos.
-    const abajo = Math.round(m.getSize().y * hueco) + 30;
-    const margen = { paddingTopLeft: [40, 90] as L.PointTuple, paddingBottomRight: [40, abajo] as L.PointTuple };
+    // En computadora el panel va a la izquierda; en celular, abajo.
+    const compu = m.getSize().x >= 900;
+    const abajo = compu ? 40 : Math.round(m.getSize().y * hueco) + 30;
+    const izquierda = compu ? 460 : 40;
+    const margen = { paddingTopLeft: [izquierda, 90] as L.PointTuple, paddingBottomRight: [40, abajo] as L.PointTuple };
     for (const h of hexagonos ?? []) {
       const grua = h.tipo === 'grua';
       L.polygon(
@@ -131,7 +134,7 @@ export function Mapa({
       firmaAjuste.current = firma;
       if (marcadores.length === 1) {
         m.setView([marcadores[0].punto.lat, marcadores[0].punto.lng], 14, { animate: false });
-        m.panBy([0, abajo / 2 - 45], { animate: false });
+        m.panBy(compu ? [-izquierda / 2, 0] : [0, abajo / 2 - 45], { animate: false });
       } else m.fitBounds(L.latLngBounds(marcadores.map((mk) => [mk.punto.lat, mk.punto.lng])), { ...margen, animate: false });
     }
   }, [marcadores, ajustar, ruta, hueco, hexagonos]);

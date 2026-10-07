@@ -312,3 +312,20 @@ button.conectar { background: var(--azul); color: #fff; }
   background: var(--hoja); box-shadow: var(--sombra-flotante);
 }
 .gps.en-vivo { color: var(--verde); }
+
+/* Computadora: panel a la izquierda, como la versión web de las apps de viajes. */
+@media (min-width: 900px) {
+  .barra { justify-content: flex-start; padding-left: 24px; }
+  .barra .segmentos button { padding: 6px 16px; font-size: 14px; }
+  .hoja, .hoja.alta {
+    left: 24px; right: auto; top: 76px; bottom: auto; width: 400px; margin: 0;
+    max-height: calc(100% - 100px); border-radius: 16px;
+  }
+  .hoja::before { display: none; }
+  .hoja-cuerpo { padding-top: 16px; }
+  .hoja-cuerpo:last-child, .hoja-pie { padding-bottom: 16px; }
+  .hoja-pie { border-radius: 0 0 16px 16px; }
+  .pista, .ganancias { left: calc(50% + 212px); top: 20px; }
+  .gps { top: 20px; right: 24px; }
+  .mapa-aviso { left: 448px; top: 20px; }
+}
