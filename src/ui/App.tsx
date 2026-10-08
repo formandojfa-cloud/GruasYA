@@ -30,30 +30,47 @@ function useSinDesplazar(activo: boolean) {
   }, [activo]);
 }
 
-// Si la página ya quedó ampliada (pellizco), avisa cómo volver a verla completa.
-function AvisoAmpliada() {
-  const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-  const [vista, setVista] = useState(() => ({ escala: vv?.scale ?? 1, x: vv?.offsetLeft ?? 0, y: vv?.offsetTop ?? 0 }));
+// Parte de la página que de verdad se ve. Cuando el navegador amplía la página
+// (pellizco en el touchpad o la pantalla), lo fijo a la ventana se sale de la
+// vista; Chrome además recuerda esa ampliación al recargar. Por eso la vista con
+// mapa se dibuja exactamente sobre la zona visible, sea cual sea el zoom.
+interface VistaVisible {
+  escala: number;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+const leerVista = (): VistaVisible => {
+  const vv = window.visualViewport;
+  if (!vv) return { escala: 1, left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+  return { escala: vv.scale, left: vv.offsetLeft, top: vv.offsetTop, width: vv.width, height: vv.height };
+};
+function useVistaVisible(): VistaVisible {
+  const [vista, setVista] = useState(leerVista);
   useEffect(() => {
-    if (!vv) return;
-    const leer = () => setVista({ escala: vv.scale, x: vv.offsetLeft, y: vv.offsetTop });
-    vv.addEventListener('resize', leer);
-    vv.addEventListener('scroll', leer);
+    const leer = () => setVista(leerVista());
+    const vv = window.visualViewport;
+    vv?.addEventListener('resize', leer);
+    vv?.addEventListener('scroll', leer);
+    window.addEventListener('resize', leer);
     return () => {
-      vv.removeEventListener('resize', leer);
-      vv.removeEventListener('scroll', leer);
+      vv?.removeEventListener('resize', leer);
+      vv?.removeEventListener('scroll', leer);
+      window.removeEventListener('resize', leer);
     };
-  }, [vv]);
-  if (vista.escala <= 1.01) return null;
+  }, []);
+  return vista;
+}
+
+// Si la página quedó ampliada, ofrece volver al tamaño normal. Es una navegación
+// nueva (no recargar) porque Chrome restaura la ampliación anterior al recargar.
+function AvisoAmpliada({ escala }: { escala: number }) {
+  if (escala <= 1.01) return null;
   return (
-    <div
-      className="aviso-ampliada"
-      style={{ left: vista.x, top: vista.y, transform: `scale(${1 / vista.escala})` }}
-      role="status"
-    >
-      La página quedó ampliada y no se ve completa.{' '}
-      {/* Una navegación nueva (no recargar) para que Chrome no restaure el zoom anterior. */}
-      <button onClick={() => (window.location.href = `${window.location.pathname}?v=${Date.now()}`)}>Ver completa</button>
+    <div className="aviso-ampliada" role="status">
+      La página está ampliada al {Math.round(escala * 100)}%.{' '}
+      <button onClick={() => (window.location.href = `${window.location.pathname}?v=${Date.now()}`)}>Tamaño normal</button>
     </div>
   );
 }
@@ -62,6 +79,7 @@ export function App() {
   const [papel, setPapel] = useSesion('gruaya-papel', 'conductor');
   const actual = (papel ?? 'conductor') as Papel;
   useSinDesplazar(actual !== 'admin');
+  const vista = useVistaVisible();
   const barra = (
     <div className="barra">
       <div className="marca">
@@ -92,11 +110,15 @@ export function App() {
       </div>
     );
   return (
-    // Si el navegador intenta desplazar la vista (al enfocar algo), se regresa arriba.
-    <div className="pantalla" onScroll={(e) => (e.currentTarget.scrollTop = 0)}>
+    // Ocupa justo la zona visible; si el navegador intenta desplazarla (al enfocar algo), se regresa arriba.
+    <div
+      className="pantalla"
+      style={{ left: vista.left, top: vista.top, width: vista.width, height: vista.height }}
+      onScroll={(e) => (e.currentTarget.scrollTop = 0)}
+    >
       {actual === 'conductor' ? <Conductor /> : <Gruero />}
       {barra}
-      <AvisoAmpliada />
+      <AvisoAmpliada escala={vista.escala} />
     </div>
   );
 }
