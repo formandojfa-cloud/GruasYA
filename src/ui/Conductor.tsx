@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import carro from './vehiculos/carro.svg';
+import moto from './vehiculos/moto.svg';
+import pickup from './vehiculos/pickup.svg';
 import { calificar, cancelarServicio, confirmarPagoConductor, pedirGrua, registrarConductor } from '../data/acciones';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
@@ -163,9 +166,9 @@ function EsperaVerificacion({ conductor, salir }: { conductor: TConductor; salir
 }
 
 const OPCIONES: { tipo: TipoVehiculo; icono: string; nombre: string; detalle: string }[] = [
-  { tipo: 'moto', icono: '🏍️', nombre: 'Moto', detalle: 'Plataforma para motocicleta' },
-  { tipo: 'carro', icono: '🚗', nombre: 'Carro', detalle: 'Sedán, hatchback o SUV pequeña' },
-  { tipo: 'pickup', icono: '🛻', nombre: 'Pickup', detalle: 'Pickup, camioneta o SUV grande' },
+  { tipo: 'moto', icono: moto, nombre: 'Moto', detalle: 'Plataforma para motocicleta' },
+  { tipo: 'carro', icono: carro, nombre: 'Carro', detalle: 'Sedán, hatchback o SUV pequeña' },
+  { tipo: 'pickup', icono: pickup, nombre: 'Pickup', detalle: 'Pickup, camioneta o SUV grande' },
 ];
 
 const hora = (enMinutos: number) =>
@@ -321,7 +324,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
                   className={`opcion ${vehiculo === o.tipo ? 'activo' : ''}`}
                   onClick={() => setVehiculo(o.tipo)}
                 >
-                  <span className="icono">{o.icono}</span>
+                  <img className="icono" src={o.icono} alt="" />
                   <span className="texto">
                     <strong>GrúaYa {o.nombre}</strong>
                     <span>

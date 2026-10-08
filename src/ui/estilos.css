@@ -17,38 +17,7 @@
   --ruta: #000000;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --tinta: #ffffff;
-    --sobre-tinta: #000000;
-    --tenue: #a6a6a6;
-    --fondo: #000000;
-    --gris: #1f1f1f;
-    --gris-fuerte: #2b2b2b;
-    --borde: #333333;
-    --hoja: #121212;
-    --sombra: 0 -4px 24px rgba(0, 0, 0, 0.6);
-    --sombra-flotante: 0 2px 10px rgba(0, 0, 0, 0.6);
-    --acento-suave: #3a3010;
-    --ruta: #ffffff;
-    color-scheme: dark;
-  }
-}
-:root[data-theme='dark'] {
-  --tinta: #ffffff;
-  --sobre-tinta: #000000;
-  --tenue: #a6a6a6;
-  --fondo: #000000;
-  --gris: #1f1f1f;
-  --gris-fuerte: #2b2b2b;
-  --borde: #333333;
-  --hoja: #121212;
-  --sombra: 0 -4px 24px rgba(0, 0, 0, 0.6);
-  --sombra-flotante: 0 2px 10px rgba(0, 0, 0, 0.6);
-  --acento-suave: #3a3010;
-  --ruta: #ffffff;
-  color-scheme: dark;
-}
+/* La app es siempre clara, como pidió el usuario; no sigue el modo oscuro del sistema. */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
 body {
@@ -191,7 +160,7 @@ button.conectar { background: var(--azul); color: #fff; }
   background: none; border: 2px solid transparent; border-radius: 10px; padding: 10px 12px; min-height: 72px;
 }
 .opcion.activo { border-color: var(--tinta); }
-.opcion .icono { font-size: 34px; width: 52px; text-align: center; flex: none; }
+.opcion .icono { width: 64px; height: 36px; object-fit: contain; flex: none; }
 .opcion .texto { flex: 1; display: flex; flex-direction: column; }
 .opcion .texto strong { font-size: 17px; }
 .opcion .texto span { color: var(--tenue); font-size: 13px; font-weight: 400; }
@@ -218,8 +187,9 @@ button.conectar { background: var(--azul); color: #fff; }
 .avatar {
   width: 52px; height: 52px; border-radius: 50%; flex: none;
   background: var(--gris-fuerte); display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 18px;
+  font-weight: 700; font-size: 18px; overflow: hidden;
 }
+.avatar img { width: 44px; height: 24px; object-fit: contain; }
 .persona .texto { flex: 1; display: flex; flex-direction: column; }
 .placa { background: var(--gris); border-radius: 6px; padding: 6px 10px; font-weight: 700; letter-spacing: 0.5px; text-align: right; }
 .placa small { display: block; font-weight: 400; color: var(--tenue); font-size: 12px; letter-spacing: 0; }
@@ -243,8 +213,10 @@ button.conectar { background: var(--azul); color: #fff; }
 }
 .pin-grua, .pin-grua-libre {
   width: 36px; height: 36px; border-radius: 50%; background: #fff;
-  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+.pin-grua img, .pin-grua-libre img { width: 28px; height: 16px; object-fit: contain; display: block;
 }
 .pin-grua { border: 3px solid var(--acento); }
 .pin-grua-libre { transform: scale(0.8); }
@@ -362,7 +334,7 @@ button.conectar { background: var(--azul); color: #fff; }
   .lugar { min-height: 46px; padding: 8px 12px; }
   .chips button { min-height: 32px; padding: 4px 12px; font-size: 13px; }
   .opcion { min-height: 58px; padding: 6px 10px; }
-  .opcion .icono { font-size: 26px; width: 40px; }
+  .opcion .icono { width: 52px; height: 30px; }
   .opcion .texto strong { font-size: 15px; }
   .opcion .texto span { font-size: 12px; }
   .opcion .precio { font-size: 15px; }

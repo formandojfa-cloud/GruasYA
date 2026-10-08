@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { bordeCelda } from '../domain/h3';
+import grua from './vehiculos/grua.svg';
 import type { Coordenada } from '../domain/tipos';
 
 export interface Marcador {
@@ -17,18 +18,16 @@ export interface Hexagono {
 }
 
 const TOKEN_MAPBOX = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
-const oscuro = () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
 
-// Mapa claro y limpio: Mapbox si hay token; si no, el estilo gratuito de CARTO.
+// Mapa claro y limpio (siempre claro): Mapbox si hay token; si no, el estilo gratuito de CARTO.
 function capaCalles(): L.TileLayer {
   if (TOKEN_MAPBOX) {
-    const estilo = oscuro() ? 'dark-v11' : 'light-v11';
     return L.tileLayer(
-      `https://api.mapbox.com/styles/v1/mapbox/${estilo}/tiles/512/{z}/{x}/{y}@2x?access_token=${TOKEN_MAPBOX}`,
+      `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${TOKEN_MAPBOX}`,
       { tileSize: 512, zoomOffset: -1, maxZoom: 20, attribution: '© Mapbox © OpenStreetMap' },
     );
   }
-  return L.tileLayer(`https://{s}.basemaps.cartocdn.com/${oscuro() ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`, {
+  return L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`, {
     maxZoom: 20,
     attribution: '© OpenStreetMap © CARTO',
   });
@@ -39,7 +38,7 @@ function icono(mk: Marcador): L.DivIcon {
     const etiqueta = mk.texto ? `<div class="pin-etiqueta">${mk.texto.replace(/</g, '&lt;')}</div>` : '';
     return L.divIcon({ className: '', html: `<div class="pin-${mk.tipo}"></div>${etiqueta}`, iconSize: [18, 18], iconAnchor: [9, 9] });
   }
-  return L.divIcon({ className: '', html: `<div class="pin-${mk.tipo}">🚚</div>`, iconSize: [36, 36], iconAnchor: [18, 18] });
+  return L.divIcon({ className: '', html: `<div class="pin-${mk.tipo}"><img src="${grua}" alt="" /></div>`, iconSize: [36, 36], iconAnchor: [18, 18] });
 }
 
 export function Mapa({

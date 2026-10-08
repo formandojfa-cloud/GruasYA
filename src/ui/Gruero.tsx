@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import grua from './vehiculos/grua.svg';
 import { createPortal } from 'react-dom';
 import {
   aceptarOferta,
@@ -139,7 +140,7 @@ export function Gruero() {
             )}
             <div className="separador" />
             <div className="persona">
-              <div className="avatar">🚚</div>
+              <div className="avatar"><img src={grua} alt="" /></div>
               <div className="texto">
                 <strong>{g.nombre}</strong>
                 <span className="tenue">
