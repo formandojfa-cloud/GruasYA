@@ -321,6 +321,7 @@ button.conectar { background: var(--azul); color: #fff; }
 
 /* Computadora: panel a la izquierda, como la versión web de las apps de viajes. */
 @media (min-width: 900px) {
+  .pista-chica { display: none; }
   .barra { justify-content: flex-start; padding-left: 24px; }
   .barra .segmentos button { padding: 6px 16px; font-size: 14px; }
   .hoja, .hoja.alta {
@@ -346,4 +347,30 @@ button.conectar { background: var(--azul); color: #fff; }
 /* En computadora el aviso va abajo al centro (el panel está a la izquierda). */
 @media (min-width: 900px) {
   .aviso-ampliada { top: auto; bottom: 24px; }
+}
+
+/* Celular: menos cosas a la vista. */
+@media (max-width: 899px) {
+  .marca { font-size: 15px; padding: 6px 10px; }
+  .barra .segmentos button { padding: 4px 9px; font-size: 12px; min-height: 30px; }
+  .barra-extra .ganancias { display: none; } /* la ganancia ya está en el panel */
+  .gps { min-height: 30px; padding: 4px 10px; font-size: 12px; }
+  .pista { display: none; }
+  .hoja { max-height: 60%; }
+  .hoja.corta { max-height: 44%; }
+  .hoja-cuerpo { gap: 10px; }
+  .lugar { min-height: 46px; padding: 8px 12px; }
+  .chips button { min-height: 32px; padding: 4px 12px; font-size: 13px; }
+  .opcion { min-height: 58px; padding: 6px 10px; }
+  .opcion .icono { font-size: 26px; width: 40px; }
+  .opcion .texto strong { font-size: 15px; }
+  .opcion .texto span { font-size: 12px; }
+  .opcion .precio { font-size: 15px; }
+  .hoja-pie { padding-top: 8px; gap: 4px; }
+  .pago.chico { font-size: 12px; font-weight: 500; color: var(--tenue); }
+  button.principal { min-height: 50px; font-size: 16px; }
+  .pin-etiqueta { font-size: 11px; padding: 4px 6px; }
+  .pin-grua-libre { transform: scale(0.7); }
+  .acciones button, .acciones a { min-height: 56px; }
+  h2 { font-size: 20px; }
 }

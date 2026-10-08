@@ -112,7 +112,7 @@ export function Gruero() {
       {oferta && !activo && <OfertaEntrante servicio={oferta} gruero={g} />}
       {activo && <ServicioActivo servicio={activo} gruero={g} />}
       {!oferta && !activo && (
-        <div className="hoja">
+        <div className="hoja corta">
           <div className="hoja-cuerpo">
             <div className="fila-entre">
               <div>

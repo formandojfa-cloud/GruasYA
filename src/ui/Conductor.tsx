@@ -267,7 +267,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
             <div className={`lugar ${marcando === 'origen' ? 'activo' : ''}`} onClick={() => setMarcando('origen')}>
               <span className="marca-origen" />
               <span className="texto">
-                <small>Recogida</small>
+                <small>Recogida{marcando === 'origen' && <span className="pista-chica"> · toca el mapa</span>}</small>
                 <span>{origenTexto}</span>
               </span>
               <button
@@ -283,7 +283,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
             <div className={`lugar ${marcando === 'destino' ? 'activo' : ''}`} onClick={() => setMarcando('destino')}>
               <span className="marca-destino" />
               <span className="texto">
-                <small>Destino</small>
+                <small>Destino{marcando === 'destino' && <span className="pista-chica"> · toca el mapa</span>}</small>
                 <select
                   aria-label="Destino"
                   value={destino.nombre}
@@ -301,11 +301,6 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
             </div>
           </div>
           {gps && <p className="tenue">{gps}</p>}
-          {cercanas.length > 0 && (
-            <p className="tenue chico">
-              {cercanas.length === 1 ? '1 grúa libre' : `${cercanas.length} grúas libres`} cerca de ti (zonas amarillas del mapa)
-            </p>
-          )}
 
           <div className="chips" role="group" aria-label="Qué pasó">
             {(Object.keys(NOMBRE_PROBLEMA) as Problema[]).map((k) => (
@@ -384,7 +379,10 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
           {cercanas.length === 0 && <div className="aviso">No hay grúas libres cerca ahora. La central te llamará si pides.</div>}
         </div>
         <div className="hoja-pie">
-          <div className="pago">💵 Efectivo al gruero</div>
+          <div className="pago chico">
+            💵 Pago en efectivo al gruero
+            {cercanas.length > 0 ? ` · ${cercanas.length} ${cercanas.length === 1 ? 'grúa libre' : 'grúas libres'} cerca` : ''}
+          </div>
           <button
             className="principal"
             disabled={!listo}

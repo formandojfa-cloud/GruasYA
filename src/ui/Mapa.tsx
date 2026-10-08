@@ -105,7 +105,7 @@ export function Mapa({
       const grua = h.tipo === 'grua';
       L.polygon(
         bordeCelda(h.celda).map((p) => [p.lat, p.lng] as [number, number]),
-        { color: grua ? '#f5b301' : '#276ef1', weight: 1, opacity: 0.8, fillOpacity: grua ? 0.3 : 0.12, interactive: false },
+        { color: grua ? '#f5b301' : '#276ef1', weight: grua ? 0 : 1, opacity: 0.6, fillOpacity: grua ? 0.22 : 0.1, interactive: false },
       ).addTo(g);
     }
     if (ruta && ruta.length > 1) {
