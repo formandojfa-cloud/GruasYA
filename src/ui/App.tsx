@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Admin } from './Admin';
 import { Conductor } from './Conductor';
 import { Gruero } from './Gruero';
@@ -6,9 +7,24 @@ import { useSesion } from './sesion';
 const PAPELES = { conductor: 'Conductor', gruero: 'Gruero', admin: 'Admin' } as const;
 type Papel = keyof typeof PAPELES;
 
+// El navegador a veces desplaza la página para mostrar algo enfocado; en la vista
+// con mapa la regresamos arriba para que la barra siempre quede a la vista.
+function useSinDesplazar(activo: boolean) {
+  useEffect(() => {
+    if (!activo) return;
+    const volver = () => {
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+    };
+    volver();
+    window.addEventListener('scroll', volver);
+    return () => window.removeEventListener('scroll', volver);
+  }, [activo]);
+}
+
 export function App() {
   const [papel, setPapel] = useSesion('gruaya-papel', 'conductor');
   const actual = (papel ?? 'conductor') as Papel;
+  useSinDesplazar(actual !== 'admin');
   const barra = (
     <div className="barra">
       <div className="marca">
@@ -39,7 +55,8 @@ export function App() {
       </div>
     );
   return (
-    <div className="pantalla">
+    // Si el navegador intenta desplazar la vista (al enfocar algo), se regresa arriba.
+    <div className="pantalla" onScroll={(e) => (e.currentTarget.scrollTop = 0)}>
       {actual === 'conductor' ? <Conductor /> : <Gruero />}
       {barra}
     </div>

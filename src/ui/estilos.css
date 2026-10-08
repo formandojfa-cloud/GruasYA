@@ -102,7 +102,9 @@ button.texto { background: none; min-height: 40px; padding: 8px; }
 .segmentos button.activo { background: var(--hoja); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
 
 /* Pantalla con mapa completo y hoja inferior */
-.pantalla { position: fixed; inset: 0; overflow: hidden; background: var(--gris); }
+.pantalla { position: fixed; inset: 0; overflow: hidden; overflow: clip; background: var(--gris); }
+/* La vista con mapa nunca se desplaza: así la barra de arriba no se puede salir de la pantalla. */
+html:has(.pantalla), html:has(.pantalla) body { overflow: hidden; }
 .pantalla > .mapa-marco { position: absolute; inset: 0; }
 .mapa-marco { position: relative; }
 .mapa { position: absolute; inset: 0; z-index: 0; background: var(--gris); }
