@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Admin } from './Admin';
 import { Conductor } from './Conductor';
 import { Gruero } from './Gruero';
@@ -15,10 +15,47 @@ function useSinDesplazar(activo: boolean) {
     const volver = () => {
       if (window.scrollY !== 0) window.scrollTo(0, 0);
     };
+    // El pellizco del touchpad llega como rueda con Ctrl y amplía toda la página,
+    // dejando la barra fuera de vista. En la vista con mapa el zoom lo hace el mapa.
+    const sinPellizco = (e: WheelEvent) => {
+      if (e.ctrlKey) e.preventDefault();
+    };
     volver();
     window.addEventListener('scroll', volver);
-    return () => window.removeEventListener('scroll', volver);
+    window.addEventListener('wheel', sinPellizco, { passive: false });
+    return () => {
+      window.removeEventListener('scroll', volver);
+      window.removeEventListener('wheel', sinPellizco);
+    };
   }, [activo]);
+}
+
+// Si la página ya quedó ampliada (pellizco), avisa cómo volver a verla completa.
+function AvisoAmpliada() {
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+  const [vista, setVista] = useState(() => ({ escala: vv?.scale ?? 1, x: vv?.offsetLeft ?? 0, y: vv?.offsetTop ?? 0 }));
+  useEffect(() => {
+    if (!vv) return;
+    const leer = () => setVista({ escala: vv.scale, x: vv.offsetLeft, y: vv.offsetTop });
+    vv.addEventListener('resize', leer);
+    vv.addEventListener('scroll', leer);
+    return () => {
+      vv.removeEventListener('resize', leer);
+      vv.removeEventListener('scroll', leer);
+    };
+  }, [vv]);
+  if (vista.escala <= 1.01) return null;
+  return (
+    <div
+      className="aviso-ampliada"
+      style={{ left: vista.x, top: vista.y, transform: `scale(${1 / vista.escala})` }}
+      role="status"
+    >
+      La página quedó ampliada y no se ve completa.{' '}
+      {/* Una navegación nueva (no recargar) para que Chrome no restaure el zoom anterior. */}
+      <button onClick={() => (window.location.href = `${window.location.pathname}?v=${Date.now()}`)}>Ver completa</button>
+    </div>
+  );
 }
 
 export function App() {
@@ -59,6 +96,7 @@ export function App() {
     <div className="pantalla" onScroll={(e) => (e.currentTarget.scrollTop = 0)}>
       {actual === 'conductor' ? <Conductor /> : <Gruero />}
       {barra}
+      <AvisoAmpliada />
     </div>
   );
 }

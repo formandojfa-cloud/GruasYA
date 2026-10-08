@@ -330,3 +330,11 @@ button.conectar { background: var(--azul); color: #fff; }
   .pista { left: calc(50% + 212px); top: 20px; }
   .mapa-aviso { left: 448px; top: 20px; }
 }
+
+.aviso-ampliada {
+  position: fixed; z-index: 2000; transform-origin: 0 0; margin: 12px;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--acento); color: #000; border-radius: 10px; padding: 8px 8px 8px 14px;
+  font-size: 14px; font-weight: 600; box-shadow: var(--sombra-flotante);
+}
+.aviso-ampliada button { min-height: 34px; padding: 4px 12px; background: #000; color: #fff; }
