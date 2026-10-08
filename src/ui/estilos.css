@@ -313,8 +313,9 @@ button.conectar { background: var(--azul); color: #fff; }
 .estado-sin_grua, .estado-cancelado { border-left-color: var(--rojo); }
 .gruero { display: flex; flex-direction: column; background: var(--gris); border-radius: 8px; padding: 10px; }
 .gps {
-  min-height: 38px; padding: 6px 12px; border-radius: 999px; font-size: 13px;
-  background: var(--hoja); box-shadow: var(--sombra-flotante);
+  display: inline-flex; align-items: center; min-height: 38px; padding: 6px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; color: var(--tenue);
+  background: var(--hoja); box-shadow: var(--sombra-flotante); white-space: nowrap;
 }
 .gps.en-vivo { color: var(--verde); }
 

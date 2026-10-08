@@ -22,22 +22,24 @@ import { km, minutos, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales
 import { Mapa, type Hexagono, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
 
-// Envía la ubicación del teléfono mientras esté activo. En producción esto va al
-// servidor cada pocos segundos; en la demo se guarda en este navegador.
+// Mientras el gruero está en línea, su ubicación real se envía sola: sin GPS no
+// se puede estar en línea. En producción va al servidor cada pocos segundos; en
+// la demo se guarda en este navegador.
 function useGpsEnVivo(grueroId: string, activo: boolean, alFallar: (m: string) => void) {
   const fallar = useRef(alFallar);
   fallar.current = alFallar;
   useEffect(() => {
     if (!activo) return;
     if (!navigator.geolocation) {
-      fallar.current('Este navegador no comparte ubicación.');
+      fallar.current('Este navegador no comparte ubicación, así que no puedes conectarte desde aquí.');
       return;
     }
     const id = navigator.geolocation.watchPosition(
       (p) => actualizarUbicacion(grueroId, { lat: p.coords.latitude, lng: p.coords.longitude }),
       (err) => {
         // Sin permiso no hay nada que hacer; otros errores (sin señal) se reintentan solos.
-        if (err.code === err.PERMISSION_DENIED) fallar.current('Sin permiso de ubicación. Actívalo en tu navegador.');
+        if (err.code === err.PERMISSION_DENIED)
+          fallar.current('Para conectarte necesitas compartir tu ubicación. Permítela en el navegador y vuelve a conectarte.');
       },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
     );
@@ -60,11 +62,10 @@ export function Gruero() {
   const estado = useEstado();
   const [id, setId] = useSesion('gruaya-gruero', 'g-demo');
   const g = estado.grueros.find((x) => x.id === id) ?? estado.grueros[0];
-  const [gps, setGps] = useSesion('gruaya-gps', null);
   const [errorGps, setErrorGps] = useState('');
-  useGpsEnVivo(g.id, gps === 'si', (m) => {
+  useGpsEnVivo(g.id, g.disponible, (m) => {
     setErrorGps(m);
-    setGps(null);
+    cambiarDisponible(g.id, false); // sin ubicación no se reciben solicitudes
   });
 
   const activo = estado.servicios.find(
@@ -97,15 +98,9 @@ export function Gruero() {
         <div className="ganancias">
           <small>Ganancia</small> {quetzales(ganado)}
         </div>
-        <button
-          className={`gps ${gps === 'si' ? 'en-vivo' : ''}`}
-          onClick={() => {
-            setErrorGps('');
-            setGps(gps === 'si' ? null : 'si');
-          }}
-        >
-          {gps === 'si' ? '● GPS en vivo' : '📍 Usar mi GPS'}
-        </button>
+        {g.disponible && (
+          <span className={`gps ${g.gpsEnVivo ? 'en-vivo' : ''}`}>{g.gpsEnVivo ? '● GPS en vivo' : '○ Buscando GPS…'}</span>
+        )}
       </EnBarra>
       <Mapa
         centro={g.ubicacion}
@@ -130,9 +125,11 @@ export function Gruero() {
             </div>
             {errorGps && <p className="aviso">{errorGps}</p>}
             {g.disponible && <div className="progreso" />}
-            {gps === 'si' && (
+            {g.disponible && (
               <p className="tenue chico">
-                Tu ubicación real se actualiza en vivo. Solo te llegan solicitudes a 10 km o menos de donde estás.
+                {g.gpsEnVivo
+                  ? 'Tu ubicación se actualiza en vivo. Solo te llegan solicitudes a 10 km o menos de donde estás.'
+                  : 'Esperando tu ubicación. Acepta el permiso del navegador para recibir solicitudes.'}
               </p>
             )}
             {!g.disponible && g.rechazosSeguidos >= DESPACHO_INICIAL.rechazosParaPausar && (
@@ -182,7 +179,13 @@ export function Gruero() {
             {g.disponible ? (
               <button onClick={() => cambiarDisponible(g.id, false)}>Desconectarme</button>
             ) : (
-              <button className="principal conectar" onClick={() => cambiarDisponible(g.id, true)}>
+              <button
+                className="principal conectar"
+                onClick={() => {
+                  setErrorGps('');
+                  cambiarDisponible(g.id, true);
+                }}
+              >
                 Conectarme
               </button>
             )}

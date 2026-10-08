@@ -209,6 +209,13 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
   );
   const eta = useEtaGrua(origen, cercanas);
 
+  // Al abrir, la recogida se pone sola donde está el conductor; el mapa sirve para ajustarla.
+  useEffect(() => {
+    usarMiUbicacion();
+    // solo al abrir la pantalla
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const usarMiUbicacion = () => {
     if (!navigator.geolocation) return setGps('Tu navegador no comparte ubicación.');
     setGps('Buscando tu ubicación…');
@@ -218,7 +225,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
         setOrigenTexto('Tu ubicación actual');
         setGps('');
       },
-      () => setGps('No se pudo obtener tu ubicación; márcala en el mapa.'),
+      () => setGps('No tenemos tu ubicación; toca el mapa para marcar dónde estás.'),
     );
   };
 
