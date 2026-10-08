@@ -4,7 +4,7 @@ import { Conductor } from './Conductor';
 import { Gruero } from './Gruero';
 import { useSesion } from './sesion';
 
-const PAPELES = { conductor: 'Conductor', gruero: 'Mecánico', admin: 'Admin' } as const;
+const PAPELES = { conductor: 'Conductor', gruero: 'Piloto', admin: 'Admin' } as const;
 type Papel = keyof typeof PAPELES;
 
 // El navegador a veces desplaza la página para mostrar algo enfocado; en la vista
@@ -104,7 +104,7 @@ export function App() {
         <main>
           <Admin />
           <p className="tenue chico" style={{ marginTop: 16, textAlign: 'center' }}>
-            Demo sin servidor: los datos viven en este navegador. Abre otra pestaña para ver al conductor y al mecánico a la vez.
+            Demo sin servidor: los datos viven en este navegador. Abre otra pestaña para ver al conductor y al piloto a la vez.
           </p>
         </main>
       </div>

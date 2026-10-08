@@ -380,7 +380,7 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
         </div>
         <div className="hoja-pie">
           <div className="pago chico">
-            💵 Pago en efectivo al mecánico
+            💵 Pago en efectivo al piloto
             {cercanas.length > 0 ? ` · ${cercanas.length} ${cercanas.length === 1 ? 'grúa libre' : 'grúas libres'} cerca` : ''}
           </div>
           <button
@@ -499,11 +499,11 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
 
           {s.estado === 'entregado' && !s.pagoConfirmadoConductor && (
             <>
-              <p>Paga {quetzales(s.tarifa)} en efectivo al mecánico y confirma aquí.</p>
+              <p>Paga {quetzales(s.tarifa)} en efectivo al piloto y confirma aquí.</p>
             </>
           )}
           {s.estado === 'entregado' && s.pagoConfirmadoConductor && (
-            <p className="tenue">Esperando que el mecánico confirme el cobro.</p>
+            <p className="tenue">Esperando que el piloto confirme el cobro.</p>
           )}
           {s.estado === 'pagado' && !s.calificacion && (
             <>
