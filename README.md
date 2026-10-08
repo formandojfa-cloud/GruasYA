@@ -6,7 +6,7 @@ Documento de alcance del MVP: https://claude.ai/code/artifact/3418bacc-ddd7-4cf8
 
 ## Prototipo
 
-App web pensada para celular (React + TypeScript + Vite, mapas con Leaflet y OpenStreetMap). Por ahora no tiene servidor: los datos viven en el navegador y se sincronizan entre pestañas, para probar el flujo completo abriendo al conductor en una pestaña y al gruero en otra.
+App web pensada para celular (React + TypeScript + Vite, mapas con Leaflet y OpenStreetMap). Por ahora no tiene servidor: los datos viven en el navegador y se sincronizan entre pestañas, para probar el flujo completo abriendo al conductor en una pestaña y al mecánico en otra.
 
 ```bash
 npm install
@@ -18,8 +18,8 @@ npm run build
 ### Qué incluye
 
 - **Conductor:** registro con celular, DPI por ambos lados y selfie; pedir grúa con precio fijo; seguimiento en mapa; chat sin compartir números; cancelación (gratis antes de que acepten, mitad del precio después); pago en efectivo con doble confirmación; calificación.
-- **Gruero:** disponible / no disponible; ofertas con 90 segundos para aceptar; botones a Waze y Google Maps; 2 fotos y video 360° antes de cargar; ganancia y comisión registrada.
-- **Administración:** servicios, grueros, aprobación manual de identidad y parámetros de tarifa.
+- **Mecánico (gruero):** disponible / no disponible; ofertas con 90 segundos para aceptar; botones a Waze y Google Maps; 2 fotos y video 360° antes de cargar; ganancia y comisión registrada.
+- **Administración:** servicios, mecánicos, aprobación manual de identidad y parámetros de tarifa.
 
 ### Dónde está cada cosa
 
@@ -29,7 +29,7 @@ npm run build
 
 ### Simulado en esta versión
 
-Código SMS (siempre `123456`), verificación de identidad (pensada para Didit) y grueros automáticos para probar sin otra persona. El registro de conductor está desactivado por ahora (`REGISTRO_ACTIVO` en `src/ui/Conductor.tsx`).
+Código SMS (siempre `123456`), verificación de identidad (pensada para Didit) y mecánicos automáticos para probar sin otra persona. El registro de conductor está desactivado por ahora (`REGISTRO_ACTIVO` en `src/ui/Conductor.tsx`).
 
 ### Rutas, tráfico y clima
 

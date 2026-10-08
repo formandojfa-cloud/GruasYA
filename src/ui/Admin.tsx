@@ -14,7 +14,7 @@ export function Admin() {
       <div className="segmentos">
         {(['servicios', 'grueros', 'conductores', 'ajustes'] as Pestana[]).map((p) => (
           <button key={p} className={pestana === p ? 'activo' : ''} onClick={() => setPestana(p)}>
-            {p[0].toUpperCase() + p.slice(1)}
+            {p === 'grueros' ? 'Mecánicos' : p[0].toUpperCase() + p.slice(1)}
           </button>
         ))}
       </div>
@@ -171,7 +171,7 @@ function Ajustes() {
             checked={e.demo.gruerosAutomaticos}
             onChange={(ev) => actualizar((x) => void (x.demo.gruerosAutomaticos = ev.target.checked))}
           />
-          Grueros simulados aceptan y avanzan solos
+          Mecánicos simulados aceptan y avanzan solos
         </label>
         <label className="check">
           <input
