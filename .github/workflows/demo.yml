@@ -31,7 +31,11 @@ jobs:
             if [ -n "${!v}" ]; then echo "$v: configurado"; else echo "$v: FALTA"; fi
           done
           if [ -n "$URL" ]; then
-            case "$URL" in https://*.supabase.co) echo "URL: forma correcta";; *) echo "URL: forma INCORRECTA (debe ser https://xxxx.supabase.co, sin barra final ni espacios)";; esac
+            case "$URL" in */) echo "URL: termina en barra (la app la quita sola)";; esac
+            case "$URL" in *" "*) echo "URL: tiene espacios";; esac
+            case "$URL" in *supabase.com/dashboard*) echo "URL: es la del panel, no la Project URL de Settings → API";; esac
+            URL="$(echo "$URL" | tr -d '[:space:]')"; URL="${URL%/}"
+            case "$URL" in https://*.supabase.co) echo "URL: forma correcta";; *) echo "URL: forma INCORRECTA (debe ser https://xxxx.supabase.co)";; esac
             case "$ANON" in eyJ*) echo "ANON: forma correcta";; sb_publishable_*) echo "ANON: clave publishable (sirve)";; *) echo "ANON: forma INCORRECTA (debe empezar con eyJ o sb_publishable_)";; esac
             codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $ANON" "$URL/rest/v1/" || echo "sin conexión")
             echo "Supabase responde: HTTP $codigo"
