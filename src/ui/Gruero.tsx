@@ -90,6 +90,15 @@ export function Gruero() {
   const oferta = estado.servicios.find(
     (s) => s.estado === 'buscando' && s.ofertas.some((o) => o.grueroId === g.id && !o.resultado),
   );
+  // Si el teléfono deja de mandar GPS (pantalla apagada, app en segundo plano),
+  // el despacho no cuenta al piloto pasados 2 min; hay que avisarle.
+  const [ahora, setAhora] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setAhora(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, []);
+  const segundosSinGps = g.gpsEnVivo ? Math.max(0, Math.round((ahora - g.ubicacionEn) / 1000)) : 0;
+  const gpsViejo = segundosSinGps > 60;
   const hechos = estado.servicios.filter((s) => s.grueroId === g.id && s.estado === 'pagado');
   const ganado = hechos.reduce((acc, s) => acc + s.tarifa - s.comision, 0);
 
@@ -115,7 +124,9 @@ export function Gruero() {
           <small>Ganancia</small> {quetzales(ganado)}
         </div>
         {(g.disponible || activo) && (
-          <span className={`gps ${g.gpsEnVivo ? 'en-vivo' : ''}`}>{g.gpsEnVivo ? `● GPS en vivo${g.precisionM ? ` ±${g.precisionM} m` : ''}` : '○ Buscando GPS…'}</span>
+          <span className={`gps ${g.gpsEnVivo && !gpsViejo ? 'en-vivo' : ''}`}>
+            {!g.gpsEnVivo ? '○ Buscando GPS…' : gpsViejo ? `○ GPS sin señal hace ${minutos(segundosSinGps / 60)}` : `● GPS en vivo${g.precisionM ? ` ±${g.precisionM} m` : ''}`}
+          </span>
         )}
       </EnBarra>
       <Mapa
@@ -152,7 +163,13 @@ export function Gruero() {
             </div>
             {errorGps && <p className="aviso">{errorGps}</p>}
             {g.disponible && <div className="progreso" />}
-            {g.disponible && (
+            {g.disponible && gpsViejo && (
+              <p className="aviso">
+                Tu teléfono no manda ubicación desde hace {minutos(segundosSinGps / 60)}. Sin ubicación reciente no te llegan
+                solicitudes: mantén GrúaYa abierta y con la pantalla encendida.
+              </p>
+            )}
+            {g.disponible && !gpsViejo && (
               <p className="tenue chico">
                 {g.gpsEnVivo
                   ? 'Tu ubicación se actualiza en vivo. Solo te llegan solicitudes a 10 km o menos de donde estás.'
