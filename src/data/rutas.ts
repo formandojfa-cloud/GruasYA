@@ -7,12 +7,13 @@ import {
   FACTOR_HORA_PICO,
   minutosEstimados,
 } from '../domain/geo';
-import type { Clima, Coordenada, FuenteRuta } from '../domain/tipos';
+import type { Clima, Coordenada, FuenteRuta, Paso } from '../domain/tipos';
 
 export interface Ruta {
   distanciaKm: number;
   minutos: number;
   geometria: Coordenada[];
+  pasos: Paso[]; // indicaciones de giro, en español
   fuente: FuenteRuta;
   conTrafico: boolean;
 }
@@ -34,8 +35,55 @@ async function pedirJson(url: string) {
 
 const par = (a: Coordenada, b: Coordenada) => `${a.lng},${a.lat};${b.lng},${b.lat}`;
 
+interface PasoApi {
+  distance: number;
+  name?: string;
+  maneuver: { location: [number, number]; type: string; modifier?: string; exit?: number; instruction?: string };
+}
 interface RespuestaRuta {
-  routes?: { distance: number; duration: number; geometry: { coordinates: [number, number][] } }[];
+  routes?: { distance: number; duration: number; geometry: { coordinates: [number, number][] }; legs?: { steps?: PasoApi[] }[] }[];
+}
+
+const LADO: Record<string, string> = {
+  left: 'a la izquierda',
+  right: 'a la derecha',
+  'slight left': 'levemente a la izquierda',
+  'slight right': 'levemente a la derecha',
+  'sharp left': 'cerrado a la izquierda',
+  'sharp right': 'cerrado a la derecha',
+  straight: 'recto',
+  uturn: 'en U',
+};
+
+// OSRM no trae el texto de la maniobra (Mapbox sí, en español); se arma aquí.
+function textoPaso(p: PasoApi): string {
+  if (p.maneuver.instruction) return p.maneuver.instruction;
+  const calle = p.name ? ` en ${p.name}` : '';
+  const lado = LADO[p.maneuver.modifier ?? ''] ?? '';
+  switch (p.maneuver.type) {
+    case 'depart':
+      return `Salga${p.name ? ` por ${p.name}` : ''}`;
+    case 'arrive':
+      return 'Llegó a su destino';
+    case 'turn':
+    case 'end of road':
+      return lado === 'recto' ? `Siga recto${calle}` : lado === 'en U' ? 'Dé la vuelta en U' : `Gire ${lado}${calle}`;
+    case 'fork':
+      return `Manténgase ${lado}${calle}`;
+    case 'merge':
+      return `Incorpórese${calle}`;
+    case 'on ramp':
+    case 'off ramp':
+      return `Tome la salida ${lado}${calle}`;
+    case 'roundabout':
+    case 'rotary':
+      return `En la rotonda, tome la salida ${p.maneuver.exit ?? ''}${calle}`.replace('salida  en', 'salida en');
+    case 'new name':
+    case 'continue':
+      return `Continúe${calle}`;
+    default:
+      return `Continúe${calle}`;
+  }
 }
 
 function leerRuta(json: RespuestaRuta) {
@@ -45,6 +93,11 @@ function leerRuta(json: RespuestaRuta) {
     distanciaKm: r.distance / 1000,
     minutos: r.duration / 60,
     geometria: r.geometry.coordinates.map(([lng, lat]) => ({ lat, lng })),
+    pasos: (r.legs?.[0]?.steps ?? []).map((p) => ({
+      texto: textoPaso(p),
+      punto: { lng: p.maneuver.location[0], lat: p.maneuver.location[1] },
+      distanciaM: Math.round(p.distance),
+    })),
   };
 }
 
@@ -53,7 +106,7 @@ export async function calcularRuta(a: Coordenada, b: Coordenada, hora: number): 
   if (TOKEN_MAPBOX) {
     try {
       const json = await pedirJson(
-        `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${par(a, b)}?geometries=geojson&overview=full&access_token=${TOKEN_MAPBOX}`,
+        `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${par(a, b)}?geometries=geojson&overview=full&steps=true&language=es&access_token=${TOKEN_MAPBOX}`,
       );
       return { ...leerRuta(json), fuente: 'mapbox', conTrafico: true };
     } catch {
@@ -61,7 +114,7 @@ export async function calcularRuta(a: Coordenada, b: Coordenada, hora: number): 
     }
   }
   try {
-    const json = await pedirJson(`https://router.project-osrm.org/route/v1/driving/${par(a, b)}?geometries=geojson&overview=full`);
+    const json = await pedirJson(`https://router.project-osrm.org/route/v1/driving/${par(a, b)}?geometries=geojson&overview=full&steps=true`);
     const r = leerRuta(json);
     return { ...r, minutos: r.minutos * pico, fuente: 'osrm', conTrafico: false };
   } catch {
@@ -69,6 +122,7 @@ export async function calcularRuta(a: Coordenada, b: Coordenada, hora: number): 
       distanciaKm: distanciaRutaKm(a, b),
       minutos: minutosEstimados(a, b) * pico,
       geometria: [a, b],
+      pasos: [],
       fuente: 'estimada',
       conTrafico: false,
     };

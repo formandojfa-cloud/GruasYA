@@ -49,6 +49,7 @@ export function Mapa({
   ruta,
   hueco = 0.55,
   hexagonos,
+  seguir,
 }: {
   centro: Coordenada;
   marcadores: Marcador[];
@@ -57,6 +58,7 @@ export function Mapa({
   ruta?: Coordenada[]; // trazo por calles, recogida → destino
   hueco?: number; // fracción de la altura tapada por la hoja inferior
   hexagonos?: Hexagono[];
+  seguir?: Coordenada; // modo navegación: el mapa sigue este punto de cerca
 }) {
   const nodo = useRef<HTMLDivElement>(null);
   const mapa = useRef<L.Map | null>(null);
@@ -89,6 +91,16 @@ export function Mapa({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Navegación: centrar en la grúa, un poco arriba del centro para ver lo que viene.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || !seguir) return;
+    // La hoja tapa la parte de abajo: la grúa queda un poco bajo el centro del área visible.
+    const desplazamiento = Math.round((m.getSize().y * hueco) / 2) - 60;
+    const centro = m.unproject(m.project([seguir.lat, seguir.lng], 16).add([0, desplazamiento]), 16);
+    m.setView(centro, 16, { animate: true, duration: 0.5 });
+  }, [seguir, hueco]);
+
   useEffect(() => {
     const m = mapa.current;
     const g = capa.current;
@@ -116,7 +128,7 @@ export function Mapa({
       // Encuadrar cuando llega una ruta nueva (el final cambia); que se acorte por
       // detrás conforme avanza la grúa no reencuadra.
       const firmaRuta = `${ruta.at(-1)!.lat}|${ruta.at(-1)!.lng}`;
-      if (firmaRuta !== firmaRutaPrevia.current) {
+      if (firmaRuta !== firmaRutaPrevia.current && !seguir) {
         firmaRutaPrevia.current = firmaRuta;
         m.fitBounds(linea.getBounds(), { ...margen, animate: false });
       }
@@ -130,14 +142,14 @@ export function Mapa({
       marcadores.length === 1
         ? `${marcadores[0].id}|${marcadores[0].punto.lat.toFixed(4)}|${marcadores[0].punto.lng.toFixed(4)}`
         : marcadores.map((mk) => mk.id).join('|');
-    if (ajustar && firma !== firmaAjuste.current && marcadores.length > 0) {
+    if (ajustar && !seguir && firma !== firmaAjuste.current && marcadores.length > 0) {
       firmaAjuste.current = firma;
       if (marcadores.length === 1) {
         m.setView([marcadores[0].punto.lat, marcadores[0].punto.lng], 14, { animate: false });
         m.panBy(compu ? [-izquierda / 2, 0] : [0, abajo / 2 - 45], { animate: false });
       } else m.fitBounds(L.latLngBounds(marcadores.map((mk) => [mk.punto.lat, mk.punto.lng])), { ...margen, animate: false });
     }
-  }, [marcadores, ajustar, ruta, hueco, hexagonos]);
+  }, [marcadores, ajustar, ruta, hueco, hexagonos, seguir]);
 
   return (
     <div className="mapa-marco">

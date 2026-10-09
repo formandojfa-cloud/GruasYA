@@ -58,6 +58,7 @@ export function pedirGrua(sol: Solicitud): string {
       minutos: ruta.minutos,
       clima,
       ruta: ruta.geometria,
+      rutaPasos: ruta.pasos,
       fuenteRuta: ruta.fuente,
       tarifa: t.total + deuda,
       comision: t.comision,

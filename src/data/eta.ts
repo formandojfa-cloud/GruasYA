@@ -55,6 +55,7 @@ export async function calcularRutaGrua(servicioId: string) {
       const s2 = e2.servicios.find((x) => x.id === servicioId);
       if (!s2 || s2.estado !== 'asignado') return;
       s2.rutaGrua = r.geometria;
+      s2.rutaGruaPasos = r.pasos;
       s2.minutosGrua = r.minutos;
       s2.avanceGruaKm = 0;
       s2.rutaGruaEn = Date.now();

@@ -54,6 +54,13 @@ export interface Oferta {
   resultado?: 'aceptada' | 'rechazada' | 'vencida';
 }
 
+// Indicación de giro de una ruta por calles (para navegar dentro de la app).
+export interface Paso {
+  texto: string; // "Gire a la derecha en 6a Avenida"
+  punto: Coordenada; // dónde se hace la maniobra
+  distanciaM: number; // largo del tramo que empieza en esta maniobra
+}
+
 export interface MensajeChat {
   de: 'conductor' | 'gruero';
   texto: string;
@@ -74,6 +81,7 @@ export interface Servicio {
   minutos: number; // duración estimada del viaje al aceptar el precio
   clima: Clima;
   ruta: Coordenada[]; // trazo por calles, recogida → destino
+  rutaPasos?: Paso[]; // indicaciones de giro de esa ruta
   fuenteRuta: FuenteRuta;
   avanceKm?: number; // simulación: km recorridos en la ruta
   tarifa: number;
@@ -89,6 +97,7 @@ export interface Servicio {
   asignadoEn?: number;
   etaPrometido?: number; // minutos que se le dijeron al cliente al aceptar
   rutaGrua?: Coordenada[]; // trazo por calles, grúa → cliente
+  rutaGruaPasos?: Paso[];
   minutosGrua?: number;
   rutaGruaEn?: number; // cuándo se calculó (se recalcula con GPS en vivo)
   avanceGruaKm?: number; // simulación: km recorridos hacia el cliente

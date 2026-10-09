@@ -329,7 +329,7 @@ button.conectar { background: var(--azul); color: #fff; }
   .gps { min-height: 30px; padding: 4px 10px; font-size: 12px; }
   .pista { display: none; }
   .hoja { max-height: 60%; }
-  .hoja.corta { max-height: 44%; }
+  .hoja.corta { max-height: 52%; }
   .hoja-cuerpo { gap: 10px; }
   .lugar { min-height: 46px; padding: 8px 12px; }
   .chips button { min-height: 32px; padding: 4px 12px; font-size: 13px; }
@@ -351,3 +351,15 @@ button.conectar { background: var(--azul); color: #fff; }
 .conectando { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 100vh; text-align: center; padding: 24px; }
 .conectando .marca { font-size: 28px; }
 .conectando button.principal { width: auto; padding: 0 32px; }
+
+/* Navegación dentro de la app: siguiente giro arriba de la hoja del piloto. */
+.navegacion { display: flex; align-items: center; gap: 12px; background: var(--tinta); color: var(--sobre-tinta); padding: 10px 14px; border-radius: 14px; margin: 4px 0 8px; }
+.navegacion .flecha { font-size: 34px; line-height: 1; width: 44px; text-align: center; flex: none; }
+.navegacion .texto { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.navegacion .texto strong { font-size: 22px; line-height: 1.1; }
+.navegacion .texto span { font-size: 15px; opacity: 0.9; }
+.navegacion .voz { background: rgba(255, 255, 255, 0.15); color: inherit; border: 0; border-radius: 50%; width: 40px; height: 40px; min-height: 40px; padding: 0; font-size: 18px; flex: none; }
+.navegacion.fuera { background: var(--rojo); }
+.acciones button.activo { outline: 2px solid var(--tinta); }
+/* Mientras navega, el piloto ya conoce al cliente: la fila se esconde en pantallas cortas. */
+@media (max-height: 760px) { .hoja.corta .persona.oculta { display: none; } }
