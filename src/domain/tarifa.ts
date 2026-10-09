@@ -16,11 +16,11 @@ export interface ParametrosTarifa {
   fraccionCancelacion: number; // fracción de la tarifa si se cancela tras aceptar
 }
 
-// Valores de ejemplo del documento de alcance; se ajustan desde administración.
+// Decisión del usuario (2026-10-09): Q300 de banderazo + Q15 por km desde el primero; se ajustan desde administración.
 export const PARAMETROS_INICIALES: ParametrosTarifa = {
-  banderazo: 350,
-  kmIncluidos: 5,
-  precioKm: 20,
+  banderazo: 300,
+  kmIncluidos: 0,
+  precioKm: 15,
   minutosIncluidos: 15,
   precioMinuto: 3,
   factorVehiculo: { moto: 0.8, carro: 1, pickup: 1.2 },
