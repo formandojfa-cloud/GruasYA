@@ -132,6 +132,8 @@ export function App() {
             {conexion.nube
               ? 'Datos en la nube (Supabase): lo que pasa aquí se ve en todos los teléfonos.'
               : 'Demo sin servidor: los datos viven en este navegador. Abre otra pestaña para ver al conductor y al piloto a la vez.'}
+            <br />
+            Versión {__VERSION__}
           </p>
         </main>
       </div>
