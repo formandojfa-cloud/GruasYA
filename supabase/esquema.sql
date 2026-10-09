@@ -54,6 +54,11 @@ begin
   end loop;
 end $$;
 
+-- Permisos de tabla para la clave pública (en proyectos nuevos no vienen solos).
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on all tables in schema public to anon, authenticated;
+alter default privileges in schema public grant select, insert, update, delete on tables to anon, authenticated;
+
 -- Piloto: la app entra con la clave pública (anon) y sin cuentas de usuario todavía,
 -- así que estas políticas dejan leer y escribir a cualquiera que tenga la app.
 -- Cuando se active el registro con cuentas, se cambian por políticas por usuario.
