@@ -23,7 +23,6 @@ import { km, minutos, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales
 import { Mapa, type Hexagono, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
 import { empezarAlerta, haySonido, prepararSonido } from './alerta';
-import { Navegacion } from './Navegacion';
 import { calcularRutaGrua } from '../data/eta';
 
 // Mientras el gruero está en línea, su ubicación real se envía sola: sin GPS no
@@ -95,8 +94,6 @@ export function Gruero() {
   const ganado = hechos.reduce((acc, s) => acc + s.tarifa - s.comision, 0);
 
   const servicio = activo ?? oferta;
-  // La guía propia es respaldo: el piloto navega con Waze, que se abre solo al aceptar.
-  const [navegando, setNavegando] = useSesion('gruaya-navegando', 'no');
   const marcadores: Marcador[] = servicio
     ? [
         { id: 'origen', punto: servicio.origen, tipo: 'origen', texto: 'Cliente' },
@@ -135,13 +132,11 @@ export function Gruero() {
               : servicio?.ruta
         }
         hexagonos={hexagonos}
-        seguir={navegando === 'si' && activo && (activo.estado === 'asignado' || activo.estado === 'en_ruta') ? g.ubicacion : undefined}
-        hueco={navegando === 'si' ? 0.44 : undefined}
       />
 
       {oferta && !activo && <OfertaEntrante servicio={oferta} gruero={g} />}
       {activo && (
-        <ServicioActivo servicio={activo} gruero={g} navegando={navegando === 'si'} cambiarNavegando={(v) => setNavegando(v ? 'si' : 'no')} />
+        <ServicioActivo servicio={activo} gruero={g} />
       )}
       {!oferta && !activo && (
         <div className="hoja corta">
@@ -229,13 +224,24 @@ export function Gruero() {
   );
 }
 
-// Abre Waze con la ruta cargada hacia el punto. Se llama dentro del toque del
-// botón: los navegadores solo dejan abrir otra app como respuesta a un toque.
+// Abre la app de Waze con la ruta cargada hacia el punto. Se llama dentro del
+// toque del botón: los navegadores solo dejan abrir otra app como respuesta a
+// un toque. En Android se usa un "intent" (abre la app directo; si no está,
+// manda a instalarla); en iPhone el esquema waze://; en computadora, la web.
 export function abrirWaze(p: Coordenada) {
+  const destino = `ll=${p.lat},${p.lng}&navigate=yes`;
+  const web = `https://waze.com/ul?${destino}`;
   try {
-    window.open(`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`, '_blank', 'noopener');
+    const ua = navigator.userAgent;
+    if (/Android/i.test(ua)) {
+      window.location.href = `intent://?${destino}#Intent;scheme=waze;package=com.waze;S.browser_fallback_url=${encodeURIComponent(web)};end`;
+    } else if (/iPhone|iPad|iPod/i.test(ua)) {
+      window.location.href = `waze://?${destino}`;
+    } else {
+      window.open(web, '_blank', 'noopener');
+    }
   } catch {
-    // sin Waze queda el botón y la guía propia
+    // sin Waze queda Google Maps
   }
 }
 
@@ -301,19 +307,8 @@ function OfertaEntrante({ servicio: s, gruero: g }: { servicio: Servicio; gruero
   );
 }
 
-function ServicioActivo({
-  servicio: s,
-  gruero: g,
-  navegando,
-  cambiarNavegando,
-}: {
-  servicio: Servicio;
-  gruero: TGruero;
-  navegando: boolean;
-  cambiarNavegando: (v: boolean) => void;
-}) {
+function ServicioActivo({ servicio: s, gruero: g }: { servicio: Servicio; gruero: TGruero }) {
   const estado = useEstado();
-  const [conVoz, setConVoz] = useSesion('gruaya-voz', 'si');
   // La ruta hacia el cliente la pide este mismo teléfono (con su GPS real), y la
   // vuelve a pedir cada 30 s o si no hay.
   useEffect(() => {
@@ -325,10 +320,6 @@ function ServicioActivo({
     const t = setInterval(pedir, 5000);
     return () => clearInterval(t);
   }, [s.id, s.estado, s.rutaGrua, s.rutaGruaEn]);
-  const rutaNav = s.estado === 'asignado' ? s.rutaGrua : s.estado === 'en_ruta' ? s.ruta : undefined;
-  const pasosNav = (s.estado === 'asignado' ? s.rutaGruaPasos : s.estado === 'en_ruta' ? s.rutaPasos : undefined) ?? [];
-  const fueraDeRuta = !!rutaNav && rutaNav.length > 1 && rutaRestante(rutaNav, g.ubicacion) === rutaNav && distanciaKm(g.ubicacion, rutaNav[0]) > 0.3;
-  const puedeNavegar = (s.estado === 'asignado' || s.estado === 'en_ruta') && pasosNav.length > 0;
   const [foto1, setFoto1] = useState<string>();
   const [foto2, setFoto2] = useState<string>();
   const [video, setVideo] = useState<string>();
@@ -338,10 +329,7 @@ function ServicioActivo({
   const mensajesDelCliente = s.chat.filter((m) => m.de === 'conductor').length;
 
   return (
-    <div className={`hoja ${s.estado === 'en_sitio' ? 'alta' : ''} ${navegando && puedeNavegar ? 'corta' : ''}`}>
-      {navegando && puedeNavegar && (
-        <Navegacion pasos={pasosNav} posicion={g.ubicacion} fueraDeRuta={fueraDeRuta} conVoz={conVoz === 'si'} cambiarVoz={(v) => setConVoz(v ? 'si' : 'no')} />
-      )}
+    <div className={`hoja ${s.estado === 'en_sitio' ? 'alta' : ''}`}>
       <div className="hoja-cuerpo">
         <div>
           <h2>{s.estado === 'en_ruta' ? `Rumbo a ${s.destinoTexto}` : NOMBRE_ESTADO[s.estado]}</h2>
@@ -352,7 +340,7 @@ function ServicioActivo({
             {s.estado === 'entregado' && 'Esperando que el cliente confirme el pago'}
           </span>
         </div>
-        <div className={`persona ${navegando && puedeNavegar ? 'oculta' : ''}`}>
+        <div className="persona">
           <div className="avatar">{cliente?.nombre.slice(0, 1).toUpperCase() ?? '?'}</div>
           <div className="texto">
             <strong>{cliente?.nombre ?? 'Cliente'}</strong>
@@ -370,21 +358,10 @@ function ServicioActivo({
         ) : null}
         {s.estado !== 'entregado' && (
           <div className="acciones">
-            {puedeNavegar && (
-              <button className={navegando ? 'activo' : ''} onClick={() => cambiarNavegando(!navegando)}>
-                <span className="ico">{navegando ? '🔍' : '📍'}</span>
-                {navegando ? 'Mapa' : 'Navegar aquí'}
-              </button>
-            )}
-            <a
-              className="boton"
-              href={`https://waze.com/ul?ll=${hacia.lat},${hacia.lng}&navigate=yes`}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <button onClick={() => abrirWaze(hacia)}>
               <span className="ico">🧭</span>
               Waze
-            </a>
+            </button>
             <a
               className="boton"
               href={`https://www.google.com/maps/dir/?api=1&destination=${hacia.lat},${hacia.lng}`}
@@ -402,7 +379,7 @@ function ServicioActivo({
         )}
         {(s.estado === 'asignado' || s.estado === 'en_ruta') && (
           <p className="tenue chico">
-            Waze se abre solo con la ruta. Mantén GrúaYa abierta o en pantalla dividida para que el cliente vea dónde vas.
+            Waze se abre solo con la ruta. Vuelve a GrúaYa de vez en cuando (o usa pantalla dividida) para que el cliente vea dónde vas.
           </p>
         )}
         {verChat && s.estado !== 'entregado' && <Chat servicio={s} yo="gruero" />}
