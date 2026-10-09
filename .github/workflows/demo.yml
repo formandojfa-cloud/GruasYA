@@ -34,6 +34,8 @@ jobs:
             case "$URL" in */) echo "URL: termina en barra (la app la quita sola)";; esac
             case "$URL" in *" "*) echo "URL: tiene espacios";; esac
             case "$URL" in *supabase.com/dashboard*) echo "URL: es la del panel, no la Project URL de Settings → API";; esac
+            # Muestra la forma de la URL con el identificador del proyecto tapado.
+            echo "URL (tapada): $(echo "$URL" | sed -E 's#^(https?://)[^./]+#\1xxxx#')"
             URL="$(echo "$URL" | tr -d '[:space:]')"; URL="${URL%/}"
             case "$URL" in https://*.supabase.co) echo "URL: forma correcta";; *) echo "URL: forma INCORRECTA (debe ser https://xxxx.supabase.co)";; esac
             case "$ANON" in eyJ*) echo "ANON: forma correcta";; sb_publishable_*) echo "ANON: clave publishable (sirve)";; *) echo "ANON: forma INCORRECTA (debe empezar con eyJ o sb_publishable_)";; esac
