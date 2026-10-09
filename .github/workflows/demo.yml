@@ -32,11 +32,12 @@ jobs:
           done
           if [ -n "$URL" ]; then
             case "$URL" in */) echo "URL: termina en barra (la app la quita sola)";; esac
+            case "$URL" in */rest/v1*) echo "URL: es la dirección REST; la app usa solo el dominio (lo recorta sola)";; esac
             case "$URL" in *" "*) echo "URL: tiene espacios";; esac
             case "$URL" in *supabase.com/dashboard*) echo "URL: es la del panel, no la Project URL de Settings → API";; esac
             # Muestra la forma de la URL con el identificador del proyecto tapado.
             echo "URL (tapada): $(echo "$URL" | sed -E 's#^(https?://)[^./]+#\1xxxx#')"
-            URL="$(echo "$URL" | tr -d '[:space:]')"; URL="${URL%/}"
+            URL="$(echo "$URL" | tr -d '[:space:]' | sed -E 's#/+$##; s#/rest/v1$##; s#/+$##')"
             case "$URL" in https://*.supabase.co) echo "URL: forma correcta";; *) echo "URL: forma INCORRECTA (debe ser https://xxxx.supabase.co)";; esac
             case "$ANON" in eyJ*) echo "ANON: forma correcta";; sb_publishable_*) echo "ANON: clave publishable (sirve)";; *) echo "ANON: forma INCORRECTA (debe empezar con eyJ o sb_publishable_)";; esac
             codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $ANON" "$URL/rest/v1/" || echo "sin conexión")
