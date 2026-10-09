@@ -113,8 +113,9 @@ export function Mapa({
         ruta.map((p) => [p.lat, p.lng] as [number, number]),
         { color, weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
       ).addTo(g);
-      // Encuadrar cuando llega una ruta nueva.
-      const firmaRuta = `${ruta.length}|${ruta.at(0)!.lat}|${ruta.at(-1)!.lat}`;
+      // Encuadrar cuando llega una ruta nueva (el final cambia); que se acorte por
+      // detrás conforme avanza la grúa no reencuadra.
+      const firmaRuta = `${ruta.at(-1)!.lat}|${ruta.at(-1)!.lng}`;
       if (firmaRuta !== firmaRutaPrevia.current) {
         firmaRutaPrevia.current = firmaRuta;
         m.fitBounds(linea.getBounds(), { ...margen, animate: false });

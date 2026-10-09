@@ -13,7 +13,7 @@ import {
 } from '../data/acciones';
 import { useEstado } from '../data/store';
 import { DESPACHO_INICIAL, minutosParaLlegar } from '../domain/despacho';
-import { distanciaKm, minutosEstimados } from '../domain/geo';
+import { distanciaKm, minutosEstimados, rutaRestante } from '../domain/geo';
 import { celdaDe } from '../domain/h3';
 import { gridDisk } from 'h3-js';
 import type { Gruero as TGruero, Servicio } from '../domain/tipos';
@@ -119,7 +119,16 @@ export function Gruero() {
       <Mapa
         centro={g.ubicacion}
         marcadores={marcadores}
-        ruta={servicio && servicio.estado === 'asignado' && servicio.rutaGrua ? servicio.rutaGrua : servicio?.ruta}
+        ruta={
+          // La línea se acorta detrás de la grúa conforme avanza.
+          servicio?.estado === 'asignado'
+            ? servicio.rutaGrua
+              ? rutaRestante(servicio.rutaGrua, g.ubicacion)
+              : servicio.ruta
+            : servicio?.estado === 'en_ruta'
+              ? rutaRestante(servicio.ruta, g.ubicacion)
+              : servicio?.ruta
+        }
         hexagonos={hexagonos}
       />
 

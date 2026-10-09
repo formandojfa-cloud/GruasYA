@@ -54,3 +54,35 @@ export const FACTOR_HORA_PICO = 1.6;
 export function esHoraPico(hora: number): boolean {
   return (hora >= 6 && hora < 9) || (hora >= 16 && hora < 20);
 }
+
+// Parte de la ruta que falta por recorrer desde donde está el vehículo: se corta
+// en el punto de la ruta más cercano a él, para que la línea se vaya "consumiendo"
+// detrás de la grúa en vez de quedarse dibujada completa.
+export function rutaRestante(ruta: Coordenada[], posicion: Coordenada): Coordenada[] {
+  if (ruta.length < 2) return ruta;
+  let mejor = 0;
+  let mejorDist = Infinity;
+  let mejorPunto = ruta[0];
+  for (let i = 0; i < ruta.length - 1; i++) {
+    const p = proyectar(ruta[i], ruta[i + 1], posicion);
+    const d = distanciaKm(p, posicion);
+    if (d < mejorDist) {
+      mejorDist = d;
+      mejor = i;
+      mejorPunto = p;
+    }
+  }
+  // Si la grúa se salió mucho de la ruta (más de 300 m), se dibuja completa.
+  if (mejorDist > 0.3) return ruta;
+  return [mejorPunto, ...ruta.slice(mejor + 1)];
+}
+
+// Punto del segmento a→b más cercano a p (en grados, suficiente para tramos cortos).
+function proyectar(a: Coordenada, b: Coordenada, p: Coordenada): Coordenada {
+  const cosLat = Math.cos((a.lat * Math.PI) / 180);
+  const ax = a.lng * cosLat, ay = a.lat, bx = b.lng * cosLat, by = b.lat, px = p.lng * cosLat, py = p.lat;
+  const dx = bx - ax, dy = by - ay;
+  const largo2 = dx * dx + dy * dy;
+  const t = largo2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / largo2));
+  return { lat: ay + dy * t, lng: (ax + dx * t) / cosLat };
+}

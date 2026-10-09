@@ -5,7 +5,7 @@ import pickup from './vehiculos/pickup.svg';
 import { calificar, cancelarServicio, confirmarPagoConductor, pedirGrua, registrarConductor } from '../data/acciones';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
-import { distanciaKm, largoRutaKm } from '../domain/geo';
+import { distanciaKm, largoRutaKm, rutaRestante } from '../domain/geo';
 import { celdaDe, celdasCercanas, enCeldas, indicePorCelda } from '../domain/h3';
 import { minutosParaLlegar } from '../domain/despacho';
 import { calcularTarifa, cargoCancelacion } from '../domain/tarifa';
@@ -411,6 +411,14 @@ function PedirGrua({ conductor }: { conductor: TConductor }) {
   );
 }
 
+// La línea se va acortando detrás de la grúa: hacia el cliente mientras va en
+// camino, y hacia el destino cuando ya lleva el vehículo.
+function rutaVisible(s: Servicio, grua?: Coordenada): Coordenada[] | undefined {
+  if (s.estado === 'asignado') return s.rutaGrua && grua ? rutaRestante(s.rutaGrua, grua) : s.rutaGrua ?? s.ruta;
+  if (s.estado === 'en_ruta' && grua) return rutaRestante(s.ruta, grua);
+  return s.ruta;
+}
+
 function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
   const estado = useEstado();
   const g = estado.grueros.find((x) => x.id === s.grueroId);
@@ -460,7 +468,7 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
 
   return (
     <>
-      <Mapa centro={s.origen} marcadores={marcadores} ruta={s.estado === 'asignado' && s.rutaGrua ? s.rutaGrua : s.ruta} />
+      <Mapa centro={s.origen} marcadores={marcadores} ruta={rutaVisible(s, g?.ubicacion)} />
       <div className="hoja">
         <div className="hoja-cuerpo">
           <div className="encabezado-viaje">
