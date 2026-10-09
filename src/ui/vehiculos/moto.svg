@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60">
+  <defs>
+    <linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4f57"/><stop offset="1" stop-color="#1c1f24"/></linearGradient>
+  </defs>
+  <ellipse cx="60" cy="53" rx="46" ry="4" fill="#000" opacity=".12"/>
+  <!-- ruedas -->
+  <circle cx="24" cy="42" r="12" fill="#111"/><circle cx="24" cy="42" r="7" fill="#8d9199"/><circle cx="24" cy="42" r="2.5" fill="#333"/>
+  <circle cx="96" cy="42" r="12" fill="#111"/><circle cx="96" cy="42" r="7" fill="#8d9199"/><circle cx="96" cy="42" r="2.5" fill="#333"/>
+  <!-- horquilla delantera y manubrio -->
+  <path d="M96 42 L84 20" stroke="#8d9199" stroke-width="3" stroke-linecap="round"/>
+  <path d="M80 18 L94 16" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="90" cy="24" r="4" fill="#ffd36b"/>
+  <!-- cuadro, motor y escape -->
+  <path d="M24 42 L44 24 L76 24 L90 36" stroke="#2b2f36" stroke-width="4" fill="none" stroke-linejoin="round"/>
+  <path d="M44 30 L68 30 L64 42 L48 42 Z" fill="#555b64"/>
+  <path d="M60 42 L28 44" stroke="#8d9199" stroke-width="4" stroke-linecap="round"/>
+  <!-- tanque y asiento -->
+  <path d="M54 26 Q60 14 80 18 L84 24 L58 26 Z" fill="url(#c)"/>
+  <path d="M26 28 Q40 22 58 26 L54 31 L30 31 Q26 31 26 28 Z" fill="#1c1f24"/>
+  <path d="M14 30 L30 27 L30 31 L16 33 Z" fill="#2b2f36"/>
+</svg>

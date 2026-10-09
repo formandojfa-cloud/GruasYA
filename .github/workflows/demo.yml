@@ -1,0 +1,95 @@
+name: Pruebas y demo
+
+on:
+  push:
+    branches: [main, claude/prototipo-mvp]
+  pull_request:
+  workflow_dispatch: # para volver a probar los secretos sin cambiar código
+
+permissions:
+  contents: write
+
+jobs:
+  pruebas-y-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # Dice qué secretos están configurados, sin mostrar sus valores.
+      - name: Revisar secretos
+        env:
+          URL: ${{ secrets.VITE_SUPABASE_URL }}
+          ANON: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          MAPBOX: ${{ secrets.VITE_MAPBOX_TOKEN }}
+        run: |
+          for v in URL ANON MAPBOX; do
+            if [ -n "${!v}" ]; then echo "$v: configurado"; else echo "$v: FALTA"; fi
+          done
+          if [ -n "$URL" ]; then
+            case "$URL" in */) echo "URL: termina en barra (la app la quita sola)";; esac
+            case "$URL" in */rest/v1*) echo "URL: es la dirección REST; la app usa solo el dominio (lo recorta sola)";; esac
+            case "$URL" in *" "*) echo "URL: tiene espacios";; esac
+            case "$URL" in *supabase.com/dashboard*) echo "URL: es la del panel, no la Project URL de Settings → API";; esac
+            # Muestra la forma de la URL con el identificador del proyecto tapado.
+            echo "URL (tapada): $(echo "$URL" | sed -E 's#^(https?://)[^./]+#\1xxxx#')"
+            URL="$(echo "$URL" | tr -d '[:space:]' | sed -E 's#/+$##; s#/rest/v1$##; s#/+$##')"
+            case "$URL" in https://*.supabase.co) echo "URL: forma correcta";; *) echo "URL: forma INCORRECTA (debe ser https://xxxx.supabase.co)";; esac
+            case "$ANON" in eyJ*) echo "ANON: forma correcta";; sb_publishable_*) echo "ANON: clave publishable (sirve)";; *) echo "ANON: forma INCORRECTA (debe empezar con eyJ o sb_publishable_)";; esac
+            ANON="$(echo "$ANON" | tr -d '[:space:]')"
+            echo "ANON: ${#ANON} caracteres"
+            # Si es un JWT, compara el proyecto de la clave con el de la URL (sin mostrar ninguno).
+            case "$ANON" in eyJ*)
+              carga=$(echo "$ANON" | cut -d. -f2 | tr '_-' '/+'); carga="$carga$(printf '%*s' $(( (4 - ${#carga} % 4) % 4 )) '' | tr ' ' '=')"
+              datos=$(echo "$carga" | base64 -d 2>/dev/null || echo '{}')
+              rol=$(echo "$datos" | sed -nE 's/.*"role":"([^"]+)".*/\1/p'); ref=$(echo "$datos" | sed -nE 's/.*"ref":"([^"]+)".*/\1/p')
+              echo "ANON: rol en la clave = ${rol:-desconocido}"
+              dominio=$(echo "$URL" | sed -E 's#^https://([^.]+)\..*#\1#')
+              if [ "$ref" = "$dominio" ]; then echo "ANON: pertenece al mismo proyecto que la URL"; else echo "ANON: NO es del mismo proyecto que la URL"; fi
+            ;; esac
+            # /auth/v1/settings acepta la clave anon; /rest/v1/ raíz ya no.
+            codigo=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -H "apikey: $ANON" "$URL/auth/v1/settings" || echo "sin conexión")
+            echo "Supabase responde: HTTP $codigo"
+            [ "$codigo" = "200" ] || head -c 300 /tmp/resp.txt; echo
+          fi
+      # La función del servidor se vuelve a empaquetar para comprobar que compila.
+      - run: npm run motor
+      - run: npm run build
+        env:
+          VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+      # Publica la demo en la rama gh-pages (GitHub Pages sirve esa rama).
+      - if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+
+  # Despliega la función "motor" en Supabase si están los secretos (si no, se salta).
+  funcion-motor:
+    needs: pruebas-y-demo
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ¿Hay secretos de Supabase?
+        id: hay
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$REF" ]; then echo "si=true" >> "$GITHUB_OUTPUT"; else echo "Faltan SUPABASE_ACCESS_TOKEN o SUPABASE_PROJECT_REF: no se despliega la función."; fi
+      - if: steps.hay.outputs.si == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - if: steps.hay.outputs.si == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy motor --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
