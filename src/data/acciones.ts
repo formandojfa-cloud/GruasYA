@@ -167,6 +167,14 @@ export function aceptar(e: Estado, servicioId: string, grueroId: string) {
   g.rechazosSeguidos = 0;
 }
 
+// El teléfono del piloto anota cuándo le apareció la oferta.
+export function marcarOfertaVista(servicioId: string, grueroId: string) {
+  actualizar((e) => {
+    const o = servicio(e, servicioId).ofertas.find((x) => x.grueroId === grueroId && !x.resultado);
+    if (o && !o.vistaEn) o.vistaEn = Date.now();
+  });
+}
+
 export function rechazarOferta(servicioId: string, grueroId: string) {
   actualizar((e) => {
     const s = servicio(e, servicioId);

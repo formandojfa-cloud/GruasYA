@@ -131,7 +131,7 @@ export function App() {
           <p className="tenue chico" style={{ marginTop: 16, textAlign: 'center' }}>
             {conexion.nube
               ? `Datos en la nube (Supabase): lo que pasa aquí se ve en todos los teléfonos. Tiempo real: ${
-                  conexion.tiempoReal ? 'conectado' : 'sin conexión (se refresca cada 5 s)'
+                  conexion.tiempoReal ? `conectado, ${conexion.avisosEnVivo} avisos recibidos` : 'sin conexión (se refresca cada 5 s)'
                 }.`
               : 'Demo sin servidor: los datos viven en este navegador. Abre otra pestaña para ver al conductor y al piloto a la vez.'}
             <br />

@@ -76,7 +76,7 @@ export interface Nube {
   borrarTodo(): Promise<void>;
   // Llama a `alCambiar` con el estado nuevo cuando otro teléfono cambia algo, y a
   // `alEstado` con el estado del canal en vivo (conectado o no).
-  escuchar(alCambiar: (e: Estado) => void, alEstado?: (conectado: boolean) => void): () => void;
+  escuchar(alCambiar: (e: Estado) => void, alEstado?: (conectado: boolean, avisos: number) => void): () => void;
 }
 
 export function crearNube(): Nube {
@@ -140,7 +140,11 @@ export function crearNube(): Nube {
     },
 
     escuchar(alCambiar, alEstado) {
+      let avisos = 0;
+      let conectado = false;
       const aplicar = (t: Tabla, tipo: string, nueva?: Fila, vieja?: { id: string }) => {
+        avisos += 1;
+        alEstado?.(conectado, avisos);
         const lista = filas[t].filter((f) => f.id !== (nueva?.id ?? vieja?.id));
         if (tipo !== 'DELETE' && nueva) lista.push(nueva);
         filas = { ...filas, [t]: lista };
@@ -152,7 +156,10 @@ export function crearNube(): Nube {
           aplicar(t, ev.eventType, ev.new as Fila | undefined, ev.old as { id: string } | undefined),
         );
       }
-      canal.subscribe((estado) => alEstado?.(estado === 'SUBSCRIBED'));
+      canal.subscribe((estado) => {
+        conectado = estado === 'SUBSCRIBED';
+        alEstado?.(conectado, avisos);
+      });
       const refresco = setInterval(() => {
         leerTodo()
           .then((f) => {

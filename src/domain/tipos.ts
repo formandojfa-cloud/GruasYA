@@ -51,6 +51,7 @@ export interface Gruero {
 export interface Oferta {
   grueroId: string;
   enviadaEn: number;
+  vistaEn?: number; // cuándo la vio el piloto en su teléfono (para medir el retraso)
   resultado?: 'aceptada' | 'rechazada' | 'vencida';
 }
 

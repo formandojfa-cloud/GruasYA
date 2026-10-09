@@ -15,6 +15,7 @@ let nube: Nube | null = null;
 let listo = !HAY_NUBE; // en modo demo no hay nada que esperar
 let errorNube = '';
 let tiempoReal = false; // canal en vivo de Supabase conectado
+let avisosEnVivo = 0; // cambios recibidos por el canal en vivo
 let escuchando = false;
 
 function arrancarNube() {
@@ -33,8 +34,9 @@ function arrancarNube() {
             cache = nuevo;
             avisar();
           },
-          (conectado) => {
+          (conectado, avisos) => {
             tiempoReal = conectado;
+            avisosEnVivo = avisos;
             avisar();
           },
         );
@@ -138,13 +140,14 @@ export interface Conexion {
   listo: boolean;
   error: string;
   tiempoReal: boolean;
+  avisosEnVivo: number;
 }
-const leerConexion = (): Conexion => ({ nube: HAY_NUBE, listo, error: errorNube, tiempoReal });
+const leerConexion = (): Conexion => ({ nube: HAY_NUBE, listo, error: errorNube, tiempoReal, avisosEnVivo });
 let conexionCache = leerConexion();
 export function useConexion(): Conexion {
   return useSyncExternalStore(suscribir, () => {
     const c = leerConexion();
-    if (c.nube !== conexionCache.nube || c.listo !== conexionCache.listo || c.error !== conexionCache.error || c.tiempoReal !== conexionCache.tiempoReal)
+    if (c.nube !== conexionCache.nube || c.listo !== conexionCache.listo || c.error !== conexionCache.error || c.tiempoReal !== conexionCache.tiempoReal || c.avisosEnVivo !== conexionCache.avisosEnVivo)
       conexionCache = c;
     return conexionCache;
   });

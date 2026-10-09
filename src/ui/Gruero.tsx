@@ -3,6 +3,7 @@ import grua from './vehiculos/grua.svg';
 import { createPortal } from 'react-dom';
 import {
   aceptarOferta,
+  marcarOfertaVista,
   actualizarUbicacion,
   cambiarDisponible,
   dejarGps,
@@ -273,6 +274,7 @@ function OfertaEntrante({ servicio: s, gruero: g }: { servicio: Servicio; gruero
   const restantes = Math.max(0, Math.ceil(total - (ahora - oferta.enviadaEn) / 1000));
   // Suena y vibra mientras la oferta esté en pantalla.
   useEffect(() => empezarAlerta(), [s.id]);
+  useEffect(() => marcarOfertaVista(s.id, g.id), [s.id, g.id]);
 
   return (
     <div className="hoja alta">

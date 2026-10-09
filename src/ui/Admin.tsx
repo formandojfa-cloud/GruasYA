@@ -61,7 +61,15 @@ function Servicios() {
               {new Date(s.creadoEn).toLocaleTimeString('es-GT')} · {c?.nombre ?? '—'} → {s.destinoTexto} · {km(s.distanciaKm)}
             </div>
             <div className="tenue">
-              Grúa: {g?.nombre ?? '—'} · ofertas: {s.ofertas.map((o) => `${o.grueroId.replace('g-', '')} ${o.resultado ?? 'pendiente'}`).join(', ') || '—'}
+              Grúa: {g?.nombre ?? '—'} · ofertas:{' '}
+              {s.ofertas
+                .map(
+                  (o) =>
+                    `${o.grueroId.replace('g-', '')} ${o.resultado ?? 'pendiente'} (enviada +${Math.round((o.enviadaEn - s.creadoEn) / 1000)} s` +
+                    `${o.vistaEn ? `, vista +${Math.round((o.vistaEn - s.creadoEn) / 1000)} s` : ''})`,
+                )
+                .join(', ') || '—'}
+              {s.etasListas ? '' : ' · calculando rutas'}
             </div>
             {s.etaPrometido !== undefined && s.asignadoEn && s.llegadaEn && (
               <div className="tenue">
