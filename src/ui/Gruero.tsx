@@ -79,14 +79,15 @@ export function Gruero() {
   const [id, setId] = useSesion('gruaya-gruero', 'g-demo');
   const g = estado.grueros.find((x) => x.id === id) ?? estado.grueros[0];
   const [errorGps, setErrorGps] = useState('');
-  useGpsEnVivo(g.id, g.disponible, (m) => {
-    setErrorGps(m);
-    cambiarDisponible(g.id, false); // sin ubicación no se reciben solicitudes
-  });
-
   const activo = estado.servicios.find(
     (s) => s.grueroId === g.id && ['asignado', 'en_sitio', 'en_ruta', 'entregado'].includes(s.estado),
   );
+  // En línea o con un servicio en curso (al aceptar deja de estar "disponible",
+  // pero el cliente lo sigue), la ubicación real se manda sola.
+  useGpsEnVivo(g.id, g.disponible || !!activo, (m) => {
+    setErrorGps(m);
+    cambiarDisponible(g.id, false); // sin ubicación no se reciben solicitudes
+  });
   const oferta = estado.servicios.find(
     (s) => s.estado === 'buscando' && s.ofertas.some((o) => o.grueroId === g.id && !o.resultado),
   );
@@ -116,7 +117,7 @@ export function Gruero() {
         <div className="ganancias">
           <small>Ganancia</small> {quetzales(ganado)}
         </div>
-        {g.disponible && (
+        {(g.disponible || activo) && (
           <span className={`gps ${g.gpsEnVivo ? 'en-vivo' : ''}`}>{g.gpsEnVivo ? `● GPS en vivo${g.precisionM ? ` ±${g.precisionM} m` : ''}` : '○ Buscando GPS…'}</span>
         )}
       </EnBarra>

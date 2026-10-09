@@ -63,7 +63,7 @@ export function tick(e: Estado, ahora: number, dispositivo?: string) {
 
     if (s.estado === 'asignado') {
       if (!s.rutaGrua || (g.gpsEnVivo && ahora - (s.rutaGruaEn ?? 0) > RECALCULAR_GPS_MS)) void calcularRutaGrua(s.id);
-      if (!g.gpsEnVivo) {
+      if (!g.gpsEnVivo && g.automatico) {
         if (s.rutaGrua) {
           // La grúa simulada avanza por las calles hacia el cliente.
           s.avanceGruaKm = Math.min((s.avanceGruaKm ?? 0) + KM_POR_TICK, largoRutaKm(s.rutaGrua));
@@ -84,7 +84,7 @@ export function tick(e: Estado, ahora: number, dispositivo?: string) {
     } else if (s.estado === 'en_ruta') {
       // La grúa avanza por las calles de la ruta cotizada.
       s.avanceKm = (s.avanceKm ?? 0) + KM_POR_TICK;
-      if (!g.gpsEnVivo) g.ubicacion = puntoEnRuta(s.ruta, s.avanceKm);
+      if (!g.gpsEnVivo && g.automatico) g.ubicacion = puntoEnRuta(s.ruta, s.avanceKm);
       if (auto && s.avanceKm >= largoRutaKm(s.ruta)) {
         s.estado = 'entregado';
         s.cobradoPorGruero = true;
