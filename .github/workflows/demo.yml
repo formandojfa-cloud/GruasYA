@@ -51,7 +51,8 @@ jobs:
               dominio=$(echo "$URL" | sed -E 's#^https://([^.]+)\..*#\1#')
               if [ "$ref" = "$dominio" ]; then echo "ANON: pertenece al mismo proyecto que la URL"; else echo "ANON: NO es del mismo proyecto que la URL"; fi
             ;; esac
-            codigo=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -H "apikey: $ANON" "$URL/rest/v1/" || echo "sin conexión")
+            # /auth/v1/settings acepta la clave anon; /rest/v1/ raíz ya no.
+            codigo=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -H "apikey: $ANON" "$URL/auth/v1/settings" || echo "sin conexión")
             echo "Supabase responde: HTTP $codigo"
             [ "$codigo" = "200" ] || head -c 300 /tmp/resp.txt; echo
           fi
