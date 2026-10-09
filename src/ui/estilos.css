@@ -44,14 +44,14 @@ p { margin: 0; }
 /* Controles */
 label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--tenue); }
 label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--tinta); }
-input, select {
+input, select, textarea {
   font: inherit; color: var(--tinta);
   background: var(--gris);
   border: 2px solid transparent; border-radius: 8px;
   padding: 10px 12px; min-height: 48px; width: 100%;
   outline: none;
 }
-input:focus, select:focus { border-color: var(--tinta); }
+input:focus, select:focus, textarea:focus { border-color: var(--tinta); }
 label.check input { width: auto; min-height: 0; }
 button, .boton {
   font: inherit; font-weight: 600;

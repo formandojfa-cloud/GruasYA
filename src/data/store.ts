@@ -152,6 +152,16 @@ export function avisarMotor() {
   nube?.avisarMotor();
 }
 
+export function guardarSuscripcionPush(grueroId: string, sub: PushSubscriptionJSON, url: string) {
+  const keys = sub.keys as { p256dh: string; auth: string } | undefined;
+  if (!nube || !sub.endpoint || !keys) return;
+  void nube.guardarSuscripcion({ id: sub.endpoint, gruero_id: grueroId, datos: { endpoint: sub.endpoint, keys, url } });
+}
+
+export function borrarSuscripcionPush(endpoint: string) {
+  void nube?.borrarSuscripcion(endpoint);
+}
+
 export function reintentarNube() {
   nube = null;
   errorNube = '';

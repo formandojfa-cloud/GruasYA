@@ -142,6 +142,47 @@ function Conductores() {
   );
 }
 
+// Claves VAPID para las notificaciones push: se generan aquí mismo (en el navegador)
+// y se copian como secretos; ningún servidor las conoce hasta que las pegues.
+function b64url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function generarClavesVapid(): Promise<{ publica: string; privada: string }> {
+  const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const publica = b64url(new Uint8Array(await crypto.subtle.exportKey('raw', k.publicKey)));
+  const jwk = await crypto.subtle.exportKey('jwk', k.privateKey);
+  return { publica, privada: jwk.d! };
+}
+
+function ClavesPush() {
+  const [claves, setClaves] = useState<{ publica: string; privada: string } | null>(null);
+  return (
+    <div className="tarjeta">
+      <h3>Notificaciones push</h3>
+      <p className="tenue chico">
+        Para avisar al piloto con la app cerrada hacen falta dos claves. Genéralas aquí una sola vez y guárdalas: la pública como
+        secreto <code>VITE_VAPID_PUBLIC_KEY</code> en GitHub, y las dos como <code>VAPID_PUBLIC_KEY</code> y{' '}
+        <code>VAPID_PRIVATE_KEY</code> en Supabase → Edge Functions → Secrets. Si las vuelves a generar, los pilotos tendrán que activar
+        los avisos de nuevo.
+      </p>
+      {claves ? (
+        <>
+          <label>
+            Pública
+            <textarea readOnly rows={2} value={claves.publica} onFocus={(e) => e.currentTarget.select()} />
+          </label>
+          <label>
+            Privada (no la compartas)
+            <textarea readOnly rows={2} value={claves.privada} onFocus={(e) => e.currentTarget.select()} />
+          </label>
+        </>
+      ) : (
+        <button onClick={() => void generarClavesVapid().then(setClaves)}>Generar claves</button>
+      )}
+    </div>
+  );
+}
+
 function Ajustes() {
   const e = useEstado();
   const campo = (clave: keyof ParametrosTarifa, etiqueta: string, paso = 1) => (
@@ -198,6 +239,7 @@ function Ajustes() {
           alConfirmar={reiniciar}
         />
       </div>
+      <ClavesPush />
     </>
   );
 }

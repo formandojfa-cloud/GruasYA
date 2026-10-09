@@ -17,11 +17,49 @@ function conTope<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+export interface OfertaNueva {
+  servicioId: string;
+  grueroId: string;
+  titulo: string;
+  cuerpo: string;
+}
+
 export interface ResumenPaso {
   servicios: number;
   buscando: number;
   ofertasNuevas: number;
+  avisos: OfertaNueva[]; // para mandar las notificaciones push
   ms: number;
+}
+
+const NOMBRE_VEHICULO: Record<string, string> = { carro: 'Carro', moto: 'Moto', pickup: 'Pickup o camioneta' };
+const NOMBRE_PROBLEMA: Record<string, string> = {
+  no_arranca: 'No arranca',
+  accidente: 'Accidente',
+  llanta: 'Llanta',
+  bateria: 'Batería',
+  otro: 'Otro',
+};
+
+// Qué ofertas aparecieron en este paso (comparando con el estado anterior).
+export function ofertasNuevas(antes: Estado, despues: Estado): OfertaNueva[] {
+  const previas = new Set(antes.servicios.flatMap((s) => s.ofertas.map((o) => `${s.id}|${o.grueroId}|${o.enviadaEn}`)));
+  const salida: OfertaNueva[] = [];
+  for (const s of despues.servicios) {
+    for (const o of s.ofertas) {
+      if (o.resultado || previas.has(`${s.id}|${o.grueroId}|${o.enviadaEn}`)) continue;
+      const eta = s.etas?.[o.grueroId]?.minutos;
+      salida.push({
+        servicioId: s.id,
+        grueroId: o.grueroId,
+        titulo: `Nueva solicitud · Q${Math.round(s.tarifa - s.comision)} para ti`,
+        cuerpo: `${eta ? `Recogida a ${Math.max(1, Math.round(eta))} min · ` : ''}${NOMBRE_VEHICULO[s.vehiculo] ?? s.vehiculo} · ${
+          NOMBRE_PROBLEMA[s.problema] ?? s.problema
+        } · tienes 90 s`,
+      });
+    }
+  }
+  return salida;
 }
 
 // Rellena, antes del tick, lo que el tick no puede esperar: tiempos por calle de
@@ -59,14 +97,15 @@ export async function pasoServidor(nube: Nube, ahora = Date.now()): Promise<Resu
   const e = await nube.cargar();
   const antes = structuredClone(e);
   await prepararEstado(e);
-  const ofertasAntes = e.servicios.reduce((n, s) => n + s.ofertas.length, 0);
   tick(e, ahora, { servidor: true });
   e.motorServidorEn = ahora;
   await nube.guardar(antes, e);
+  const avisos = ofertasNuevas(antes, e);
   return {
     servicios: e.servicios.length,
     buscando: e.servicios.filter((s) => s.estado === 'buscando').length,
-    ofertasNuevas: e.servicios.reduce((n, s) => n + s.ofertas.length, 0) - ofertasAntes,
+    ofertasNuevas: avisos.length,
+    avisos,
     ms: Date.now() - inicio,
   };
 }

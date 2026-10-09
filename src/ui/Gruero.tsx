@@ -24,6 +24,7 @@ import { km, minutos, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales
 import { Mapa, type Hexagono, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
 import { empezarAlerta, haySonido, prepararSonido } from './alerta';
+import { activarPush, estadoPush, type EstadoPush } from './push';
 import { calcularRutaGrua } from '../data/eta';
 
 // Mientras el gruero está en línea, su ubicación real se envía sola: sin GPS no
@@ -66,6 +67,24 @@ function useGpsEnVivo(grueroId: string, activo: boolean, alFallar: (m: string) =
   }, [grueroId, activo]);
 }
 
+// Chrome ofrece instalar la web como app; guardamos esa oferta para un botón.
+interface EventoInstalar extends Event {
+  prompt(): Promise<void>;
+}
+function useInstalar(): (() => void) | null {
+  const [evento, setEvento] = useState<EventoInstalar | null>(null);
+  useEffect(() => {
+    const guardar = (e: Event) => {
+      e.preventDefault();
+      setEvento(e as EventoInstalar);
+    };
+    window.addEventListener('beforeinstallprompt', guardar);
+    window.addEventListener('appinstalled', () => setEvento(null));
+    return () => window.removeEventListener('beforeinstallprompt', guardar);
+  }, []);
+  return evento ? () => void evento.prompt().then(() => setEvento(null)) : null;
+}
+
 // Lleva los controles del gruero a la barra de arriba, junto al selector de papel,
 // para que el saldo siempre quede a la vista sin importar el tamaño de pantalla.
 function EnBarra({ children }: { children: ReactNode }) {
@@ -79,6 +98,12 @@ export function Gruero() {
   const [id, setId] = useSesion('gruaya-gruero', 'g-demo');
   const g = estado.grueros.find((x) => x.id === id) ?? estado.grueros[0];
   const [errorGps, setErrorGps] = useState('');
+  // Avisos push (nueva solicitud con la app cerrada) e instalación como app.
+  const [push, setPush] = useState<EstadoPush>('pendiente');
+  useEffect(() => {
+    void estadoPush().then(setPush);
+  }, []);
+  const instalar = useInstalar();
   const activo = estado.servicios.find(
     (s) => s.grueroId === g.id && ['asignado', 'en_sitio', 'en_ruta', 'entregado'].includes(s.estado),
   );
@@ -177,6 +202,19 @@ export function Gruero() {
                   : 'Esperando tu ubicación. Acepta el permiso del navegador para recibir solicitudes.'}
               </p>
             )}
+            {push === 'activo' && <p className="tenue chico">🔔 Te avisamos de cada solicitud aunque la app esté cerrada.</p>}
+            {push === 'pendiente' && g.disponible && (
+              <button onClick={() => void activarPush(g.id).then(setPush)}>🔔 Activar avisos de solicitudes</button>
+            )}
+            {push === 'bloqueado' && (
+              <p className="aviso">Las notificaciones están bloqueadas para GrúaYa. Actívalas en los ajustes del sitio en el navegador.</p>
+            )}
+            {push === 'no_soportado' && (
+              <p className="tenue chico">
+                Para recibir avisos con la app cerrada, agrega GrúaYa a la pantalla de inicio (en iPhone: Compartir → "Agregar a inicio").
+              </p>
+            )}
+            {instalar && <button onClick={instalar}>📲 Instalar GrúaYa en el teléfono</button>}
             {!g.disponible && g.rechazosSeguidos >= DESPACHO_INICIAL.rechazosParaPausar && (
               <p className="aviso">
                 Te pausamos por dejar pasar varias ofertas seguidas. Conéctate cuando puedas recibir trabajos.
@@ -230,6 +268,7 @@ export function Gruero() {
                   setErrorGps('');
                   prepararSonido(); // el navegador solo deja sonar tras un toque
                   cambiarDisponible(g.id, true);
+                  void activarPush(g.id).then(setPush); // también aprovecha el toque
                 }}
               >
                 Conectarme

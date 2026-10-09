@@ -77,8 +77,18 @@ function filasDe(e: Estado): Record<Tabla, Fila[]> {
   };
 }
 
+export interface SuscripcionPush {
+  id: string; // el endpoint
+  gruero_id: string;
+  datos: { endpoint: string; keys: { p256dh: string; auth: string }; url: string };
+}
+
 export interface Nube {
   cargar(): Promise<Estado>;
+  // Suscripciones push de los pilotos (tabla suscripciones de supabase/push.sql).
+  guardarSuscripcion(s: SuscripcionPush): Promise<void>;
+  borrarSuscripcion(id: string): Promise<void>;
+  suscripcionesDe(grueroIds: string[]): Promise<SuscripcionPush[]>;
   // Pide al servidor que corra el reparto ya mismo (sin esperar el siguiente paso programado).
   avisarMotor(): void;
   // Candado en la base para que no corran dos pasos del servidor a la vez
@@ -123,6 +133,22 @@ export function crearNube(): Nube {
       void sb.functions.invoke('motor', { body: {} }).catch(() => {
         // sin función en el servidor, el reparto corre en la app
       });
+    },
+
+    async guardarSuscripcion(s) {
+      const { error } = await sb.from('suscripciones').upsert(s);
+      if (error) console.error('suscripciones', error.message);
+    },
+
+    async borrarSuscripcion(id) {
+      await sb.from('suscripciones').delete().eq('id', id);
+    },
+
+    async suscripcionesDe(grueroIds) {
+      if (!grueroIds.length) return [];
+      const { data, error } = await sb.from('suscripciones').select('id, gruero_id, datos').in('gruero_id', grueroIds);
+      if (error) return [];
+      return (data ?? []) as SuscripcionPush[];
     },
 
     async tomarCandado(nombre, ms) {

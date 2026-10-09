@@ -17,6 +17,9 @@ function nubeDePrueba(e: Estado) {
     avisarMotor: () => {},
     tomarCandado: async () => true,
     soltarCandado: async () => {},
+    guardarSuscripcion: async () => {},
+    borrarSuscripcion: async () => {},
+    suscripcionesDe: async () => [],
   };
   return { nube, escrituras, estado: () => e };
 }
@@ -60,6 +63,8 @@ describe('pasoServidor', () => {
     const ahora = Date.now();
     const r = await pasoServidor(nube, ahora);
     expect(r.ofertasNuevas).toBe(1);
+    expect(r.avisos[0]).toMatchObject({ servicioId: 's-1', grueroId: 'g-demo' });
+    expect(r.avisos[0].titulo).toContain('Q270');
     const s = estado().servicios[0];
     expect(s.etasListas).toBe(true);
     expect(s.ofertas[0].grueroId).toBe('g-demo');

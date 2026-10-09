@@ -8,6 +8,7 @@ await build({
   target: 'es2022',
   outfile: 'supabase/functions/motor/index.ts',
   legalComments: 'none',
+  external: ['npm:*'], // Deno los resuelve al desplegar
   minify: true,
   banner: { js: '// Generado por `npm run motor` desde src/servidor/edge.ts. No editar a mano.' },
 });
