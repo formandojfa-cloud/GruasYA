@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Admin } from './Admin';
 import { Conductor } from './Conductor';
 import { Gruero } from './Gruero';
+import { reintentarNube, useConexion } from '../data/store';
 import { useSesion } from './sesion';
 
 const PAPELES = { conductor: 'Conductor', gruero: 'Piloto', admin: 'Admin' } as const;
@@ -75,11 +76,35 @@ function AvisoAmpliada({ escala }: { escala: number }) {
   );
 }
 
+// Con datos en la nube, no se muestra nada hasta tener el estado real.
+function Conectando({ error }: { error: string }) {
+  return (
+    <div className="pagina conectando">
+      <div className="marca">
+        Grúa<span>Ya</span>
+      </div>
+      {error ? (
+        <>
+          <p>No se pudo conectar con el servidor.</p>
+          <p className="tenue chico">{error}</p>
+          <button className="principal" onClick={reintentarNube}>
+            Reintentar
+          </button>
+        </>
+      ) : (
+        <p className="tenue">Conectando…</p>
+      )}
+    </div>
+  );
+}
+
 export function App() {
   const [papel, setPapel] = useSesion('gruaya-papel', 'conductor');
   const actual = (papel ?? 'conductor') as Papel;
   useSinDesplazar(actual !== 'admin');
   const vista = useVistaVisible();
+  const conexion = useConexion();
+  if (conexion.nube && !conexion.listo) return <Conectando error={conexion.error} />;
   const barra = (
     <div className="barra">
       <div className="marca">
@@ -104,7 +129,9 @@ export function App() {
         <main>
           <Admin />
           <p className="tenue chico" style={{ marginTop: 16, textAlign: 'center' }}>
-            Demo sin servidor: los datos viven en este navegador. Abre otra pestaña para ver al conductor y al piloto a la vez.
+            {conexion.nube
+              ? 'Datos en la nube (Supabase): lo que pasa aquí se ve en todos los teléfonos.'
+              : 'Demo sin servidor: los datos viven en este navegador. Abre otra pestaña para ver al conductor y al piloto a la vez.'}
           </p>
         </main>
       </div>

@@ -62,6 +62,7 @@ export interface MensajeChat {
 export interface Servicio {
   id: string;
   conductorId: string;
+  dispositivo?: string; // navegador que pidió la grúa; en la nube, ese es el que despacha
   creadoEn: number;
   origen: Coordenada;
   destino: Coordenada;

@@ -346,3 +346,8 @@ button.conectar { background: var(--azul); color: #fff; }
   .acciones button, .acciones a { min-height: 56px; }
   h2 { font-size: 20px; }
 }
+
+/* Pantalla de espera mientras llegan los datos de la nube. */
+.conectando { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 100vh; text-align: center; padding: 24px; }
+.conectando .marca { font-size: 28px; }
+.conectando button.principal { width: auto; padding: 0 32px; }

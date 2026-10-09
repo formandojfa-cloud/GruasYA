@@ -2,6 +2,7 @@ import { cargoCancelacion, calcularTarifa } from '../domain/tarifa';
 import type { Clima, Conductor, Coordenada, Gruero, Problema, Servicio, TipoVehiculo } from '../domain/tipos';
 import type { Ruta } from './rutas';
 import type { Estado } from './semilla';
+import { HAY_NUBE, idDispositivo } from './nube';
 import { actualizar, nuevoId } from './store';
 
 const RECHAZOS_PARA_PAUSAR = 3;
@@ -51,6 +52,7 @@ export function pedirGrua(sol: Solicitud): string {
     const s: Servicio = {
       id,
       ...resto,
+      dispositivo: HAY_NUBE ? idDispositivo() : undefined,
       creadoEn: Date.now(),
       distanciaKm: ruta.distanciaKm,
       minutos: ruta.minutos,

@@ -5,6 +5,7 @@ import { avanzar, distanciaKm, largoRutaKm, puntoEnRuta } from '../domain/geo';
 import { aceptar, cerrarSiPagado, contarRechazo } from './acciones';
 import { calcularEtas, calcularRutaGrua } from './eta';
 import type { Estado } from './semilla';
+import { HAY_NUBE, idDispositivo } from './nube';
 import { actualizar } from './store';
 
 const SEGUNDOS_BOT_ACEPTA = 4;
@@ -13,9 +14,13 @@ const KM_POR_TICK = 0.25; // velocidad acelerada para que la demo no tarde
 const ESPERA_ETAS_MS = 6000; // tiempo máximo esperando rutas antes de ofrecer igual
 const RECALCULAR_GPS_MS = 30_000;
 
-export function tick(e: Estado, ahora: number) {
-  for (const g of e.grueros) {
-    if (!g.gpsEnVivo && (g.disponible || !g.automatico)) g.ubicacionEn = ahora; // GPS simulado
+// `dispositivo`: en la nube, este teléfono solo despacha y simula los servicios que
+// pidió él mismo; así dos teléfonos no se pisan escribiendo el mismo servicio.
+export function tick(e: Estado, ahora: number, dispositivo?: string) {
+  if (!dispositivo) {
+    for (const g of e.grueros) {
+      if (!g.gpsEnVivo && (g.disponible || !g.automatico)) g.ubicacionEn = ahora; // GPS simulado
+    }
   }
 
   for (const c of e.conductores) {
@@ -23,6 +28,7 @@ export function tick(e: Estado, ahora: number) {
   }
 
   for (const s of e.servicios) {
+    if (dispositivo && s.dispositivo !== dispositivo) continue;
     if (s.estado === 'buscando') {
       // Antes de la primera oferta se piden los tiempos por calle de los candidatos.
       if (!s.etasListas) {
@@ -96,7 +102,7 @@ function acercar(desde: { lat: number; lng: number }, hacia: { lat: number; lng:
 
 export function arrancarMotor() {
   const correr = () => {
-    const id = setInterval(() => actualizar((e) => tick(e, Date.now())), 1000);
+    const id = setInterval(() => actualizar((e) => tick(e, Date.now(), HAY_NUBE ? idDispositivo() : undefined)), 1000);
     return () => clearInterval(id);
   };
   try {

@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
     "h3-js": "^4.2.1",
     "leaflet": "^1.9.4",
     "react": "^19.3.0",

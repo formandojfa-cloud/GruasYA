@@ -35,6 +35,7 @@ Código SMS (siempre `123456`), verificación de identidad (pensada para Didit) 
 
 El precio usa la ruta por calles y su duración, más un recargo si llueve en el punto de recogida:
 
+- **Con datos en la nube (varios teléfonos):** crea un proyecto gratis en [Supabase](https://supabase.com), corre `supabase/esquema.sql` en su SQL Editor y pon la Project URL y la clave anon como `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (en `.env.local` o como secretos del repo). Sin esas variables la app corre en modo demo local.
 - **Con tráfico en vivo:** crea una cuenta gratis en [Mapbox](https://account.mapbox.com/) (100,000 rutas al mes sin costo) y pon el token en un archivo `.env.local` como `VITE_MAPBOX_TOKEN=pk...`. En GitHub, guárdalo como secreto `VITE_MAPBOX_TOKEN` para que la demo lo use.
 - **Sin token:** se usa [OSRM](https://project-osrm.org/) (gratis, calles reales pero sin tráfico en vivo) y se alarga la duración en horas pico (6 a 9 y 16 a 20).
 - **Clima:** [Open-Meteo](https://open-meteo.com/), gratis y sin clave.

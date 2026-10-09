@@ -40,7 +40,7 @@ export function candidatos(
       (g) =>
         g.disponible &&
         !yaOfrecidos.has(g.id) &&
-        ahora - g.ubicacionEn <= p.ubicacionVigenteMs &&
+        (g.automatico || ahora - g.ubicacionEn <= p.ubicacionVigenteMs) &&
         distanciaKm(g.ubicacion, origen) <= radioKm,
     )
     .map((gruero) => ({ gruero, minutos: etas[gruero.id]?.minutos ?? minutosEstimados(gruero.ubicacion, origen) }))

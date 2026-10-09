@@ -1,14 +1,46 @@
-// Backend simulado para la demo: todo vive en localStorage y se sincroniza entre
-// pestañas del mismo navegador. Así se puede abrir el conductor en una pestaña y
-// el gruero en otra. La versión real reemplaza este archivo por un servidor.
+// Estado de la app. Con Supabase configurado (VITE_SUPABASE_URL y
+// VITE_SUPABASE_ANON_KEY) los datos viven en la nube y se comparten entre
+// teléfonos; si no, viven en localStorage y se sincronizan entre pestañas del
+// mismo navegador (modo demo).
 import { useSyncExternalStore } from 'react';
+import { crearNube, HAY_NUBE, type Nube } from './nube';
 import { estadoInicial, type Estado } from './semilla';
 
 const CLAVE = 'gruaya-demo-v6';
 let cache: Estado | null = null;
 const oyentes = new Set<() => void>();
 
-function leer(): Estado {
+// ---------- nube ----------
+let nube: Nube | null = null;
+let listo = !HAY_NUBE; // en modo demo no hay nada que esperar
+let errorNube = '';
+let escuchando = false;
+
+function arrancarNube() {
+  if (!HAY_NUBE || nube) return;
+  nube = crearNube();
+  nube
+    .cargar()
+    .then((e) => {
+      cache = e;
+      listo = true;
+      errorNube = '';
+      if (!escuchando) {
+        escuchando = true;
+        nube!.escuchar((nuevo) => {
+          cache = nuevo;
+          avisar();
+        });
+      }
+      avisar();
+    })
+    .catch((err: Error) => {
+      errorNube = err.message;
+      avisar();
+    });
+}
+
+function leerLocal(): Estado {
   try {
     const crudo = localStorage.getItem(CLAVE);
     if (crudo) {
@@ -22,7 +54,7 @@ function leer(): Estado {
 }
 
 export function obtener(): Estado {
-  if (!cache) cache = leer();
+  if (!cache) cache = HAY_NUBE ? estadoInicial() : leerLocal();
   return cache;
 }
 
@@ -30,9 +62,19 @@ function avisar() {
   oyentes.forEach((f) => f());
 }
 
-// Lee lo último guardado (pudo cambiar en otra pestaña), aplica el cambio y guarda.
+// Aplica el cambio sobre lo último conocido y lo guarda (nube o localStorage).
 export function actualizar(cambio: (e: Estado) => void) {
-  const e = structuredClone(leer());
+  if (HAY_NUBE) {
+    if (!listo) return; // todavía no llegó el estado real: no se escribe nada encima
+    const antes = cache!;
+    const e = structuredClone(antes);
+    cambio(e);
+    cache = e;
+    avisar();
+    void nube!.guardar(antes, e);
+    return;
+  }
+  const e = structuredClone(leerLocal());
   cambio(e);
   cache = e;
   try {
@@ -44,16 +86,35 @@ export function actualizar(cambio: (e: Estado) => void) {
 }
 
 export function reiniciar() {
+  if (HAY_NUBE) {
+    listo = false;
+    avisar();
+    nube!
+      .borrarTodo()
+      .then(() => nube!.cargar())
+      .then((e) => {
+        cache = e;
+        listo = true;
+        avisar();
+      })
+      .catch((err: Error) => {
+        errorNube = err.message;
+        avisar();
+      });
+    return;
+  }
   actualizar((e) => Object.assign(e, estadoInicial()));
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (ev) => {
-    if (ev.key === CLAVE) {
-      cache = null;
-      avisar();
-    }
-  });
+  if (HAY_NUBE) arrancarNube();
+  else
+    window.addEventListener('storage', (ev) => {
+      if (ev.key === CLAVE) {
+        cache = null;
+        avisar();
+      }
+    });
 }
 
 function suscribir(f: () => void) {
@@ -63,6 +124,27 @@ function suscribir(f: () => void) {
 
 export function useEstado(): Estado {
   return useSyncExternalStore(suscribir, obtener);
+}
+
+export interface Conexion {
+  nube: boolean;
+  listo: boolean;
+  error: string;
+}
+const leerConexion = (): Conexion => ({ nube: HAY_NUBE, listo, error: errorNube });
+let conexionCache = leerConexion();
+export function useConexion(): Conexion {
+  return useSyncExternalStore(suscribir, () => {
+    const c = leerConexion();
+    if (c.nube !== conexionCache.nube || c.listo !== conexionCache.listo || c.error !== conexionCache.error) conexionCache = c;
+    return conexionCache;
+  });
+}
+
+export function reintentarNube() {
+  nube = null;
+  errorNube = '';
+  arrancarNube();
 }
 
 export function nuevoId(prefijo: string) {
