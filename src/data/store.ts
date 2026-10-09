@@ -4,7 +4,7 @@
 import { useSyncExternalStore } from 'react';
 import { estadoInicial, type Estado } from './semilla';
 
-const CLAVE = 'gruaya-demo-v5';
+const CLAVE = 'gruaya-demo-v6';
 let cache: Estado | null = null;
 const oyentes = new Set<() => void>();
 
