@@ -91,6 +91,7 @@ function Grueros() {
           </div>
           <div className="tenue">
             {g.placaGrua} · {g.tipoGrua} · ★ {g.calificacion.toFixed(1)} · {g.automatico ? 'simulado' : 'manejado por ti'}
+            {!g.automatico && ` · ubicación hace ${Math.max(0, Math.round((Date.now() - g.ubicacionEn) / 1000))} s`}
           </div>
           <div className="tenue">
             Comisión registrada {quetzales(g.comisionAcumulada)} · rechazos seguidos {g.rechazosSeguidos}

@@ -20,7 +20,7 @@ export async function calcularEtas(servicioId: string) {
     if (!s) return;
     const libres = e.grueros.filter((g) => g.disponible);
     const cercanas = enCeldas(indicePorCelda(libres), celdasCercanas(s.origen, RADIO_MAXIMO_KM))
-      .sort((a, b) => distanciaKm(a.ubicacion, s.origen) - distanciaKm(b.ubicacion, s.origen))
+      .sort((a, b) => Number(a.automatico) - Number(b.automatico) || distanciaKm(a.ubicacion, s.origen) - distanciaKm(b.ubicacion, s.origen))
       .slice(0, CANDIDATOS_A_CONSULTAR);
     const hora = new Date().getHours();
     const rutas = await Promise.all(cercanas.map((g) => calcularRuta(g.ubicacion, s.origen, hora)));

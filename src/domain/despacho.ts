@@ -21,8 +21,8 @@ export interface Candidato {
   minutos: number;
 }
 
-// Grueros que pueden recibir la oferta, ordenados por quién llegaría antes;
-// empate: mejor calificación, luego quien lleva más tiempo sin servicio.
+// Grueros que pueden recibir la oferta: primero los pilotos reales, ordenados por
+// quién llegaría antes; empate: mejor calificación, luego quien lleva más tiempo sin servicio.
 export function candidatos(
   grueros: Gruero[],
   origen: Coordenada,
@@ -46,6 +46,8 @@ export function candidatos(
     .map((gruero) => ({ gruero, minutos: etas[gruero.id]?.minutos ?? minutosEstimados(gruero.ubicacion, origen) }))
     .sort(
       (a, b) =>
+        // Un piloto real va antes que una grúa simulada de la demo.
+        Number(a.gruero.automatico) - Number(b.gruero.automatico) ||
         a.minutos - b.minutos ||
         b.gruero.calificacion - a.gruero.calificacion ||
         a.gruero.ultimoServicioEn - b.gruero.ultimoServicioEn,

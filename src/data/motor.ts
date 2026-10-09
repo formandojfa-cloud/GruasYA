@@ -41,7 +41,10 @@ export function tick(e: Estado, ahora: number, dispositivo?: string) {
         const g = e.grueros.find((x) => x.id === vencida.grueroId);
         if (g) contarRechazo(g);
       }
-      const paso = siguientePaso(s, e.grueros, ahora, DESPACHO_INICIAL);
+      // Con las grúas simuladas apagadas no se les ofrece: cada oferta a un bot
+      // que no responde costaría 90 s antes de llegar al piloto real.
+      const elegibles = e.grueros.filter((g) => !g.automatico || e.demo.gruerosAutomaticos);
+      const paso = siguientePaso(s, elegibles, ahora, DESPACHO_INICIAL);
       if (paso.tipo === 'ofrecer') {
         s.radioKm = paso.radioKm;
         s.ofertas.push({ grueroId: paso.grueroId, enviadaEn: ahora });

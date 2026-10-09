@@ -71,6 +71,17 @@ describe('candidatos', () => {
     expect(lista.map((c) => c.gruero.id)).toEqual(['cerca', 'lejos']);
   });
 
+  it('un piloto real va antes que una grúa simulada aunque esté más lejos', () => {
+    const lista = candidatos(
+      [gruero('bot', 1, { automatico: true }), gruero('real', 3, { automatico: false })],
+      ORIGEN,
+      5,
+      new Set(),
+      AHORA,
+    );
+    expect(lista.map((c) => c.gruero.id)).toEqual(['real', 'bot']);
+  });
+
   it('desempata por calificación', () => {
     const lista = candidatos(
       [gruero('a', 1, { calificacion: 4 }), gruero('b', 1, { calificacion: 5 })],
