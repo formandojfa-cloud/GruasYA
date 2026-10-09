@@ -30,7 +30,9 @@ jobs:
             if [ -n "${!v}" ]; then echo "$v: configurado"; else echo "$v: FALTA"; fi
           done
           if [ -n "$URL" ]; then
-            codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $ANON" "$URL/rest/v1/")
+            case "$URL" in https://*.supabase.co) echo "URL: forma correcta";; *) echo "URL: forma INCORRECTA (debe ser https://xxxx.supabase.co, sin barra final ni espacios)";; esac
+            case "$ANON" in eyJ*) echo "ANON: forma correcta";; sb_publishable_*) echo "ANON: clave publishable (sirve)";; *) echo "ANON: forma INCORRECTA (debe empezar con eyJ o sb_publishable_)";; esac
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $ANON" "$URL/rest/v1/" || echo "sin conexión")
             echo "Supabase responde: HTTP $codigo"
           fi
       - run: npm run build
