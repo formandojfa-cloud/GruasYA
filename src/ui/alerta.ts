@@ -7,22 +7,29 @@
 // ---- el archivo de sonido (WAV) ----
 const MUESTREO = 22050;
 function generarTimbre(): string {
-  const dur = 1.0;
+  // Ráfagas rápidas de un acorde brillante, como las alertas de pedidos de las apps
+  // de entregas: tres toques cortos, pausa, tres toques más agudos. Fuerte y seco.
+  const dur = 1.6;
   const n = Math.floor(MUESTREO * dur);
   const datos = new Float32Array(n);
-  const notas: [number, number][] = [
-    [0, 1047], // do6
-    [0.16, 1319], // mi6
-    [0.32, 1568], // sol6
-  ];
-  for (const [inicio, hz] of notas) {
+  const toque = (inicio: number, largo: number, hzs: number[]) => {
     const desde = Math.floor(inicio * MUESTREO);
-    for (let i = desde; i < n; i++) {
+    const hasta = Math.min(n, Math.floor((inicio + largo) * MUESTREO));
+    for (let i = desde; i < hasta; i++) {
       const t = (i - desde) / MUESTREO;
-      const caida = Math.exp(-t * 7);
-      datos[i] += caida * (0.6 * Math.sin(2 * Math.PI * hz * t) + 0.25 * Math.sin(2 * Math.PI * hz * 2 * t) + 0.08 * Math.sin(2 * Math.PI * hz * 3 * t));
+      const ataque = Math.min(1, t / 0.005);
+      const caida = Math.exp(-t * 9);
+      let v = 0;
+      for (const hz of hzs) v += Math.sin(2 * Math.PI * hz * t) + 0.3 * Math.sin(2 * Math.PI * hz * 2 * t);
+      datos[i] += (ataque * caida * v) / hzs.length;
     }
-  }
+  };
+  const grave = [1047, 1319]; // do6 + mi6
+  const agudo = [1319, 1568]; // mi6 + sol6
+  for (let k = 0; k < 3; k++) toque(0.0 + k * 0.17, 0.3, grave);
+  for (let k = 0; k < 3; k++) toque(0.75 + k * 0.17, 0.3, agudo);
+  // Un poco de compresión para que suene lleno sin recortar.
+  for (let i = 0; i < n; i++) datos[i] = Math.tanh(datos[i] * 1.6);
   const buf = new ArrayBuffer(44 + n * 2);
   const v = new DataView(buf);
   const texto = (pos: number, s: string) => [...s].forEach((c, i) => v.setUint8(pos + i, c.charCodeAt(0)));
@@ -47,11 +54,17 @@ let audio: HTMLAudioElement | null = null;
 let destrabado = false;
 let alertaActiva = false;
 
+// Si existe public/sonidos/alerta.mp3 se usa ese archivo; si no, el timbre generado.
 function elemento(): HTMLAudioElement {
   if (!audio) {
-    audio = new Audio(generarTimbre());
-    audio.preload = 'auto';
-    audio.volume = 1;
+    const a = new Audio(`${import.meta.env.BASE_URL}sonidos/alerta.mp3`);
+    a.preload = 'auto';
+    a.volume = 1;
+    a.addEventListener('error', () => {
+      a.src = generarTimbre();
+      a.load();
+    });
+    audio = a;
   }
   return audio;
 }
@@ -108,7 +121,7 @@ export function empezarAlerta(): () => void {
     }
   };
   aviso();
-  const id = setInterval(aviso, 2000);
+  const id = setInterval(aviso, 2200);
   return () => {
     alertaActiva = false;
     clearInterval(id);
