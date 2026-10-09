@@ -22,7 +22,7 @@ interface Fila {
   datos: unknown;
 }
 
-const REFRESCO_MS = 15_000; // por si los avisos en vivo no llegan
+const REFRESCO_MS = 5_000; // por si los avisos en vivo no llegan
 
 let cliente: SupabaseClient | null = null;
 function conexion(): SupabaseClient {
@@ -74,8 +74,9 @@ export interface Nube {
   // Manda a la nube solo lo que cambió entre dos estados.
   guardar(antes: Estado, despues: Estado): Promise<void>;
   borrarTodo(): Promise<void>;
-  // Llama a `alCambiar` con el estado nuevo cuando otro teléfono cambia algo.
-  escuchar(alCambiar: (e: Estado) => void): () => void;
+  // Llama a `alCambiar` con el estado nuevo cuando otro teléfono cambia algo, y a
+  // `alEstado` con el estado del canal en vivo (conectado o no).
+  escuchar(alCambiar: (e: Estado) => void, alEstado?: (conectado: boolean) => void): () => void;
 }
 
 export function crearNube(): Nube {
@@ -138,7 +139,7 @@ export function crearNube(): Nube {
       filas = { ajustes: [], conductores: [], grueros: [], servicios: [] };
     },
 
-    escuchar(alCambiar) {
+    escuchar(alCambiar, alEstado) {
       const aplicar = (t: Tabla, tipo: string, nueva?: Fila, vieja?: { id: string }) => {
         const lista = filas[t].filter((f) => f.id !== (nueva?.id ?? vieja?.id));
         if (tipo !== 'DELETE' && nueva) lista.push(nueva);
@@ -151,7 +152,7 @@ export function crearNube(): Nube {
           aplicar(t, ev.eventType, ev.new as Fila | undefined, ev.old as { id: string } | undefined),
         );
       }
-      canal.subscribe();
+      canal.subscribe((estado) => alEstado?.(estado === 'SUBSCRIBED'));
       const refresco = setInterval(() => {
         leerTodo()
           .then((f) => {
