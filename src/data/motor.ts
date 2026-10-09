@@ -103,44 +103,32 @@ function acercar(desde: { lat: number; lng: number }, hacia: { lat: number; lng:
   return avanzar(desde, hacia, KM_POR_TICK / d);
 }
 
-// El motor corre en UNA pestaña por aparato (Web Locks) y solo mientras esa
-// pestaña está a la vista: Chrome frena los temporizadores de las pestañas
-// escondidas (hasta una vez por minuto), y si la pestaña con el motor quedaba
-// atrás, la oferta tardaba medio minuto en salir. Al esconderse suelta el
-// candado para que lo tome la pestaña visible.
+// El motor corre en UNA pestaña por aparato (Web Locks). Chrome frena los
+// temporizadores de las pestañas escondidas (hasta una vez por minuto), así que
+// cuando una pestaña pasa a estar a la vista le "roba" el candado a la que lo
+// tenga: el motor corre siempre en la pestaña visible, y si todas están
+// escondidas sigue corriendo (despacio) en la última que lo tomó.
 export function arrancarMotor() {
   const correr = () => {
     const id = setInterval(() => actualizar((e) => tick(e, Date.now(), HAY_NUBE ? idDispositivo() : undefined)), 1000);
     return () => clearInterval(id);
   };
   const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
-  let soltar: (() => void) | null = null;
-  let pidiendo = false;
 
   const pedir = () => {
-    if (soltar || pidiendo || !visible()) return;
-    pidiendo = true;
-    const tomar = (resolve: () => void) => {
-      pidiendo = false;
-      if (!visible()) return resolve(); // se escondió mientras esperaba el candado
-      const parar = correr();
-      soltar = () => {
-        parar();
-        soltar = null;
-        resolve();
-      };
-    };
+    let parar: (() => void) | null = null;
     try {
-      navigator.locks.request('gruaya-motor', () => new Promise<void>((resolve) => tomar(resolve))).catch(() => tomar(() => {}));
+      navigator.locks
+        .request('gruaya-motor', { steal: true }, () => new Promise<void>(() => (parar = correr())))
+        .catch(() => parar?.()); // otra pestaña se lo robó: esta deja de correr
     } catch {
-      tomar(() => {}); // navegador sin Web Locks
+      correr(); // navegador sin Web Locks
     }
   };
 
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
       if (visible()) pedir();
-      else soltar?.();
     });
   }
   pedir();
