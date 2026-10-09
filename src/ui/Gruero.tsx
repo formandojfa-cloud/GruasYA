@@ -22,7 +22,7 @@ import { Foto } from './Conductor';
 import { km, minutos, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
 import { Mapa, type Hexagono, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
-import { empezarAlerta, prepararSonido } from './alerta';
+import { empezarAlerta, haySonido, prepararSonido } from './alerta';
 
 // Mientras el gruero está en línea, su ubicación real se envía sola: sin GPS no
 // se puede estar en línea. En producción va al servidor cada pocos segundos; en
@@ -229,6 +229,7 @@ function OfertaEntrante({ servicio: s, gruero: g }: { servicio: Servicio; gruero
         <div className="oferta-tiempo">
           <div style={{ width: `${(restantes / total) * 100}%` }} />
         </div>
+        {!haySonido() && <p className="aviso">🔔 Toca la pantalla para activar el sonido de las solicitudes.</p>}
         <div className="fila-entre">
           <span className="tenue">Nueva solicitud · {NOMBRE_VEHICULO[s.vehiculo]}</span>
           <span className="contador">{restantes} s</span>
