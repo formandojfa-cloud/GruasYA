@@ -40,8 +40,20 @@ jobs:
             URL="$(echo "$URL" | tr -d '[:space:]' | sed -E 's#/+$##; s#/rest/v1$##; s#/+$##')"
             case "$URL" in https://*.supabase.co) echo "URL: forma correcta";; *) echo "URL: forma INCORRECTA (debe ser https://xxxx.supabase.co)";; esac
             case "$ANON" in eyJ*) echo "ANON: forma correcta";; sb_publishable_*) echo "ANON: clave publishable (sirve)";; *) echo "ANON: forma INCORRECTA (debe empezar con eyJ o sb_publishable_)";; esac
-            codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $ANON" "$URL/rest/v1/" || echo "sin conexión")
+            ANON="$(echo "$ANON" | tr -d '[:space:]')"
+            echo "ANON: ${#ANON} caracteres"
+            # Si es un JWT, compara el proyecto de la clave con el de la URL (sin mostrar ninguno).
+            case "$ANON" in eyJ*)
+              carga=$(echo "$ANON" | cut -d. -f2 | tr '_-' '/+'); carga="$carga$(printf '%*s' $(( (4 - ${#carga} % 4) % 4 )) '' | tr ' ' '=')"
+              datos=$(echo "$carga" | base64 -d 2>/dev/null || echo '{}')
+              rol=$(echo "$datos" | sed -nE 's/.*"role":"([^"]+)".*/\1/p'); ref=$(echo "$datos" | sed -nE 's/.*"ref":"([^"]+)".*/\1/p')
+              echo "ANON: rol en la clave = ${rol:-desconocido}"
+              dominio=$(echo "$URL" | sed -E 's#^https://([^.]+)\..*#\1#')
+              if [ "$ref" = "$dominio" ]; then echo "ANON: pertenece al mismo proyecto que la URL"; else echo "ANON: NO es del mismo proyecto que la URL"; fi
+            ;; esac
+            codigo=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -H "apikey: $ANON" "$URL/rest/v1/" || echo "sin conexión")
             echo "Supabase responde: HTTP $codigo"
+            [ "$codigo" = "200" ] || head -c 300 /tmp/resp.txt; echo
           fi
       - run: npm run build
         env:
