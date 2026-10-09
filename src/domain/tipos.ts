@@ -40,6 +40,7 @@ export interface Gruero {
   disponible: boolean;
   ubicacion: Coordenada;
   ubicacionEn: number; // epoch ms de la última ubicación
+  precisionM?: number; // radio de error del GPS en metros
   ultimoServicioEn: number; // epoch ms; sirve para desempatar
   rechazosSeguidos: number;
   comisionAcumulada: number; // Q registrados (no cobrados en el piloto)

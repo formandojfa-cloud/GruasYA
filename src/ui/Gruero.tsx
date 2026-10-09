@@ -22,6 +22,7 @@ import { Foto } from './Conductor';
 import { km, minutos, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
 import { Mapa, type Hexagono, type Marcador } from './Mapa';
 import { useSesion } from './sesion';
+import { empezarAlerta, prepararSonido } from './alerta';
 
 // Mientras el gruero está en línea, su ubicación real se envía sola: sin GPS no
 // se puede estar en línea. En producción va al servidor cada pocos segundos; en
@@ -35,8 +36,20 @@ function useGpsEnVivo(grueroId: string, activo: boolean, alFallar: (m: string) =
       fallar.current('Este navegador no comparte ubicación, así que no puedes conectarte desde aquí.');
       return;
     }
+    // El teléfono manda primero lecturas burdas (red, wifi) y luego el GPS fino. Una
+    // lectura peor que la anterior reciente se ignora, salvo que la anterior ya sea vieja.
+    let mejor: { en: number; precision: number; punto: { lat: number; lng: number } } | null = null;
     const id = navigator.geolocation.watchPosition(
-      (p) => actualizarUbicacion(grueroId, { lat: p.coords.latitude, lng: p.coords.longitude }),
+      (p) => {
+        const ahora = Date.now();
+        const precision = p.coords.accuracy ?? 9999;
+        const punto = { lat: p.coords.latitude, lng: p.coords.longitude };
+        if (mejor && ahora - mejor.en < 30_000 && precision > mejor.precision * 1.5 && precision > 30) return;
+        // No vale la pena mandar a la nube un cambio de un par de metros cada segundo.
+        if (mejor && ahora - mejor.en < 3000 && distanciaKm(mejor.punto, punto) < 0.01 && precision >= mejor.precision) return;
+        mejor = { en: ahora, precision, punto };
+        actualizarUbicacion(grueroId, punto, Math.round(precision));
+      },
       (err) => {
         // Sin permiso no hay nada que hacer; otros errores (sin señal) se reintentan solos.
         if (err.code === err.PERMISSION_DENIED)
@@ -100,7 +113,7 @@ export function Gruero() {
           <small>Ganancia</small> {quetzales(ganado)}
         </div>
         {g.disponible && (
-          <span className={`gps ${g.gpsEnVivo ? 'en-vivo' : ''}`}>{g.gpsEnVivo ? '● GPS en vivo' : '○ Buscando GPS…'}</span>
+          <span className={`gps ${g.gpsEnVivo ? 'en-vivo' : ''}`}>{g.gpsEnVivo ? `● GPS en vivo${g.precisionM ? ` ±${g.precisionM} m` : ''}` : '○ Buscando GPS…'}</span>
         )}
       </EnBarra>
       <Mapa
@@ -184,6 +197,7 @@ export function Gruero() {
                 className="principal conectar"
                 onClick={() => {
                   setErrorGps('');
+                  prepararSonido(); // el navegador solo deja sonar tras un toque
                   cambiarDisponible(g.id, true);
                 }}
               >
@@ -206,6 +220,8 @@ function OfertaEntrante({ servicio: s, gruero: g }: { servicio: Servicio; gruero
   }, []);
   const total = DESPACHO_INICIAL.segundosParaAceptar;
   const restantes = Math.max(0, Math.ceil(total - (ahora - oferta.enviadaEn) / 1000));
+  // Suena y vibra mientras la oferta esté en pantalla.
+  useEffect(() => empezarAlerta(), [s.id]);
 
   return (
     <div className="hoja alta">

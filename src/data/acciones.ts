@@ -122,11 +122,12 @@ export function enviarMensaje(servicioId: string, de: 'conductor' | 'gruero', te
 // ---------- Gruero ----------
 
 // Ubicación en vivo desde el GPS del teléfono del gruero.
-export function actualizarUbicacion(grueroId: string, p: Coordenada) {
+export function actualizarUbicacion(grueroId: string, p: Coordenada, precisionM?: number) {
   actualizar((e) => {
     const g = gruero(e, grueroId);
     g.ubicacion = p;
     g.ubicacionEn = Date.now();
+    g.precisionM = precisionM;
     g.gpsEnVivo = true;
   });
 }
