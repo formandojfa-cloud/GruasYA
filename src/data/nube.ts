@@ -6,13 +6,16 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { ParametrosTarifa } from '../domain/tarifa';
 import type { Conductor, Gruero, Servicio } from '../domain/tipos';
 import { estadoInicial, type AjustesDemo, type Estado } from './semilla';
+import { leerEntorno } from './entorno';
 
-const URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined)
+// En la app llegan como VITE_*; en la función del servidor (Deno) Supabase las
+// inyecta como SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY (que salta las políticas RLS).
+const URL = leerEntorno('VITE_SUPABASE_URL', 'SUPABASE_URL')
   ?.trim()
   .replace(/\/+$/, '')
   .replace(/\/rest\/v1$/, '')
   .replace(/\/+$/, '');
-const CLAVE = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
+const CLAVE = leerEntorno('VITE_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY')?.trim();
 
 export const HAY_NUBE = Boolean(URL && CLAVE);
 
@@ -48,10 +51,12 @@ function armar(filas: Record<Tabla, Fila[]>): Estado {
   const ajustes = filas.ajustes.find((f) => f.id === 'global')?.datos as
     | { tarifa: ParametrosTarifa; demo: AjustesDemo }
     | undefined;
+  const motor = filas.ajustes.find((f) => f.id === 'motor')?.datos as { en: number } | undefined;
   return {
     version: base.version,
     tarifa: ajustes?.tarifa ?? base.tarifa,
     demo: ajustes?.demo ?? base.demo,
+    motorServidorEn: motor?.en,
     conductores: filas.conductores.map((f) => f.datos as Conductor),
     grueros: filas.grueros.map((f) => f.datos as Gruero),
     servicios: filas.servicios
@@ -62,7 +67,10 @@ function armar(filas: Record<Tabla, Fila[]>): Estado {
 
 function filasDe(e: Estado): Record<Tabla, Fila[]> {
   return {
-    ajustes: [{ id: 'global', datos: { tarifa: e.tarifa, demo: e.demo } }],
+    ajustes: [
+      { id: 'global', datos: { tarifa: e.tarifa, demo: e.demo } },
+      ...(e.motorServidorEn ? [{ id: 'motor', datos: { en: e.motorServidorEn } }] : []),
+    ],
     conductores: e.conductores.map((c) => ({ id: c.id, datos: c })),
     grueros: e.grueros.map((g) => ({ id: g.id, datos: g })),
     servicios: e.servicios.map((s) => ({ id: s.id, datos: s })),
@@ -71,6 +79,12 @@ function filasDe(e: Estado): Record<Tabla, Fila[]> {
 
 export interface Nube {
   cargar(): Promise<Estado>;
+  // Pide al servidor que corra el reparto ya mismo (sin esperar el siguiente paso programado).
+  avisarMotor(): void;
+  // Candado en la base para que no corran dos pasos del servidor a la vez
+  // (funciones public.tomar_candado / soltar_candado de supabase/motor.sql).
+  tomarCandado(nombre: string, ms: number): Promise<boolean>;
+  soltarCandado(nombre: string): Promise<void>;
   // Manda a la nube solo lo que cambió entre dos estados.
   guardar(antes: Estado, despues: Estado): Promise<void>;
   borrarTodo(): Promise<void>;
@@ -105,6 +119,22 @@ export function crearNube(): Nube {
   }
 
   return {
+    avisarMotor() {
+      void sb.functions.invoke('motor', { body: {} }).catch(() => {
+        // sin función en el servidor, el reparto corre en la app
+      });
+    },
+
+    async tomarCandado(nombre, ms) {
+      const { data, error } = await sb.rpc('tomar_candado', { nombre, ms });
+      if (error) return true; // sin la función en la base, se corre igual
+      return data === true;
+    },
+
+    async soltarCandado(nombre) {
+      await sb.rpc('soltar_candado', { nombre });
+    },
+
     async cargar() {
       filas = await leerTodo();
       if (filas.ajustes.length === 0) {

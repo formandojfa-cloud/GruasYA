@@ -13,6 +13,7 @@ export interface Estado {
   conductores: Conductor[];
   grueros: Gruero[];
   servicios: Servicio[];
+  motorServidorEn?: number; // último paso del reparto en el servidor (epoch ms); lo escribe solo el servidor
 }
 
 export const CONDUCTOR_DEMO = 'c-demo';

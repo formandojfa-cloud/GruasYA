@@ -12,7 +12,7 @@ import {
   marcarLlegada,
   rechazarOferta,
 } from '../data/acciones';
-import { useEstado } from '../data/store';
+import { useEstado } from '../data/hooks';
 import { DESPACHO_INICIAL, minutosParaLlegar } from '../domain/despacho';
 import { distanciaKm, minutosEstimados, rutaRestante } from '../domain/geo';
 import { celdaDe } from '../domain/h3';

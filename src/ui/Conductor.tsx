@@ -5,7 +5,7 @@ import pickup from './vehiculos/pickup.svg';
 import { calificar, cancelarServicio, confirmarPagoConductor, pedirGrua, registrarConductor } from '../data/acciones';
 import { calcularRutaGrua } from '../data/eta';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
-import { useEstado } from '../data/store';
+import { useEstado } from '../data/hooks';
 import { distanciaKm, largoRutaKm, rutaRestante } from '../domain/geo';
 import { celdaDe, celdasCercanas, enCeldas, indicePorCelda } from '../domain/h3';
 import { minutosParaLlegar } from '../domain/despacho';

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cambiarDisponible, revisarConductor } from '../data/acciones';
-import { actualizar, reiniciar, useEstado } from '../data/store';
+import { actualizar, reiniciar } from '../data/store';
+import { useEstado } from '../data/hooks';
 import type { ParametrosTarifa } from '../domain/tarifa';
 import { BotonConfirmar } from './BotonConfirmar';
 import { km, NOMBRE_ESTADO, quetzales } from './formato';

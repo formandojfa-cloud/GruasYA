@@ -8,6 +8,7 @@ import {
   minutosEstimados,
 } from '../domain/geo';
 import type { Clima, Coordenada, FuenteRuta, Paso } from '../domain/tipos';
+import { leerEntorno } from './entorno';
 
 export interface Ruta {
   distanciaKm: number;
@@ -18,7 +19,7 @@ export interface Ruta {
   conTrafico: boolean;
 }
 
-const TOKEN_MAPBOX = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+const TOKEN_MAPBOX = leerEntorno('VITE_MAPBOX_TOKEN', 'MAPBOX_TOKEN');
 const ESPERA_MS = 6000;
 
 async function pedirJson(url: string) {

@@ -14,10 +14,25 @@ const KM_POR_TICK = 0.25; // velocidad acelerada para que la demo no tarde
 const ESPERA_ETAS_MS = 6000; // tiempo máximo esperando rutas antes de ofrecer igual
 const RECALCULAR_GPS_MS = 30_000;
 
-// `dispositivo`: en la nube, este teléfono solo despacha y simula los servicios que
-// pidió él mismo; así dos teléfonos no se pisan escribiendo el mismo servicio.
-export function tick(e: Estado, ahora: number, dispositivo?: string) {
-  if (!dispositivo) {
+export interface ModoMotor {
+  // En la nube, este teléfono solo despacha y simula los servicios que pidió él
+  // mismo; así dos teléfonos no se pisan escribiendo el mismo servicio.
+  dispositivo?: string;
+  // En el servidor (función de Supabase): despacha todos los servicios; las rutas
+  // y tiempos ya vienen calculados (ver servidor/paso.ts) y los pilotos reales
+  // mandan su propia ubicación.
+  servidor?: boolean;
+}
+
+const SERVIDOR_VIVO_MS = 30_000; // si el servidor dio un paso hace menos, la app no despacha
+
+export function tick(e: Estado, ahora: number, modo: ModoMotor = {}) {
+  const { dispositivo, servidor } = modo;
+  // Con el reparto corriendo en el servidor, la app solo mira.
+  if (dispositivo && !servidor && e.motorServidorEn && ahora - e.motorServidorEn < SERVIDOR_VIVO_MS) return;
+  if (servidor) {
+    for (const g of e.grueros) if (g.automatico && !g.gpsEnVivo) g.ubicacionEn = ahora; // bots de la demo
+  } else if (!dispositivo) {
     for (const g of e.grueros) {
       if (!g.gpsEnVivo && (g.disponible || !g.automatico)) g.ubicacionEn = ahora; // GPS simulado
     }
@@ -28,11 +43,11 @@ export function tick(e: Estado, ahora: number, dispositivo?: string) {
   }
 
   for (const s of e.servicios) {
-    if (dispositivo && s.dispositivo !== dispositivo) continue;
+    if (dispositivo && !servidor && s.dispositivo !== dispositivo) continue;
     if (s.estado === 'buscando') {
       // Antes de la primera oferta se piden los tiempos por calle de los candidatos.
       if (!s.etasListas) {
-        void calcularEtas(s.id);
+        if (!servidor) void calcularEtas(s.id);
         if (ahora - s.creadoEn < ESPERA_ETAS_MS) continue;
       }
       const vencida = ofertaVencida(s, ahora);
@@ -65,7 +80,7 @@ export function tick(e: Estado, ahora: number, dispositivo?: string) {
     const auto = g.automatico && e.demo.gruerosAutomaticos;
 
     if (s.estado === 'asignado') {
-      if (!s.rutaGrua || (g.gpsEnVivo && ahora - (s.rutaGruaEn ?? 0) > RECALCULAR_GPS_MS)) void calcularRutaGrua(s.id);
+      if (!servidor && (!s.rutaGrua || (g.gpsEnVivo && ahora - (s.rutaGruaEn ?? 0) > RECALCULAR_GPS_MS))) void calcularRutaGrua(s.id);
       if (!g.gpsEnVivo && g.automatico) {
         if (s.rutaGrua) {
           // La grúa simulada avanza por las calles hacia el cliente.
@@ -110,7 +125,7 @@ function acercar(desde: { lat: number; lng: number }, hacia: { lat: number; lng:
 // escondidas sigue corriendo (despacio) en la última que lo tomó.
 export function arrancarMotor() {
   const correr = () => {
-    const id = setInterval(() => actualizar((e) => tick(e, Date.now(), HAY_NUBE ? idDispositivo() : undefined)), 1000);
+    const id = setInterval(() => actualizar((e) => tick(e, Date.now(), { dispositivo: HAY_NUBE ? idDispositivo() : undefined })), 1000);
     return () => clearInterval(id);
   };
   const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';

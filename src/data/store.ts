@@ -2,7 +2,6 @@
 // VITE_SUPABASE_ANON_KEY) los datos viven en la nube y se comparten entre
 // teléfonos; si no, viven en localStorage y se sincronizan entre pestañas del
 // mismo navegador (modo demo).
-import { useSyncExternalStore } from 'react';
 import { crearNube, HAY_NUBE, type Nube } from './nube';
 import { estadoInicial, type Estado } from './semilla';
 
@@ -126,13 +125,9 @@ if (typeof window !== 'undefined') {
     });
 }
 
-function suscribir(f: () => void) {
+export function suscribir(f: () => void) {
   oyentes.add(f);
   return () => oyentes.delete(f);
-}
-
-export function useEstado(): Estado {
-  return useSyncExternalStore(suscribir, obtener);
 }
 
 export interface Conexion {
@@ -144,13 +139,17 @@ export interface Conexion {
 }
 const leerConexion = (): Conexion => ({ nube: HAY_NUBE, listo, error: errorNube, tiempoReal, avisosEnVivo });
 let conexionCache = leerConexion();
-export function useConexion(): Conexion {
-  return useSyncExternalStore(suscribir, () => {
-    const c = leerConexion();
-    if (c.nube !== conexionCache.nube || c.listo !== conexionCache.listo || c.error !== conexionCache.error || c.tiempoReal !== conexionCache.tiempoReal || c.avisosEnVivo !== conexionCache.avisosEnVivo)
-      conexionCache = c;
-    return conexionCache;
-  });
+// Devuelve el mismo objeto mientras nada cambie (para useSyncExternalStore).
+export function obtenerConexion(): Conexion {
+  const c = leerConexion();
+  if (c.nube !== conexionCache.nube || c.listo !== conexionCache.listo || c.error !== conexionCache.error || c.tiempoReal !== conexionCache.tiempoReal || c.avisosEnVivo !== conexionCache.avisosEnVivo)
+    conexionCache = c;
+  return conexionCache;
+}
+
+// Pide al servidor que reparta ya mismo (después de pedir, aceptar o rechazar).
+export function avisarMotor() {
+  nube?.avisarMotor();
 }
 
 export function reintentarNube() {

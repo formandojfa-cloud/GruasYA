@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Admin } from './Admin';
 import { Conductor } from './Conductor';
 import { Gruero } from './Gruero';
-import { reintentarNube, useConexion } from '../data/store';
+import { reintentarNube } from '../data/store';
+import { useConexion, useEstado } from '../data/hooks';
 import { useSesion } from './sesion';
 
 const PAPELES = { conductor: 'Conductor', gruero: 'Piloto', admin: 'Admin' } as const;
@@ -104,6 +105,7 @@ export function App() {
   useSinDesplazar(actual !== 'admin');
   const vista = useVistaVisible();
   const conexion = useConexion();
+  const estado = useEstado();
   if (conexion.nube && !conexion.listo) return <Conectando error={conexion.error} />;
   const barra = (
     <div className="barra">
@@ -130,7 +132,11 @@ export function App() {
           <Admin />
           <p className="tenue chico" style={{ marginTop: 16, textAlign: 'center' }}>
             {conexion.nube
-              ? `Datos en la nube (Supabase): lo que pasa aquí se ve en todos los teléfonos. Tiempo real: ${
+              ? `Datos en la nube (Supabase): lo que pasa aquí se ve en todos los teléfonos. ${
+                  estado.motorServidorEn && Date.now() - estado.motorServidorEn < 30_000
+                    ? 'Reparto en el servidor.'
+                    : 'Reparto en esta pestaña (el servidor no ha dado señales).'
+                } Tiempo real: ${
                   conexion.tiempoReal ? `conectado, ${conexion.avisosEnVivo} avisos recibidos` : 'sin conexión (se refresca cada 5 s)'
                 }.`
               : 'Demo sin servidor: los datos viven en este navegador. Abre otra pestaña para ver al conductor y al piloto a la vez.'}

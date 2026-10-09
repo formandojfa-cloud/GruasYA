@@ -3,7 +3,7 @@ import type { Clima, Conductor, Coordenada, Gruero, Problema, Servicio, TipoVehi
 import type { Ruta } from './rutas';
 import type { Estado } from './semilla';
 import { HAY_NUBE, idDispositivo } from './nube';
-import { actualizar, nuevoId } from './store';
+import { actualizar, avisarMotor, nuevoId } from './store';
 
 const RECHAZOS_PARA_PAUSAR = 3;
 
@@ -73,6 +73,7 @@ export function pedirGrua(sol: Solicitud): string {
     };
     e.servicios.push(s);
   });
+  avisarMotor();
   return id;
 }
 
@@ -150,6 +151,7 @@ export function cambiarDisponible(grueroId: string, disponible: boolean) {
 
 export function aceptarOferta(servicioId: string, grueroId: string) {
   actualizar((e) => aceptar(e, servicioId, grueroId));
+  avisarMotor();
 }
 
 export function aceptar(e: Estado, servicioId: string, grueroId: string) {
@@ -183,6 +185,7 @@ export function rechazarOferta(servicioId: string, grueroId: string) {
     oferta.resultado = 'rechazada';
     contarRechazo(gruero(e, grueroId));
   });
+  avisarMotor();
 }
 
 export function contarRechazo(g: Gruero) {
