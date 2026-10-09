@@ -19,9 +19,25 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # Dice qué secretos están configurados, sin mostrar sus valores.
+      - name: Revisar secretos
+        env:
+          URL: ${{ secrets.VITE_SUPABASE_URL }}
+          ANON: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          MAPBOX: ${{ secrets.VITE_MAPBOX_TOKEN }}
+        run: |
+          for v in URL ANON MAPBOX; do
+            if [ -n "${!v}" ]; then echo "$v: configurado"; else echo "$v: FALTA"; fi
+          done
+          if [ -n "$URL" ]; then
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $ANON" "$URL/rest/v1/")
+            echo "Supabase responde: HTTP $codigo"
+          fi
       - run: npm run build
         env:
           VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       # Publica la demo en la rama gh-pages (GitHub Pages sirve esa rama).
       - if: github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v4
