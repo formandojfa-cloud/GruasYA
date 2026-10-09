@@ -33,18 +33,21 @@ function flecha(texto: string): string {
 
 // Tarjeta con la siguiente indicación de giro y aviso por voz, calculada con la
 // posición real de la grúa. Si el teléfono se sale de la ruta se avisa.
+// El cliente usa la misma tarjeta para seguir a la grúa: sin voz y con un rótulo.
 export function Navegacion({
   pasos,
   posicion,
   fueraDeRuta,
-  conVoz,
+  conVoz = false,
   cambiarVoz,
+  etiqueta,
 }: {
   pasos: Paso[];
   posicion: Coordenada;
   fueraDeRuta: boolean;
-  conVoz: boolean;
-  cambiarVoz: (v: boolean) => void;
+  conVoz?: boolean;
+  cambiarVoz?: (v: boolean) => void;
+  etiqueta?: string;
 }) {
   // El primer paso ("Salga por…") se omite: lo que importa es el próximo giro.
   const [indice, setIndice] = useState(1);
@@ -84,19 +87,23 @@ export function Navegacion({
       <div className="texto">
         {fueraDeRuta ? (
           <>
+            {etiqueta && <small>{etiqueta}</small>}
             <strong>Fuera de la ruta</strong>
-            <span>Regresa a la línea o usa Waze</span>
+            <span>{etiqueta ? 'Se calcula una ruta nueva' : 'Regresa a la línea o usa Waze'}</span>
           </>
         ) : (
           <>
+            {etiqueta && <small>{etiqueta}</small>}
             <strong>{metros(m)}</strong>
             <span>{paso.texto}</span>
           </>
         )}
       </div>
-      <button className="voz" onClick={() => cambiarVoz(!conVoz)} aria-label={conVoz ? 'Silenciar voz' : 'Activar voz'}>
-        {conVoz ? '🔊' : '🔇'}
-      </button>
+      {cambiarVoz && (
+        <button className="voz" onClick={() => cambiarVoz(!conVoz)} aria-label={conVoz ? 'Silenciar voz' : 'Activar voz'}>
+          {conVoz ? '🔊' : '🔇'}
+        </button>
+      )}
     </div>
   );
 }

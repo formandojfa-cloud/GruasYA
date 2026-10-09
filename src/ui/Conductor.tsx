@@ -3,6 +3,7 @@ import carro from './vehiculos/carro.svg';
 import moto from './vehiculos/moto.svg';
 import pickup from './vehiculos/pickup.svg';
 import { calificar, cancelarServicio, confirmarPagoConductor, pedirGrua, registrarConductor } from '../data/acciones';
+import { calcularRutaGrua } from '../data/eta';
 import { CENTRO_CIUDAD, CONDUCTOR_DEMO, DESTINOS_SUGERIDOS } from '../data/semilla';
 import { useEstado } from '../data/store';
 import { distanciaKm, largoRutaKm, rutaRestante } from '../domain/geo';
@@ -15,6 +16,7 @@ import { Chat } from './Chat';
 import { useCotizacion, useEtaGrua } from './cotizacion';
 import { km, minutos, NOMBRE_CLIMA, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
 import { Mapa, type Hexagono, type Marcador } from './Mapa';
+import { Navegacion } from './Navegacion';
 import { useSesion } from './sesion';
 
 const CODIGO_DEMO = '123456';
@@ -427,6 +429,37 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
   const [cancelando, setCancelando] = useState(false);
   useEffect(() => setCopiado(false), [s.estado]);
 
+  // Seguimiento en vivo: el mapa sigue a la grúa de cerca y muestra su próximo giro.
+  const [seguir, setSeguir] = useSesion('gruaya-seguir-grua', 'si');
+  const enMarcha = !!g && (s.estado === 'asignado' || s.estado === 'en_ruta');
+  const siguiendo = enMarcha && seguir === 'si';
+  const rutaGrua = s.estado === 'asignado' ? s.rutaGrua : s.estado === 'en_ruta' ? s.ruta : undefined;
+  const pasosGrua = (s.estado === 'asignado' ? s.rutaGruaPasos : s.estado === 'en_ruta' ? s.rutaPasos : undefined) ?? [];
+  const fueraDeRuta =
+    !!g && !!rutaGrua && rutaGrua.length > 1 && rutaRestante(rutaGrua, g.ubicacion) === rutaGrua && distanciaKm(g.ubicacion, rutaGrua[0]) > 0.3;
+  // Reloj para saber hace cuánto se vio la grúa (si el piloto está en Waze, su app deja de mandar GPS).
+  const [ahora, setAhora] = useState(Date.now());
+  useEffect(() => {
+    if (!enMarcha) return;
+    const t = setInterval(() => setAhora(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, [enMarcha]);
+  const segundosSinGps = g?.gpsEnVivo ? Math.max(0, Math.round((ahora - g.ubicacionEn) / 1000)) : 0;
+  // La ruta de la grúa la pide el teléfono del piloto; si se quedó vieja (está en
+  // Waze) y la grúa sí se movió, la pide este teléfono.
+  const ubicacionGruaEn = g?.ubicacionEn ?? 0;
+  useEffect(() => {
+    if (s.estado !== 'asignado' || !g) return;
+    const pedir = () => {
+      const edad = Date.now() - (s.rutaGruaEn ?? 0);
+      if (!s.rutaGrua || (edad > 60_000 && ubicacionGruaEn > (s.rutaGruaEn ?? 0))) void calcularRutaGrua(s.id);
+    };
+    pedir();
+    const t = setInterval(pedir, 10_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.id, s.estado, s.rutaGrua, s.rutaGruaEn, ubicacionGruaEn]);
+
   const marcadores: Marcador[] = [
     { id: 'origen', punto: s.origen, tipo: 'origen', texto: 'Recogida' },
     { id: 'destino', punto: s.destino, tipo: 'destino', texto: s.destinoTexto },
@@ -468,8 +501,17 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
 
   return (
     <>
-      <Mapa centro={s.origen} marcadores={marcadores} ruta={rutaVisible(s, g?.ubicacion)} />
-      <div className="hoja">
+      <Mapa
+        centro={s.origen}
+        marcadores={marcadores}
+        ruta={rutaVisible(s, g?.ubicacion)}
+        seguir={siguiendo && g ? g.ubicacion : undefined}
+        hueco={siguiendo ? 0.44 : undefined}
+      />
+      <div className={`hoja ${siguiendo && pasosGrua.length ? 'corta' : ''}`}>
+        {siguiendo && g && pasosGrua.length > 0 && (
+          <Navegacion pasos={pasosGrua} posicion={g.ubicacion} fueraDeRuta={fueraDeRuta} etiqueta={`Próximo giro de ${g.nombre}`} />
+        )}
         <div className="hoja-cuerpo">
           <div className="encabezado-viaje">
             <div className="pila" style={{ gap: 2 }}>
@@ -477,6 +519,11 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
               {s.estado === 'buscando' && <span className="tenue">Ofreciendo tu servicio a la grúa más cercana</span>}
               {s.estado === 'en_sitio' && <span className="tenue">Está tomando fotos de tu vehículo antes de subirlo</span>}
               {s.estado === 'en_ruta' && restante !== null && <span className="tenue">Llegada aprox. {hora(restante)}</span>}
+              {enMarcha && segundosSinGps > 45 && (
+                <span className="tenue sin-gps">
+                  Última ubicación de la grúa hace {segundosSinGps >= 90 ? minutos(segundosSinGps / 60) : `${segundosSinGps} s`}
+                </span>
+              )}
               {s.estado === 'sin_grua' && (
                 <span className="tenue">
                   No encontramos grúa libre a 10 km. La central de GrúaYa te va a llamar para coordinarla.
@@ -493,7 +540,7 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
           {s.estado === 'buscando' && <div className="progreso" />}
 
           {conGrua && g && (
-            <div className="persona">
+            <div className={`persona ${siguiendo && pasosGrua.length ? 'oculta' : ''}`}>
               <div className="avatar">{iniciales(g.nombre)}</div>
               <div className="texto">
                 <strong>{g.nombre}</strong>
@@ -531,6 +578,12 @@ function ServicioEnCurso({ servicio: s }: { servicio: Servicio }) {
 
           {conGrua && s.estado !== 'entregado' && (
             <div className="acciones">
+              {enMarcha && (
+                <button className={siguiendo ? 'activo' : ''} onClick={() => setSeguir(siguiendo ? 'no' : 'si')}>
+                  <span className="ico">{siguiendo ? '🔍' : '📍'}</span>
+                  {siguiendo ? 'Mapa' : 'Seguir grúa'}
+                </button>
+              )}
               <button onClick={() => setVerChat(!verChat)}>
                 <span className="ico">💬</span>
                 {verChat ? 'Cerrar chat' : mensajesDelGruero ? `Chat (${mensajesDelGruero})` : 'Chat'}

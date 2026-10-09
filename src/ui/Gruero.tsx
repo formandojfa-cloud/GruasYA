@@ -16,7 +16,7 @@ import { DESPACHO_INICIAL, minutosParaLlegar } from '../domain/despacho';
 import { distanciaKm, minutosEstimados, rutaRestante } from '../domain/geo';
 import { celdaDe } from '../domain/h3';
 import { gridDisk } from 'h3-js';
-import type { Gruero as TGruero, Servicio } from '../domain/tipos';
+import type { Coordenada, Gruero as TGruero, Servicio } from '../domain/tipos';
 import { Chat } from './Chat';
 import { Foto } from './Conductor';
 import { km, minutos, NOMBRE_ESTADO, NOMBRE_PROBLEMA, NOMBRE_VEHICULO, quetzales } from './formato';
@@ -94,7 +94,8 @@ export function Gruero() {
   const ganado = hechos.reduce((acc, s) => acc + s.tarifa - s.comision, 0);
 
   const servicio = activo ?? oferta;
-  const [navegando, setNavegando] = useSesion('gruaya-navegando', 'si');
+  // La guía propia es respaldo: el piloto navega con Waze, que se abre solo al aceptar.
+  const [navegando, setNavegando] = useSesion('gruaya-navegando', 'no');
   const marcadores: Marcador[] = servicio
     ? [
         { id: 'origen', punto: servicio.origen, tipo: 'origen', texto: 'Cliente' },
@@ -227,6 +228,16 @@ export function Gruero() {
   );
 }
 
+// Abre Waze con la ruta cargada hacia el punto. Se llama dentro del toque del
+// botón: los navegadores solo dejan abrir otra app como respuesta a un toque.
+export function abrirWaze(p: Coordenada) {
+  try {
+    window.open(`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`, '_blank', 'noopener');
+  } catch {
+    // sin Waze queda el botón y la guía propia
+  }
+}
+
 function OfertaEntrante({ servicio: s, gruero: g }: { servicio: Servicio; gruero: TGruero }) {
   const oferta = s.ofertas.find((o) => o.grueroId === g.id && !o.resultado)!;
   const [ahora, setAhora] = useState(Date.now());
@@ -272,7 +283,13 @@ function OfertaEntrante({ servicio: s, gruero: g }: { servicio: Servicio; gruero
         </div>
       </div>
       <div className="hoja-pie">
-        <button className="principal" onClick={() => aceptarOferta(s.id, g.id)}>
+        <button
+          className="principal"
+          onClick={() => {
+            abrirWaze(s.origen);
+            aceptarOferta(s.id, g.id);
+          }}
+        >
           Aceptar
         </button>
         <button className="texto" onClick={() => rechazarOferta(s.id, g.id)}>
@@ -382,6 +399,11 @@ function ServicioActivo({
             </button>
           </div>
         )}
+        {(s.estado === 'asignado' || s.estado === 'en_ruta') && (
+          <p className="tenue chico">
+            Waze se abre solo con la ruta. Mantén GrúaYa abierta o en pantalla dividida para que el cliente vea dónde vas.
+          </p>
+        )}
         {verChat && s.estado !== 'entregado' && <Chat servicio={s} yo="gruero" />}
         {s.estado === 'en_sitio' && (
           <>
@@ -404,7 +426,10 @@ function ServicioActivo({
             <button
               className="principal"
               disabled={!foto1 || !foto2 || !video}
-              onClick={() => marcarCargado(s.id, [foto1!, foto2!, video!])}
+              onClick={() => {
+                abrirWaze(s.destino);
+                marcarCargado(s.id, [foto1!, foto2!, video!]);
+              }}
             >
               Vehículo cargado, en ruta
             </button>
