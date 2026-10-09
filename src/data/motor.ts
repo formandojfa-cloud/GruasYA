@@ -103,14 +103,45 @@ function acercar(desde: { lat: number; lng: number }, hacia: { lat: number; lng:
   return avanzar(desde, hacia, KM_POR_TICK / d);
 }
 
+// El motor corre en UNA pestaña por aparato (Web Locks) y solo mientras esa
+// pestaña está a la vista: Chrome frena los temporizadores de las pestañas
+// escondidas (hasta una vez por minuto), y si la pestaña con el motor quedaba
+// atrás, la oferta tardaba medio minuto en salir. Al esconderse suelta el
+// candado para que lo tome la pestaña visible.
 export function arrancarMotor() {
   const correr = () => {
     const id = setInterval(() => actualizar((e) => tick(e, Date.now(), HAY_NUBE ? idDispositivo() : undefined)), 1000);
     return () => clearInterval(id);
   };
-  try {
-    navigator.locks.request('gruaya-motor', () => new Promise<void>(() => correr())).catch(correr);
-  } catch {
-    correr(); // navegador sin Web Locks
+  const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
+  let soltar: (() => void) | null = null;
+  let pidiendo = false;
+
+  const pedir = () => {
+    if (soltar || pidiendo || !visible()) return;
+    pidiendo = true;
+    const tomar = (resolve: () => void) => {
+      pidiendo = false;
+      if (!visible()) return resolve(); // se escondió mientras esperaba el candado
+      const parar = correr();
+      soltar = () => {
+        parar();
+        soltar = null;
+        resolve();
+      };
+    };
+    try {
+      navigator.locks.request('gruaya-motor', () => new Promise<void>((resolve) => tomar(resolve))).catch(() => tomar(() => {}));
+    } catch {
+      tomar(() => {}); // navegador sin Web Locks
+    }
+  };
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (visible()) pedir();
+      else soltar?.();
+    });
   }
+  pedir();
 }
