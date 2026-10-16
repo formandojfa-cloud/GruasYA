@@ -44,9 +44,8 @@ enum RequestStatus {
   ESCALATED // sin proveedor: alerta al PBX
   EN_ROUTE // proveedor asignado y en camino
   ARRIVED // proveedor en el punto
-  IN_PROGRESS // servicio en curso (PIN verificado, vehículo cargado)
-  DELIVERED // entregado en el destino; falta confirmar el pago en efectivo
-  COMPLETED // pagado (gruero y cliente confirmaron, o la central)
+  IN_PROGRESS // servicio en curso (PIN verificado)
+  COMPLETED
   CANCELLED
 }
 
@@ -74,70 +73,15 @@ enum RaterRole {
   PROVIDER
 }
 
-enum Weather {
-  NONE
-  RAIN
-  HEAVY_RAIN
-}
-
-enum Problem {
-  NO_START // no arranca
-  CRASH // choque
-  FLAT_NO_SPARE // llanta sin repuesto
-  OTHER
-}
-
-enum IdentityStatus {
-  NONE
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum MediaKind {
-  DPI_FRONT
-  DPI_BACK
-  SELFIE
-  LICENSE
-  VEHICLE_DOC
-  LOAD_PHOTO
-  LOAD_VIDEO
-}
-
-enum MediaOwnerType {
-  USER
-  PROVIDER
-}
-
-enum ChatRole {
-  CLIENT
-  PROVIDER
-  PBX
-}
-
-enum TowVehicleType {
-  PLATFORM // plataforma
-  DRAG // arrastre
-}
-
-enum PauseReason {
-  MISSED_OFFERS // dejó pasar varias ofertas seguidas
-}
-
 // ---------- Modelos ----------
 
 model User {
-  id                  String         @id @default(cuid())
-  phone               String         @unique
+  id                  String    @id @default(cuid())
+  phone               String    @unique
   name                String
-  isMember            Boolean        @default(false)
+  isMember            Boolean   @default(false)
   membershipExpiresAt DateTime?
-  phoneVerifiedAt     DateTime?
-  identityStatus      IdentityStatus @default(NONE)
-  identityNote        String?
-  identityReviewedAt  DateTime?
-  balanceDueQ         Int            @default(0) // saldo pendiente (cargos de cancelación)
-  createdAt           DateTime       @default(now())
+  createdAt           DateTime  @default(now())
 
   requests ServiceRequest[]
   vehicles Vehicle[]
@@ -155,30 +99,24 @@ model Vehicle {
 }
 
 model Provider {
-  id                 String         @id @default(cuid())
-  name               String
-  phone              String
-  kind               ProviderKind
-  plate              String?
-  vehicleLabel       String? // "Grúa de plataforma Hino"
-  photoUrl           String?
-  status             ProviderStatus @default(OFFLINE)
-  lat                Float?
-  lng                Float?
-  heading            Float?
-  h3Cell             String?
-  lastSeenAt         DateTime?
-  isExternal         Boolean        @default(false) // coordinado por el PBX, fuera de la red
-  accessToken        String         @unique // enlace mágico para la app del proveedor
-  ratingSum          Int            @default(0)
-  ratingCount        Int            @default(0)
-  vehicleType        TowVehicleType @default(PLATFORM) // plataforma / arrastre
-  identityStatus     IdentityStatus @default(NONE)
-  identityNote       String?
-  identityReviewedAt DateTime?
-  consecutiveMissed  Int            @default(0) // ofertas ignoradas/rechazadas seguidas
-  pausedReason       PauseReason?
-  createdAt          DateTime       @default(now())
+  id           String         @id @default(cuid())
+  name         String
+  phone        String
+  kind         ProviderKind
+  plate        String?
+  vehicleLabel String? // "Grúa de plataforma Hino"
+  photoUrl     String?
+  status       ProviderStatus @default(OFFLINE)
+  lat          Float?
+  lng          Float?
+  heading      Float?
+  h3Cell       String?
+  lastSeenAt   DateTime?
+  isExternal   Boolean        @default(false) // coordinado por el PBX, fuera de la red
+  accessToken  String         @unique // enlace mágico para la app del proveedor
+  ratingSum    Int            @default(0)
+  ratingCount  Int            @default(0)
+  createdAt    DateTime       @default(now())
 
   offers   DispatchOffer[]
   requests ServiceRequest[]
@@ -197,9 +135,9 @@ model Operator {
 }
 
 model ServiceRequest {
-  id     String        @id @default(cuid())
+  id     String      @id @default(cuid())
   userId String
-  user   User          @relation(fields: [userId], references: [id])
+  user   User        @relation(fields: [userId], references: [id])
   kind   ServiceKind
   status RequestStatus
 
@@ -207,7 +145,6 @@ model ServiceRequest {
   vehicleLabel String?
   plate        String?
   notes        String?
-  problem      Problem?
 
   pickupLat     Float
   pickupLng     Float
@@ -218,15 +155,9 @@ model ServiceRequest {
   dropoffAddress String?
 
   distanceKm        Float // distancia estimada de remolque (recogida → destino)
-  estimatedMinutes  Float? // duración estimada del remolque al cotizar
-  weatherAtRequest  Weather?
-  routeSource       String? // mapbox | osrm | estimada
-  routeGeometry     String? // JSON [{lat,lng}] del trazo por calles
   isMemberAtRequest Boolean
   quoteJson         String // desglose de precio (ver lib/pricing.ts)
   priceTotal        Int // quetzales
-  commissionQ       Float? // comisión GruaYa registrada
-  providerPayoutQ   Float? // ganancia del gruero
 
   pin String // 4 dígitos; el cliente lo da al proveedor al iniciar el servicio
 
@@ -238,31 +169,24 @@ model ServiceRequest {
   searchStartedAt  DateTime
   searchDeadlineAt DateTime
 
-  escalatedAt                DateTime?
-  escalationReason           String?
-  assignedAt                 DateTime?
-  arrivedAt                  DateTime?
-  startedAt                  DateTime?
-  deliveredAt                DateTime?
-  providerConfirmedCashAt    DateTime?
-  clientConfirmedPaymentAt   DateTime?
-  paidAt                     DateTime?
-  completedAt                DateTime?
-  cancelledAt                DateTime?
-  cancelledBy                CancelledBy?
-  cancelReason               String?
-  cancellationFee            Int          @default(0)
-  cancellationFeeToProviderQ Int          @default(0)
+  escalatedAt      DateTime?
+  escalationReason String?
+  assignedAt       DateTime?
+  arrivedAt        DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  cancelledAt      DateTime?
+  cancelledBy      CancelledBy?
+  cancelReason     String?
+  cancellationFee  Int          @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  offers       DispatchOffer[]
-  alerts       EscalationAlert[]
-  events       RequestEvent[]
-  ratings      Rating[]
-  chatMessages ChatMessage[]
-  media        MediaFile[]
+  offers  DispatchOffer[]
+  alerts  EscalationAlert[]
+  events  RequestEvent[]
+  ratings Rating[]
 
   @@index([status])
   @@index([userId, createdAt])
@@ -334,90 +258,4 @@ model Rating {
   createdAt DateTime       @default(now())
 
   @@unique([requestId, byRole])
-}
-
-// ---------- GruaYa: ajustes, verificación, identidad, chat ----------
-
-/// Fila única (id "default") con la tarifa, el despacho y los interruptores.
-/// Se edita desde Central → Ajustes; `src/lib/settings.ts` la lee con caché.
-model Settings {
-  id String @id @default("default")
-
-  // Tarifa (prototipo GruaYa, decisión 2026-10-09)
-  banderazo           Int   @default(300) // Q
-  kmIncluidos         Float @default(10)
-  precioKm            Float @default(15) // Q por km adicional
-  minutosIncluidos    Float @default(15)
-  precioMinuto        Float @default(3) // Q por minuto adicional de viaje
-  factorMoto          Float @default(0.8)
-  factorCarro         Float @default(1)
-  factorPickup        Float @default(1.2)
-  recargoNocturno     Float @default(1.2) // multiplicador
-  horaNocheInicio     Int   @default(22)
-  horaNocheFin        Int   @default(6)
-  recargoLluvia       Float @default(1.15)
-  recargoLluviaFuerte Float @default(1.3)
-  comision            Float @default(0.1) // fracción para GruaYa
-  fraccionCancelacion Float @default(0.5) // de la tarifa, si se cancela tras aceptar
-  nonMemberTowFeeQ    Int   @default(50)
-  lightNonMemberFlatQ Int   @default(150)
-  freeCancelMinutes   Int   @default(2)
-
-  // Despacho
-  offerSeconds       Int    @default(90)
-  radiiKm            String @default("[5,10]") // JSON number[]
-  locationFreshMs    Int    @default(120000)
-  rechazosParaPausar Int    @default(3)
-  searchTimeoutMs    Int    @default(120000)
-  maxOffers          Int    @default(5)
-
-  // Interruptores
-  weather                Weather @default(NONE) // clima manual (respaldo / refuerzo)
-  shareContactNumbers    Boolean @default(false)
-  requireLoadPhotos      Boolean @default(true)
-  requirePin             Boolean @default(true)
-  identityRequiredForTow Boolean @default(false)
-
-  updatedAt DateTime @updatedAt
-}
-
-/// Código de verificación de teléfono (uno vigente por número).
-model PhoneCode {
-  id         String    @id @default(cuid())
-  phone      String    @unique
-  codeHash   String // HMAC(AUTH_SECRET, phone:code); vacío si lo valida Twilio Verify
-  expiresAt  DateTime
-  attempts   Int       @default(0)
-  sentAt     DateTime  @default(now())
-  verifiedAt DateTime? // tras verificar, permite completar el registro sin pedir otro código
-  createdAt  DateTime  @default(now())
-}
-
-/// Foto o video guardado en disco (UPLOAD_DIR). Identidad y evidencias de carga.
-model MediaFile {
-  id        String          @id @default(cuid())
-  kind      MediaKind
-  ownerType MediaOwnerType
-  ownerId   String
-  requestId String?
-  request   ServiceRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  mime      String
-  size      Int
-  path      String // relativo a UPLOAD_DIR
-  createdAt DateTime        @default(now())
-
-  @@index([ownerType, ownerId, kind])
-  @@index([requestId, kind])
-}
-
-model ChatMessage {
-  id         String         @id @default(cuid())
-  requestId  String
-  request    ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  senderRole ChatRole
-  senderId   String
-  text       String
-  at         DateTime       @default(now())
-
-  @@index([requestId, at])
 }
