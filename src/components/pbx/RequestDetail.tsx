@@ -309,7 +309,11 @@ function Body({
           <div className="flex flex-col gap-2">
             <PlaceRow icon="🚗" label="Dónde está" place={r.pickup} />
             {r.dropoff && <PlaceRow icon="🏁" label="A dónde va" place={r.dropoff} />}
-            <p className="tenue chico">{r.kind === "TOW" ? `Remolque estimado ${formatKm(r.distanceKm)}` : "Asistencia en el lugar"}</p>
+            <p className="tenue chico">
+              {r.kind === "TOW"
+                ? `Remolque ${formatKm(r.distanceKm)}${r.estimatedMinutes != null ? ` · ${formatMinutes(r.estimatedMinutes)}` : ""}${r.routeSource === "estimada" ? " aprox. (sin motor de rutas)" : r.routeSource ? ` · ruta por calles (${r.routeSource})` : ""}`
+                : "Asistencia en el lugar"}
+            </p>
           </div>
           <div className="mapa-marco h-48">
             <DetailMap r={r} />
@@ -438,8 +442,8 @@ function StatusStrip({ r, now }: { r: RequestView; now: number }) {
             <p className="tenue">
               {live ? (
                 <>
-                  {live.target === "PICKUP" ? "Llega al vehículo en" : "Llega al destino en"} <b className="text-foreground">{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)} · señal{" "}
-                  {relativeTime(live.updatedAt, now)}
+                  {live.target === "PICKUP" ? "Llega al vehículo en" : "Llega al destino en"} <b className="text-foreground">{formatMinutes(live.etaMinutes)}</b>
+                  {live.routeSource === "estimada" ? " aprox." : ""} · {formatKm(live.distanceKm)} · señal {relativeTime(live.updatedAt, now)}
                 </>
               ) : (
                 <span className="text-rojo font-semibold">Sin ubicación del piloto todavía</span>
@@ -499,7 +503,13 @@ function DetailMap({ r }: { r: RequestView }) {
     }
     return out;
   }, [r.pickup, r.dropoff, r.providerLive, r.provider]);
-  const polyline = useMemo(() => (r.dropoff ? [r.pickup, r.dropoff] : undefined), [r.pickup, r.dropoff]);
+  // Ruta en vivo del piloto si existe; si no, la del remolque; si no, recta discontinua.
+  const polyline = useMemo(() => {
+    const live = r.providerLive;
+    if (live && r.provider && live.routeGeometry && live.routeGeometry.length > 2) return live.routeGeometry;
+    if (r.routeGeometry && r.routeGeometry.length > 2) return r.routeGeometry;
+    return r.dropoff ? [r.pickup, r.dropoff] : undefined;
+  }, [r.pickup, r.dropoff, r.providerLive, r.provider, r.routeGeometry]);
   return <MapView className="h-full w-full" markers={markers} polyline={polyline} fitToMarkers zoom={14} />;
 }
 
@@ -532,7 +542,8 @@ function ProviderBox({ r, now }: { r: RequestView; now: number }) {
               k={live.target === "PICKUP" ? "Hacia el vehículo" : "Hacia el destino"}
               v={
                 <>
-                  <b>{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)} · señal {relativeTime(live.updatedAt, now)}
+                  <b>{formatMinutes(live.etaMinutes)}</b>
+                  {live.routeSource === "estimada" ? " aprox." : ""} · {formatKm(live.distanceKm)} · señal {relativeTime(live.updatedAt, now)}
                 </>
               }
             />

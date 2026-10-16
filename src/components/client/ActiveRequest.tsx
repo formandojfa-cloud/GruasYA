@@ -15,7 +15,7 @@ import type { RequestView } from "@/lib/types";
 import { Toast, useToast } from "./bits";
 import { ClientScreen } from "./ClientShell";
 import { apiErrorMessage, CANCELLATION_FEE_Q, elapsedLabel, isActiveStatus, POLL_MS, serviceNoun } from "./constants";
-import { ActionButton, ContactActions, EtaLine, PinBlock, ProgressSteps, ProviderPerson, QuoteLines, ServiceDetail, ServiceHeader, Timeline } from "./RequestCard";
+import { ActionButton, ContactActions, EtaLine, PinBlock, ProgressSteps, ProviderPerson, QuoteLines, ServiceDetail, ServiceHeader, Timeline, towSummary } from "./RequestCard";
 import { RequestMap } from "./RequestMap";
 
 type Props = { initial: RequestView; onNewService: () => void };
@@ -87,6 +87,7 @@ export function ActiveRequest({ initial, onNewService }: Props) {
   const active = isActiveStatus(req.status);
   const live = req.providerLive;
   const etaToMe = req.status === "EN_ROUTE" && live && live.target === "PICKUP" ? live.etaMinutes : null;
+  const towLine = towSummary(req);
 
   const cancelAction = <ActionButton icon="✕" label="Cancelar" danger onClick={() => setCancelOpen(true)} />;
   const helpAction = <ActionButton icon="🎧" label="Central" onClick={help} disabled={busy === "help"} />;
@@ -102,6 +103,7 @@ export function ActiveRequest({ initial, onNewService }: Props) {
               {req.search.offersSent > 0 ? `Contactando ${noun} ${req.search.offersSent} de ${req.search.maxOffers}` : `Buscando ${noun}s conectadas`} · {elapsed}
               {req.search.currentOffer && ` · esperando a ${req.search.currentOffer.providerName}`}
             </p>
+            {towLine && <p className="tenue chico">{towLine}</p>}
           </ServiceHeader>
           <ProgressBar label={`Buscando ${noun}`} />
           <div className="flex gap-2">
@@ -121,6 +123,7 @@ export function ActiveRequest({ initial, onNewService }: Props) {
             <p className="tenue chico tabular-nums">
               {req.escalation ? escalationReasonLabel(req.escalation.reason) : "Buscando la mejor opción"} · {elapsed}
             </p>
+            {towLine && <p className="tenue chico">{towLine}</p>}
           </ServiceHeader>
           <div className="flex gap-2">
             <ActionButton icon="✕" label="Cancelar solicitud" danger onClick={() => setCancelOpen(true)} />

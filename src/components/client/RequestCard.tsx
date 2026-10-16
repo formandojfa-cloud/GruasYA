@@ -8,6 +8,7 @@
  */
 import type { ReactNode } from "react";
 import { Row, cn } from "@/components/ui";
+import { useNow } from "@/lib/hooks";
 import { EVENT_LABELS, formatKm, formatMinutes, formatQ, formatTime, KIND_LABELS, PROVIDER_KIND_LABELS, VEHICLE_LABELS } from "@/lib/format";
 import type { ProviderCard, Quote, RequestEventView, RequestStatus, RequestView } from "@/lib/types";
 import { initials, placeLabel, providerNoun, serviceNoun, shortAddress, telHref } from "./constants";
@@ -120,23 +121,34 @@ export function ContactActions({ provider }: { provider: ProviderCard }) {
   );
 }
 
-/** "Llega en 8 min · 2.3 km" según el objetivo actual del proveedor. */
+/** "Remolque: 6.6 km · 25 min" (" aprox." si no hubo motor de rutas); null si no es grúa o no hay minutos. */
+export function towSummary(req: RequestView): string | null {
+  if (req.kind !== "TOW" || req.estimatedMinutes == null) return null;
+  return `Remolque: ${formatKm(req.distanceKm)} · ${formatMinutes(req.estimatedMinutes)}${req.routeSource === "estimada" ? " aprox." : ""}`;
+}
+
+/** "Llega en 8 min · a las 14:32" según el objetivo actual del proveedor; " aprox." si la ruta se estimó en línea recta. */
 export function EtaLine({ req }: { req: RequestView }) {
+  const now = useNow(15000);
   const live = req.providerLive;
   const noun = serviceNoun(req.kind);
   if (req.status === "ARRIVED") return <p className="text-sm font-semibold text-verde">Tu {noun} ya está junto a tu vehículo</p>;
   if (!live) return <p className="tenue">Esperando la ubicación de tu {noun}…</p>;
+  const approx = live.routeSource === "estimada" ? " aprox." : "";
   if (req.status === "IN_PROGRESS") {
     if (live.target !== "DROPOFF") return <p className="tenue">Servicio en curso</p>;
     return (
       <p className="tenue">
-        Llegan al destino en <b className="text-foreground">{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)}
+        Llegas a tu destino en <b className="text-foreground">{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)}
+        {approx}
       </p>
     );
   }
+  const arrival = formatTime(new Date(now + live.etaMinutes * 60_000));
   return (
     <p className="tenue">
-      Llega en <b className="text-foreground">{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)}
+      Llega en <b className="text-foreground">{formatMinutes(live.etaMinutes)}</b> · a las {arrival}
+      {approx}
     </p>
   );
 }
@@ -191,7 +203,14 @@ export function PinBlock({ pin, providerKind }: { pin: string; providerKind: Pro
 
 /** Bloque de detalle: ● Recogida · qué pasó / ■ Destino / 💵 Efectivo  Q377 / "Carro · 6.6 km · precio fijo". */
 export function ServiceDetail({ req }: { req: RequestView }) {
-  const tail = [VEHICLE_LABELS[req.vehicleKind], req.kind === "TOW" ? formatKm(req.distanceKm) : KIND_LABELS[req.kind], "precio fijo"].join(" · ");
+  const tail = [
+    VEHICLE_LABELS[req.vehicleKind],
+    req.kind === "TOW" ? formatKm(req.distanceKm) : KIND_LABELS[req.kind],
+    req.kind === "TOW" && req.estimatedMinutes != null ? `${formatMinutes(req.estimatedMinutes)}${req.routeSource === "estimada" ? " aprox." : ""}` : null,
+    "precio fijo",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-start gap-3">

@@ -15,7 +15,7 @@ import type { RequestView } from "@/lib/types";
 import { LINK_PRIMARY } from "./bits";
 import { ClientScreen } from "./ClientShell";
 import { GUATEMALA_CITY, isActiveStatus, POLL_MS, serviceNoun } from "./constants";
-import { EtaLine, PinBlock, ProgressSteps, ProviderPerson, QuoteLines, ServiceDetail, ServiceHeader, Timeline } from "./RequestCard";
+import { EtaLine, PinBlock, ProgressSteps, ProviderPerson, QuoteLines, ServiceDetail, ServiceHeader, Timeline, towSummary } from "./RequestCard";
 import { RequestMap } from "./RequestMap";
 
 type Mode = "owner" | "share";
@@ -107,6 +107,7 @@ export function TrackPage({ id }: { id: string }) {
       {error && <Notice tone="warning">Sin conexión con el servidor: {error.message}</Notice>}
       <ServiceHeader title={req.status === "COMPLETED" ? "Completado" : statusLabelFor(req.status, req.kind)} subtitle={subtitle} eta={etaToMe}>
         {live && <EtaLine req={req} />}
+        {(req.status === "SEARCHING" || req.status === "ESCALATED") && towSummary(req) && <p className="tenue chico">{towSummary(req)}</p>}
       </ServiceHeader>
       {req.status === "SEARCHING" && <ProgressBar label={`Buscando ${noun}`} />}
       {req.provider && (live || req.status === "COMPLETED") && <ProviderPerson provider={req.provider} />}

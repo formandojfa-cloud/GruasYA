@@ -12,7 +12,7 @@ import { Aviso, Button, Chip, Field, Input, Notice, OptionRow, RouteFields, Sele
 import { api, ApiClientError } from "@/lib/api";
 import { formatKm, formatMinutes, formatQ, KIND_ICONS, KIND_LABELS, VEHICLE_LABELS } from "@/lib/format";
 import type { LatLng } from "@/lib/geo";
-import type { ClientSelf, CreateRequestInput, Place, Quote, RequestView, ServiceKind, VehicleKind } from "@/lib/types";
+import type { ClientSelf, CreateRequestInput, Place, QuoteResponse, RequestView, ServiceKind, VehicleKind } from "@/lib/types";
 import type { Draft } from "./ClientApp";
 import { ClientScreen } from "./ClientShell";
 import {
@@ -33,8 +33,6 @@ import {
 } from "./constants";
 import { useReverseGeocode } from "./geocode";
 import type { VehicleDraft } from "./useVehicle";
-
-type QuoteResponse = { quote: Quote; distanceKm: number; towMinutes: number; isMember: boolean };
 
 type Props = {
   me: ClientSelf;
@@ -99,6 +97,9 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
   const ready = !!quote;
   const total = quote?.quote.totalQ ?? 0;
   const included = light && isMember;
+  // Tiempos de la cotización: llegada de la grúa más cercana y duración del remolque.
+  const approx = quote?.routeSource === "estimada" ? " aprox." : "";
+  const towEta = quote && !light ? `${quote.nearestProvider ? `Llega en ${formatMinutes(quote.nearestProvider.etaMinutes)}` : "Sin grúas cerca ahora"} · Remolque ${formatMinutes(quote.towMinutes)} · ${formatKm(quote.distanceKm)}${approx}` : null;
 
   function setKind(next: ServiceKind, vehicleKind?: VehicleKind) {
     if (vehicleKind && vehicleKind !== vehicle.vehicleKind) onVehicleChange({ ...vehicle, vehicleKind });
@@ -139,7 +140,8 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
   if (pickup) markers.push({ id: "pickup", lat: pickup.lat, lng: pickup.lng, kind: "pickup", label: "Recogida" });
   if (!light && dropoff) markers.push({ id: "dropoff", lat: dropoff.lat, lng: dropoff.lng, kind: "dropoff", label: dropoff.address ? shortAddress(dropoff.address, 1) : "Destino" });
   if (gps && !usingGps) markers.push({ id: "me", lat: gps.lat, lng: gps.lng, kind: "me" });
-  const polyline = pickup && !light && dropoff ? [pickup, dropoff] : undefined;
+  // Ruta real por calles cuando el motor respondió; línea recta (discontinua) mientras tanto o si se estimó.
+  const polyline = pickup && !light && dropoff ? (quote && quote.geometry.length > 2 ? quote.geometry : [pickup, dropoff]) : undefined;
 
   const ctaLabel = !pickup
     ? "Marcar dónde estás"
@@ -254,7 +256,7 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
               className="!min-h-[60px]"
               icon={VEHICLE_ICONS[o.kind]}
               title={`GrúaYa ${o.name}`}
-              subtitle={kind === "TOW" && needsQuote ? (ready ? `Precio fijo · ${o.detail}` : quoteError ? o.detail : "Calculando precio…") : o.detail}
+              subtitle={kind === "TOW" && needsQuote ? (ready ? (towEta ?? `Precio fijo · ${o.detail}`) : quoteError ? o.detail : "Calculando precio…") : o.detail}
               price={kind === "TOW" && ready ? formatQ(total) : `desde ${formatQ(TOW_BASE_Q)}`}
               active={active}
               onClick={() => setKind("TOW", o.kind)}
@@ -304,7 +306,7 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
         <details className="chico text-muted">
           <summary className="cursor-pointer select-none">
             Precio fijo
-            {kind === "TOW" && ` · ${formatKm(quote.distanceKm)} y ${quote.towMinutes < 1 ? "menos de 1 min" : `unos ${formatMinutes(quote.towMinutes)}`}`}
+            {kind === "TOW" && ` · ${formatKm(quote.distanceKm)} y ${quote.towMinutes < 1 ? "menos de 1 min" : `unos ${formatMinutes(quote.towMinutes)}`}${approx}`}
             {light && ` · ${quote.quote.summary}`}
           </summary>
           <div className="mt-1.5 flex flex-col gap-0.5">

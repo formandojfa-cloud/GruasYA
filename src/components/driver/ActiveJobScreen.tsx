@@ -93,7 +93,11 @@ export default function ActiveJobScreen({
         ]
       : []),
   ];
-  const polyline: LatLng[] = [...(position ? [position] : []), ...(!inProgress ? [job.pickup] : []), ...(job.dropoff ? [job.dropoff] : [])];
+  // Ruta por calles grúa → objetivo cuando el servidor la calculó; si no, recta discontinua.
+  const live = job.providerLive;
+  const origin: LatLng | null = position ?? (live ? { lat: live.lat, lng: live.lng } : null);
+  const polyline: LatLng[] | undefined =
+    job.status !== "ARRIVED" && live?.routeGeometry && live.routeGeometry.length > 2 ? live.routeGeometry : origin ? [origin, target] : undefined;
 
   const transition = async (to: Transition, pinValue?: string) => {
     setBusy(to);
@@ -144,12 +148,13 @@ export default function ActiveJobScreen({
     }
   };
 
-  const live = job.providerLive;
+  const approx = live?.routeSource === "estimada" ? " aprox." : "";
+  const etaText = live ? `Llegas en ${formatMinutes(live.etaMinutes)} (${formatKm(live.distanceKm)})${approx}` : null;
   const sub =
     job.status === "ARRIVED"
       ? "Pide el PIN de 4 dígitos al cliente para iniciar."
-      : live
-        ? `${targetName === "cliente" ? "Cliente" : "Destino"} a ${formatKm(live.distanceKm)} (${live.etaMinutes < 1 ? "menos de 1 min" : `unos ${formatMinutes(live.etaMinutes)}`})`
+      : etaText
+        ? `${targetName === "cliente" ? "Cliente" : "Destino"}: ${etaText.charAt(0).toLowerCase()}${etaText.slice(1)}`
         : `Rumbo al ${targetName}`;
   const vehicle = [VEHICLE_LABELS[job.vehicleKind], job.vehicleLabel, job.plate].filter(Boolean).join(" · ");
   const what = job.kind === "TOW" ? vehicle : `${KIND_LABELS[job.kind]} · ${vehicle}`;
@@ -186,7 +191,13 @@ export default function ActiveJobScreen({
         <MapOverlay>
           <div className="flex w-full items-center justify-between gap-2">
             <GpsPill loc={loc} reporting />
-            <button type="button" onClick={() => setFit(true)} aria-label="Centrar mapa" className="pildora !px-3 text-lg leading-none">
+            {live && job.status !== "ARRIVED" && (
+              <span className="pildora min-w-0 truncate !px-3 text-[13px] font-semibold tabular-nums">
+                Llegas en {formatMinutes(live.etaMinutes)} · {formatKm(live.distanceKm)}
+                {approx}
+              </span>
+            )}
+            <button type="button" onClick={() => setFit(true)} aria-label="Centrar mapa" className="pildora shrink-0 !px-3 text-lg leading-none">
               ⌖
             </button>
           </div>

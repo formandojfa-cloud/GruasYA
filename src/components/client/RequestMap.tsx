@@ -23,17 +23,28 @@ export function RequestMap({ req, className }: { req: RequestView; className?: s
     markers.push({ id: "dropoff", lat: req.dropoff.lat, lng: req.dropoff.lng, kind: "dropoff", label: req.dropoff.address ? shortAddress(req.dropoff.address, 2) : "Destino" });
   }
 
+  // Ruta por calles si el motor la dio (>2 puntos, línea sólida); si no, recta discontinua.
+  const towRoute: LatLng[] | undefined = req.dropoff
+    ? req.routeGeometry && req.routeGeometry.length > 2
+      ? req.routeGeometry
+      : [
+          { lat: req.pickup.lat, lng: req.pickup.lng },
+          { lat: req.dropoff.lat, lng: req.dropoff.lng },
+        ]
+    : undefined;
   let polyline: LatLng[] | undefined;
   if (live && req.provider) {
     markers.push({ id: "provider", lat: live.lat, lng: live.lng, kind: "provider", heading: live.heading, glyph: providerGlyph(req.provider.kind), label: req.provider.name });
-    const here = { lat: live.lat, lng: live.lng };
-    const dropoff = req.dropoff ? [{ lat: req.dropoff.lat, lng: req.dropoff.lng }] : [];
-    polyline = live.target === "PICKUP" ? [here, { lat: req.pickup.lat, lng: req.pickup.lng }, ...dropoff] : [here, ...dropoff];
-  } else if (!searching && req.dropoff) {
-    polyline = [
-      { lat: req.pickup.lat, lng: req.pickup.lng },
-      { lat: req.dropoff.lat, lng: req.dropoff.lng },
-    ];
+    if (req.status === "ARRIVED") {
+      polyline = towRoute;
+    } else {
+      // EN_ROUTE: grúa → recogida; IN_PROGRESS: grúa → destino.
+      const here = { lat: live.lat, lng: live.lng };
+      const target = live.target === "PICKUP" || !req.dropoff ? req.pickup : req.dropoff;
+      polyline = live.routeGeometry && live.routeGeometry.length > 2 ? live.routeGeometry : [here, { lat: target.lat, lng: target.lng }];
+    }
+  } else if (!searching) {
+    polyline = towRoute;
   }
 
   return (

@@ -57,7 +57,8 @@ function OfferCard({
   const timer = useOfferTimer({ until: offer.expiresAt, onExpire });
   const vehicle = [VEHICLE_LABELS[offer.vehicleKind], offer.vehicleLabel].filter(Boolean).join(" ");
   const what = offer.kind === "TOW" ? vehicle : `${KIND_LABELS[offer.kind]} · ${vehicle}`;
-  const eta = offer.etaToPickupMinutes < 1 ? "menos de 1 min" : `unos ${formatMinutes(offer.etaToPickupMinutes)}`;
+  const approx = offer.routeSource === "estimada" ? " aprox." : "";
+  const times = `${formatMinutes(offer.etaToPickupMinutes)} hasta la recogida${offer.dropoff ? ` · ${formatKm(offer.towDistanceKm)} de remolque` : ""}${approx}`;
 
   return (
     <section className="tarjeta oferta" aria-labelledby="oferta-titulo">
@@ -78,7 +79,9 @@ function OfferCard({
         <div className="flex items-start gap-3">
           <span className="marca-origen mt-1.5" aria-hidden />
           <p className="text-[15px] leading-snug">
-            Cliente {offer.clientFirstName} a {formatKm(offer.distanceToPickupKm)} ({eta}) · {what}
+            Cliente {offer.clientFirstName} a {formatKm(offer.distanceToPickupKm)} · {what}
+            <br />
+            <span className="font-semibold">{times}</span>
             <br />
             <span className="text-muted">Recogida: {placeLabel(offer.pickup)}</span>
           </p>
@@ -169,7 +172,8 @@ export default function OfferScreen({
         ]
       : []),
   ];
-  const polyline: LatLng[] = [...(position ? [position] : []), offer.pickup, ...(offer.dropoff ? [offer.dropoff] : [])];
+  // La oferta no trae geometría: recta discontinua recogida → destino (o tú → cliente si no hay destino).
+  const polyline: LatLng[] | undefined = offer.dropoff ? [offer.pickup, offer.dropoff] : position ? [position, offer.pickup] : undefined;
 
   const run = async (which: "accept" | "reject") => {
     setBusy(which);
