@@ -22,7 +22,7 @@ export type Draft = { kind: ServiceKind; pickup: Place | null; dropoff: Place | 
 type Step =
   | ({ step: "home" } & Draft)
   | ({ step: "pickup" } & Draft)
-  | ({ step: "dropoff" } & Draft & { pickup: Place })
+  | ({ step: "dropoff" } & Draft)
   | { step: "active"; request: RequestView };
 
 const DRAFT_STEPS = new Set<Step["step"]>(["home", "pickup", "dropoff"]);
@@ -87,7 +87,7 @@ function ClientFlow({ me }: { me: ClientSelf }) {
           vehicle={vehicle}
           onVehicleChange={setVehicle}
           onEditPickup={() => setStep({ ...step, step: "pickup" })}
-          onEditDropoff={() => setStep({ ...step, step: "dropoff", pickup: step.pickup ?? gps ?? GUATEMALA_CITY })}
+          onEditDropoff={() => setStep({ ...step, step: "dropoff" })}
           onCreated={(request) => setStep({ step: "active", request })}
           onActiveExists={() => void resume()}
         />
@@ -109,21 +109,24 @@ function ClientFlow({ me }: { me: ClientSelf }) {
         />
       );
     }
-    case "dropoff":
+    case "dropoff": {
+      // Sin recogida fija, la recogida es tu ubicación actual (o la ciudad si no hay GPS).
+      const pickup = step.pickup ?? gps ?? GUATEMALA_CITY;
       return (
         <LocationStep
           key="dropoff"
           kind="dropoff"
-          initial={step.dropoff ?? step.pickup}
+          initial={step.dropoff ?? pickup}
           gps={gps}
           cta="Confirmar destino"
           hasDropoff
-          markers={[{ id: "pickup", lat: step.pickup.lat, lng: step.pickup.lng, kind: "pickup", label: "Recogida" }]}
+          markers={[{ id: "pickup", lat: pickup.lat, lng: pickup.lng, kind: "pickup", label: "Recogida" }]}
           onBack={() => setStep({ ...step, step: "home" })}
           onConfirm={(dropoff) => setStep({ ...step, step: "home", dropoff })}
           onPrev={() => setStep({ ...step, step: "pickup" })}
         />
       );
+    }
     case "active":
       return <ActiveRequest key={step.request.id} initial={step.request} onNewService={() => void resume()} />;
   }

@@ -122,7 +122,9 @@ export function ActiveRequest({ initial, onNewService }: Props) {
               {req.escalation ? escalationReasonLabel(req.escalation.reason) : "Buscando la mejor opción"} · {elapsed}
             </p>
           </ServiceHeader>
-          <div className="flex gap-2">{cancelAction}</div>
+          <div className="flex gap-2">
+            <ActionButton icon="✕" label="Cancelar solicitud" danger onClick={() => setCancelOpen(true)} />
+          </div>
         </>
       );
       break;

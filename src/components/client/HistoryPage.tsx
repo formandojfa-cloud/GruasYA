@@ -26,7 +26,7 @@ function HistoryList({ me }: { me: ClientSelf }) {
 
   return (
     <ClientShell section="historial" hasActive={!!me.activeRequest}>
-      <div className="px-1">
+      <div className="px-1 pt-2">
         <h2 className="titulo-hoja">Historial</h2>
         <p className="tenue">Tus servicios recientes, con su estado y precio.</p>
       </div>

@@ -75,7 +75,7 @@ export function MapScreen({ map, overlay, children }: { map: ReactNode; overlay?
 export function MapOverlay({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={cn("pointer-events-none absolute left-4 right-4 z-[900] flex flex-col items-start gap-2 [&>*]:pointer-events-auto", className)}
+      className={cn("pointer-events-none absolute left-4 right-4 z-[900] flex flex-col items-start gap-2 [&>*]:pointer-events-auto min-[900px]:left-[448px] min-[900px]:right-6", className)}
       style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
     >
       {children}
@@ -107,7 +107,7 @@ export function ProviderCard({ self }: { self: ProviderSelf }) {
       </div>
       <div className="persona-texto">
         <strong className="truncate text-[17px]">{self.name}</strong>
-        <span className="tenue truncate">
+        <span className="tenue leading-snug">
           {rating} · {vehicle}
         </span>
       </div>

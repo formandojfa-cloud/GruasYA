@@ -168,7 +168,6 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
       section="pedir"
       hasActive={!!me.activeRequest}
       footer={footer}
-      height="alta"
       map={
         <MapView
           center={pickup ?? GUATEMALA_CITY}
@@ -200,17 +199,26 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
           value: pickup ? (usingGps ? "Tu ubicación actual" : (pickupLabel ?? "Punto marcado en el mapa")) : "Toca el mapa o busca la dirección",
           onClick: onEditPickup,
           action: (
-            <button
-              type="button"
-              className="pildora !min-h-[36px] !px-3 !text-[13px]"
-              disabled={!gps}
+            // span con rol de botón: la fila ya es un <button> y no se pueden anidar.
+            <span
+              role="button"
+              tabIndex={gps ? 0 : -1}
+              aria-disabled={!gps}
+              className={cn("pildora !min-h-[36px] !px-3 !text-[13px]", !gps && "opacity-40")}
               onClick={(e) => {
                 e.stopPropagation();
-                onDraftChange({ ...draft, pickup: null });
+                if (gps) onDraftChange({ ...draft, pickup: null });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (gps) onDraftChange({ ...draft, pickup: null });
+                }
               }}
             >
               📍 Mi ubicación
-            </button>
+            </span>
           ),
         }}
         destination={{
@@ -243,6 +251,7 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
           return (
             <OptionRow
               key={o.kind}
+              className="!min-h-[60px]"
               icon={VEHICLE_ICONS[o.kind]}
               title={`GrúaYa ${o.name}`}
               subtitle={kind === "TOW" && needsQuote ? (ready ? `Precio fijo · ${o.detail}` : quoteError ? o.detail : "Calculando precio…") : o.detail}

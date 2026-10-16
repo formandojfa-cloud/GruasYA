@@ -104,7 +104,7 @@ export function apiErrorMessage(err: unknown): string {
 export const VEHICLE_OPTIONS: ReadonlyArray<{ kind: VehicleKind; name: string; detail: string }> = [
   { kind: "MOTO", name: "Moto", detail: "Plataforma para motocicleta" },
   { kind: "SEDAN", name: "Carro", detail: "Sedán, hatchback o SUV pequeña" },
-  { kind: "SUV", name: "Camioneta", detail: "SUV o camioneta mediana" },
+  { kind: "SUV", name: "SUV", detail: "SUV o camioneta mediana" },
   { kind: "PICKUP", name: "Pickup", detail: "Pickup, camioneta o SUV grande" },
 ];
 
