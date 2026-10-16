@@ -3,12 +3,13 @@
 import { type FormEvent, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import type { ProviderSelf } from "@/lib/types";
-import { Button, Card, Field, Input, Notice } from "@/components/ui";
+import { Button, Field, Input, Notice } from "@/components/ui";
+import { DriverShell } from "./bits";
 import { extractToken } from "./util";
 
 /**
- * Sin sesión y sin token en la URL: el gruero pega aquí el enlace que le mandó
- * el PBX por WhatsApp (o solo el token).
+ * Sin sesión y sin token en la URL: el piloto pega aquí el enlace que le mandó
+ * la central por WhatsApp (o solo el token).
  */
 export default function LoginScreen({ initialError, onLoggedIn }: { initialError?: string | null; onLoggedIn: (me: ProviderSelf) => void }) {
   const [value, setValue] = useState("");
@@ -19,7 +20,7 @@ export default function LoginScreen({ initialError, onLoggedIn }: { initialError
     e.preventDefault();
     const token = extractToken(value);
     if (token.length < 8) {
-      setError("Pega el enlace completo o el token que te mandó el PBX.");
+      setError("Pega el enlace completo o el token que te mandó la central.");
       return;
     }
     setBusy(true);
@@ -35,24 +36,10 @@ export default function LoginScreen({ initialError, onLoggedIn }: { initialError
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-1 flex-col gap-6 px-5 py-8 safe-top safe-bottom">
-      <header className="flex items-center gap-3 pt-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-2xl" aria-hidden>
-          🚛
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Asistencia Vial</p>
-          <h1 className="text-xl font-bold leading-tight">App del gruero</h1>
-        </div>
-      </header>
-
-      <Card className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-2xl font-black leading-tight">Pide tu enlace de acceso al PBX</h2>
-          <p className="mt-2 text-sm text-muted">
-            El operador del PBX te manda por WhatsApp un enlace personal. Ábrelo en este teléfono, o pega aquí el enlace o el token.
-          </p>
-        </div>
+    <DriverShell footer="¿No tienes enlace o ya no funciona? Escribe a la central y te mandan uno nuevo.">
+      <section className="tarjeta">
+        <h2 className="text-[22px]">Entra con tu enlace</h2>
+        <p className="tenue">La central de GruaYa te manda por WhatsApp un enlace personal. Ábrelo en este teléfono, o pega aquí el enlace o el token.</p>
         <form onSubmit={submit} className="flex flex-col gap-3" noValidate>
           <Field label="Enlace o token" hint="Ejemplo: https://…/driver?token=abc123">
             <Input
@@ -74,9 +61,7 @@ export default function LoginScreen({ initialError, onLoggedIn }: { initialError
             Entrar
           </Button>
         </form>
-      </Card>
-
-      <p className="px-2 text-center text-xs text-muted">¿No tienes enlace o ya no funciona? Escribe al PBX y te mandan uno nuevo.</p>
-    </main>
+      </section>
+    </DriverShell>
   );
 }

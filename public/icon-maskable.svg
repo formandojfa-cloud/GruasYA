@@ -1,11 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <rect width="128" height="128" fill="#000"/>
-  <g fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" transform="translate(16 16) scale(0.75)">
-    <path d="M22 84h12l8-26h30l8 26h12"/>
-    <path d="M42 58l6-18h24"/>
-    <path d="M78 40v30"/>
-    <path d="M78 40l24 10v34"/>
-    <circle cx="40" cy="92" r="8"/>
-    <circle cx="90" cy="92" r="8"/>
+  <rect width="128" height="128" fill="#f5b301"/>
+  <g transform="translate(12.8 12.8) scale(0.8)">
+    <g fill="#1d1d1f">
+      <path d="M18 86V60a8 8 0 0 1 8-8h20l12 14v20z"/>
+      <rect x="56" y="70" width="54" height="16" rx="3"/>
+    </g>
+    <path d="M60 70l32-32" fill="none" stroke="#1d1d1f" stroke-width="8" stroke-linecap="round"/>
+    <path d="M92 38v14" fill="none" stroke="#1d1d1f" stroke-width="5" stroke-linecap="round"/>
+    <path d="M30 60h12l7 9H30z" fill="#f5b301"/>
+    <circle cx="34" cy="90" r="10" fill="#1d1d1f"/><circle cx="34" cy="90" r="4" fill="#f5b301"/>
+    <circle cx="90" cy="90" r="10" fill="#1d1d1f"/><circle cx="90" cy="90" r="4" fill="#f5b301"/>
   </g>
 </svg>

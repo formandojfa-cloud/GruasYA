@@ -50,7 +50,7 @@ export function beep(): void {
 
 export function useAlertSignals(alerts: AlertView[] | undefined) {
   const known = useRef<Set<string> | null>(null);
-  const baseTitle = useRef<string>("PBX · Asistencia Vial");
+  const baseTitle = useRef<string>("Central · GruaYa");
   const [unseen, setUnseen] = useState<ReadonlySet<string>>(() => new Set());
 
   // Desbloquear el audio con el primer gesto del operador (política de autoplay).
@@ -101,7 +101,7 @@ export function useAlertSignals(alerts: AlertView[] | undefined) {
       document.title = base;
       return;
     }
-    const alertTitle = `(${count}) ALERTA · PBX`;
+    const alertTitle = `(${count}) ALERTA · Central`;
     let on = true;
     document.title = alertTitle;
     const id = setInterval(() => {

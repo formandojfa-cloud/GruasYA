@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Asistencia Vial",
-    short_name: "Asistencia",
-    description: "Grúa y asistencia en carretera a un toque, con seguimiento en vivo.",
+    name: "GruaYa",
+    short_name: "GruaYa",
+    description: "Grúa por demanda en Guatemala: precio fijo, grúa en minutos y seguimiento en vivo.",
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#ffffff",
-    theme_color: "#000000",
+    background_color: "#f4f4f1",
+    theme_color: "#f5b301",
     lang: "es-GT",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },

@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * Detalle de una solicitud para el operador: todo a la vista (cliente, lugar,
- * vehículo, precio, PIN, proveedor, línea de tiempo) y las acciones que
+ * Detalle de una solicitud para la Central: todo a la vista (conductor, lugar,
+ * vehículo, precio fijo, PIN, piloto, línea de tiempo) y las acciones que
  * permite su estado. Vive en /pbx?request=<id> para poder enlazarlo.
  */
 import { useCallback, useMemo, useState } from "react";
 import MapView, { type MapMarker } from "@/components/map/Map";
-import { Button, cn, Input, Notice, Pill, Spinner, StatusPill } from "@/components/ui";
+import { Button, cn, Input, Notice, Pill, Spinner, StatusCard, StatusPill } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import {
   escalationReasonLabel,
@@ -22,7 +22,7 @@ import {
   PROVIDER_KIND_LABELS,
   relativeTime,
   secondsUntil,
-  STATUS_SHORT,
+  statusLabelFor,
   VEHICLE_LABELS,
 } from "@/lib/format";
 import { useNow, usePolling } from "@/lib/hooks";
@@ -82,16 +82,16 @@ export default function RequestDetail({ id, overview, onClose, onChanged, onAck 
         <Body key={request.id} request={request} alert={alert} overview={overview} onClose={onClose} onChanged={onChanged} onAck={onAck} />
       ) : (
         <div className="flex-1 flex flex-col">
-          <header className="flex items-center justify-between px-4 h-14 border-b border-border">
-            <span className="text-sm text-muted">Solicitud #{shortId(id)}</span>
+          <header className="flex items-center justify-between px-4 h-14 border-b border-border bg-background safe-top">
+            <span className="tenue">Solicitud #{shortId(id)}</span>
             <CloseButton onClose={onClose} />
           </header>
           <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center text-muted">
             {fetchError && !loading ? (
               <>
-                <p className="text-sm text-danger">{errorMessage(fetchError)}</p>
+                <p className="text-sm text-rojo">{errorMessage(fetchError)}</p>
                 <Button variant="secondary" onClick={onClose}>
-                  Volver al panel
+                  Volver a la central
                 </Button>
               </>
             ) : (
@@ -109,7 +109,12 @@ export default function RequestDetail({ id, overview, onClose, onChanged, onAck 
 
 function CloseButton({ onClose }: { onClose: () => void }) {
   return (
-    <button type="button" onClick={onClose} aria-label="Cerrar" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-full hover:bg-surface text-2xl leading-none">
+    <button
+      type="button"
+      onClick={onClose}
+      aria-label="Cerrar"
+      className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl border border-border bg-background hover:bg-surface text-2xl leading-none"
+    >
       ×
     </button>
   );
@@ -159,7 +164,7 @@ function Body({
 
   function onAssigned(res: AssignResult) {
     if (res.invite) {
-      setInvite({ forRequest: r.id, accessLink: res.invite.accessLink, whatsapp: res.invite.whatsapp, name: res.request.provider?.name ?? "El gruero" });
+      setInvite({ forRequest: r.id, accessLink: res.invite.accessLink, whatsapp: res.invite.whatsapp, name: res.request.provider?.name ?? "El piloto" });
     }
     setError(null);
     void onChanged();
@@ -169,7 +174,7 @@ function Body({
 
   return (
     <>
-      <header className="flex items-start gap-2 px-4 py-3 border-b border-border bg-background">
+      <header className="flex items-start gap-2 px-3.5 py-3 border-b border-border bg-background safe-top">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <StatusPill status={r.status} />
@@ -177,30 +182,30 @@ function Body({
               {KIND_ICONS[r.kind]} {KIND_LABELS[r.kind]}
             </Pill>
             <Pill tone={r.isMember ? "success" : "neutral"}>{r.isMember ? "Socio" : "No socio"}</Pill>
-            <span className="text-xs text-muted">
+            <span className="tenue chico">
               #{shortId(r.id)} · {relativeTime(r.timestamps.createdAt, now)}
             </span>
           </div>
-          <h2 className="text-lg font-bold truncate mt-1">
-            {r.client?.name ?? "Cliente"} <span className="text-muted font-semibold">· {formatQ(r.priceTotal)}</span>
+          <h2 className="text-[22px] truncate mt-1">
+            {r.client?.name ?? "Conductor"} <span className="text-muted font-semibold">· {formatQ(r.priceTotal)}</span>
           </h2>
         </div>
         <CloseButton onClose={onClose} />
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 safe-bottom">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 flex flex-col gap-3 safe-bottom [&>*]:min-w-0">
         {alert && (
           <Notice tone={alert.acknowledgedAt ? "warning" : "danger"} className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-bold">⚠ {escalationReasonLabel(alert.reason)}</p>
-                <p className="text-xs opacity-90">
+                <p className="chico opacity-90">
                   Alerta {relativeTime(alert.createdAt, now)}
-                  {alert.acknowledgedAt ? ` · atiende ${alert.acknowledgedBy ?? "operador"} ${relativeTime(alert.acknowledgedAt, now)}` : " · sin atender"}
+                  {alert.acknowledgedAt ? ` · atiende ${alert.acknowledgedBy ?? "la central"} ${relativeTime(alert.acknowledgedAt, now)}` : " · sin atender"}
                 </p>
               </div>
               {!alert.acknowledgedAt && (
-                <Button size="sm" variant="danger" loading={busy === "ack"} onClick={() => run("ack", () => onAck(alert.id))}>
+                <Button size="sm" loading={busy === "ack"} onClick={() => run("ack", () => onAck(alert.id))}>
                   Atender
                 </Button>
               )}
@@ -212,27 +217,27 @@ function Body({
 
         <StatusStrip r={r} now={now} />
 
-        {/* Quién y dónde: lo primero que necesita quien tiene al cliente en la línea. */}
-        <div className="grid md:grid-cols-2 gap-3">
+        {/* Quién y dónde: lo primero que necesita quien tiene al conductor en la línea. */}
+        <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 gap-3">
           <Box>
-            <SectionTitle>Cliente</SectionTitle>
+            <SectionTitle>Conductor</SectionTitle>
             {r.client ? (
               <>
                 <p className="text-base font-bold">{r.client.name}</p>
-                <div className="mt-2">
-                  <ContactLinks phone={r.client.phone} whatsapp={r.client.whatsapp} size="md" />
-                </div>
+                <ContactLinks phone={r.client.phone} whatsapp={r.client.whatsapp} size="md" />
               </>
             ) : (
-              <p className="text-sm text-muted">Sin datos del cliente</p>
+              <p className="tenue">Sin datos del conductor</p>
             )}
           </Box>
           <Box>
             <SectionTitle>Vehículo</SectionTitle>
-            <KV k="Tipo" v={VEHICLE_LABELS[r.vehicleKind]} />
-            <KV k="Descripción" v={r.vehicleLabel ?? "—"} />
-            <KV k="Placa" v={r.plate ?? "—"} mono />
-            {r.notes && <KV k="Notas" v={<span className="italic">“{r.notes}”</span>} />}
+            <div>
+              <KV k="Tipo" v={VEHICLE_LABELS[r.vehicleKind]} />
+              <KV k="Descripción" v={r.vehicleLabel ?? "—"} />
+              <KV k="Placa" v={r.plate ?? "—"} mono />
+              {r.notes && <KV k="Qué pasó" v={<span className="italic">“{r.notes}”</span>} />}
+            </div>
           </Box>
         </div>
 
@@ -240,19 +245,17 @@ function Body({
 
         {/* Acciones según estado */}
         {assignable && (
-          <Box tone={r.status === "ESCALATED" ? "warning" : "info"}>
+          <Box tone={r.status === "ESCALATED" ? "danger" : "warning"}>
             <SectionTitle
               right={
-                <div className="flex gap-1.5">
-                  {r.status === "ESCALATED" && (
-                    <Button size="sm" variant="secondary" loading={busy === "retry"} onClick={() => run("retry", () => api.post(`/api/pbx/requests/${r.id}/retry`))}>
-                      Reintentar búsqueda
-                    </Button>
-                  )}
-                </div>
+                r.status === "ESCALATED" ? (
+                  <Button size="sm" variant="secondary" loading={busy === "retry"} onClick={() => run("retry", () => api.post(`/api/pbx/requests/${r.id}/retry`))}>
+                    Reintentar búsqueda
+                  </Button>
+                ) : undefined
               }
             >
-              {r.status === "ESCALATED" ? "Asignar manualmente" : "Asignar sin esperar la cascada"}
+              {r.status === "ESCALATED" ? "Asignar grúa a mano" : "Asignar sin esperar la cascada"}
             </SectionTitle>
             <AssignPanel request={r} providers={overview?.providers ?? []} onAssigned={onAssigned} />
           </Box>
@@ -264,15 +267,15 @@ function Body({
           <Box tone={cancelOpen ? "danger" : undefined}>
             {cancelOpen ? (
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-bold text-danger">Cancelar la solicitud</p>
-                <p className="text-xs text-muted">
-                  {assigned ? "El proveedor asignado quedará libre y se avisará al cliente. " : ""}
-                  La cancelación desde el PBX no cobra al cliente.
+                <h3 className="text-[17px] font-semibold text-rojo">¿Cancelar la solicitud?</h3>
+                <p className="tenue chico">
+                  {assigned ? "El piloto asignado quedará libre y se avisará al conductor. " : ""}
+                  Cancelar desde la central no cobra al conductor.
                 </p>
                 <Input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Motivo (opcional, lo ve el equipo)" maxLength={200} />
                 <div className="flex gap-2">
                   <Button variant="secondary" className="flex-1" onClick={() => setCancelOpen(false)} disabled={busy === "cancel"}>
-                    Volver
+                    No
                   </Button>
                   <Button
                     variant="danger"
@@ -285,15 +288,15 @@ function Body({
                       })
                     }
                   >
-                    Confirmar cancelación
+                    Sí, cancelar
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted">El PBX puede cancelar en cualquier momento sin cargo al cliente.</span>
-                <Button size="sm" variant="secondary" className="text-danger" onClick={() => setCancelOpen(true)}>
-                  Cancelar solicitud
+                <span className="tenue chico">La central puede cancelar en cualquier momento sin cargo al conductor.</span>
+                <Button size="sm" variant="danger" onClick={() => setCancelOpen(true)}>
+                  Cancelar
                 </Button>
               </div>
             )}
@@ -302,36 +305,36 @@ function Body({
 
         {/* Lugar */}
         <Box>
-          <SectionTitle>Recogida y destino</SectionTitle>
-          <div className="flex flex-col gap-2 mb-2">
-            <PlaceRow icon="📍" label="Recogida" place={r.pickup} />
-            {r.dropoff && <PlaceRow icon="🏁" label="Destino" place={r.dropoff} />}
-            <p className="text-xs text-muted">
-              {r.kind === "TOW" ? `Remolque estimado ${formatKm(r.distanceKm)}` : "Asistencia en el lugar"}
-            </p>
+          <SectionTitle>Dónde está y a dónde va</SectionTitle>
+          <div className="flex flex-col gap-2">
+            <PlaceRow icon="🚗" label="Dónde está" place={r.pickup} />
+            {r.dropoff && <PlaceRow icon="🏁" label="A dónde va" place={r.dropoff} />}
+            <p className="tenue chico">{r.kind === "TOW" ? `Remolque estimado ${formatKm(r.distanceKm)}` : "Asistencia en el lugar"}</p>
           </div>
-          <div className="h-48 rounded-xl overflow-hidden border border-border">
+          <div className="mapa-marco h-48">
             <DetailMap r={r} />
           </div>
         </Box>
 
-        <div className="grid md:grid-cols-2 gap-3">
-          <Box>
-            <SectionTitle>Precio</SectionTitle>
-            {r.quote.lines.map((l, i) => (
-              <KV key={i} k={l.label} v={formatQ(l.amountQ)} />
-            ))}
-            <div className="flex items-baseline justify-between pt-2">
-              <span className="text-sm font-bold">Total al cliente</span>
-              <span className="text-xl font-bold tabular-nums">{formatQ(r.quote.totalQ)}</span>
+        <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 gap-3">
+          <Box className="precio">
+            <SectionTitle>Precio fijo</SectionTitle>
+            <div>
+              {r.quote.lines.map((l, i) => (
+                <KV key={i} k={l.label} v={formatQ(l.amountQ)} />
+              ))}
             </div>
-            <p className="text-xs text-muted">{r.quote.summary}</p>
-            <div className="mt-2 pt-2 border-t border-border/60">
-              <KV k="Pago al proveedor" v={formatQ(r.quote.providerPayoutQ)} />
-              <KV k="Ingreso plataforma" v={formatQ(r.quote.platformRevenueQ)} />
+            <div className="flex items-baseline justify-between">
+              <span className="text-[15px] font-bold">Total en efectivo</span>
+              <span className="grande tabular-nums">{formatQ(r.quote.totalQ)}</span>
+            </div>
+            <p className="tenue chico">{r.quote.summary} · Pago en efectivo al gruero.</p>
+            <div className="pt-2 border-t border-border/60">
+              <KV k="Pago al piloto" v={formatQ(r.quote.providerPayoutQ)} />
+              <KV k="Ingreso GruaYa" v={formatQ(r.quote.platformRevenueQ)} />
             </div>
             {r.cancellation && (
-              <p className="mt-2 text-xs text-danger">
+              <p className="chico text-rojo">
                 Cancelada por {CANCELLED_BY_LABELS[r.cancellation.by] ?? r.cancellation.by}
                 {r.cancellation.reason ? ` · “${r.cancellation.reason}”` : ""} · cargo {formatQ(r.cancellation.feeQ)}
               </p>
@@ -339,19 +342,17 @@ function Body({
           </Box>
           <Box>
             <SectionTitle>PIN y asignación</SectionTitle>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs text-muted">PIN de inicio</p>
-                <p className="text-3xl font-bold font-mono tracking-[0.3em]">{r.pin ?? "—"}</p>
-                <p className="text-[11px] text-muted">El cliente se lo dice al gruero al empezar.</p>
-              </div>
+            <div>
+              <p className="tenue chico">PIN de inicio</p>
+              <p className="grande font-mono tracking-[0.3em]">{r.pin ?? "—"}</p>
+              <p className="tenue chico">El conductor se lo dice al gruero al empezar.</p>
             </div>
-            <div className="mt-2 pt-2 border-t border-border/60">
+            <div className="pt-2 border-t border-border/60">
               <KV k="Asignado por" v={r.assignedBy ? ASSIGNED_BY_LABELS[r.assignedBy] ?? r.assignedBy : "—"} />
               <KV k="Búsqueda" v={`Intento ${r.search.epoch} · ${r.search.offersSent}/${r.search.maxOffers} ofertas`} />
               {r.escalation && (
                 <KV
-                  k="Escalada"
+                  k="Pasó a la central"
                   v={
                     <>
                       {formatTime(r.escalation.at)} · {escalationReasonLabel(r.escalation.reason)}
@@ -360,12 +361,7 @@ function Body({
                   }
                 />
               )}
-              {finished && (
-                <KV
-                  k="Calificaciones"
-                  v={`Cliente → gruero: ${r.ratings.client ?? "—"} · Gruero → cliente: ${r.ratings.provider ?? "—"}`}
-                />
-              )}
+              {finished && <KV k="Calificaciones" v={`Conductor → piloto: ${r.ratings.client ?? "—"} · Piloto → conductor: ${r.ratings.provider ?? "—"}`} />}
             </div>
           </Box>
         </div>
@@ -383,7 +379,7 @@ function Body({
         </Box>
 
         <Box>
-          <SectionTitle right={<span className="text-xs text-muted">{r.events.length} eventos</span>}>Línea de tiempo</SectionTitle>
+          <SectionTitle right={<span className="tenue chico">{r.events.length} eventos</span>}>Línea de tiempo</SectionTitle>
           <Timeline r={r} overview={overview} />
         </Box>
       </div>
@@ -391,80 +387,78 @@ function Body({
   );
 }
 
-// ---------- Qué está pasando ahora ----------
+// ---------- Qué está pasando ahora (tarjeta de estado con borde de color) ----------
 
 function StatusStrip({ r, now }: { r: RequestView; now: number }) {
   const offer = r.search.currentOffer;
   const live = r.providerLive;
+  const title = statusLabelFor(r.status, r.kind);
   if (r.status === "SEARCHING") {
     const left = offer ? secondsUntil(offer.expiresAt, now) : null;
     const deadline = secondsUntil(r.search.deadlineAt, now);
     return (
-      <Notice tone="info" className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-bold">{STATUS_SHORT.SEARCHING}</p>
-          <p className="text-xs">
+      <StatusCard status={r.status} title={title}>
+        <p className="tenue flex items-center gap-2">
+          <Spinner size="sm" />
+          <span>
             {offer ? (
               <>
-                Oferta {offer.round} → <b>{offer.providerName}</b>, expira en <b className={cn("tabular-nums", left != null && left <= 10 && "text-danger")}>{left} s</b>
+                Oferta {offer.round} → <b className="text-foreground">{offer.providerName}</b>, expira en <b className={cn("tabular-nums", left != null && left <= 10 ? "text-rojo" : "text-foreground")}>{left} s</b>
               </>
             ) : (
-              "Buscando el siguiente candidato…"
-            )}{" "}
-            · {r.search.offersSent}/{r.search.maxOffers} ofertas · escala en {formatMinutes(Math.ceil(deadline / 60))}
-          </p>
-        </div>
-        <Spinner size="sm" />
-      </Notice>
+              "Ofreciendo el servicio a la grúa más cercana…"
+            )}
+          </span>
+        </p>
+        <p className="tenue chico">
+          {r.search.offersSent}/{r.search.maxOffers} ofertas · pasa a la central en {formatMinutes(Math.ceil(deadline / 60))}
+        </p>
+      </StatusCard>
     );
   }
   if (r.status === "ESCALATED") {
     return (
-      <Notice tone="warning">
-        <p className="font-bold">Escalada al PBX {r.escalation ? relativeTime(r.escalation.at, now) : ""}</p>
-        <p className="text-xs">
+      <StatusCard status={r.status} title={`Sin grúa · pasó a la central ${r.escalation ? relativeTime(r.escalation.at, now) : ""}`}>
+        <p className="tenue">
           {r.escalation ? escalationReasonLabel(r.escalation.reason) : "Sin motivo registrado"} · {r.search.offersSent}/{r.search.maxOffers} ofertas enviadas. Asigna una grúa o reintenta la búsqueda.
         </p>
-      </Notice>
+      </StatusCard>
     );
   }
   if (ASSIGNED_STATUSES.includes(r.status)) {
     return (
-      <Notice tone={r.status === "EN_ROUTE" ? "info" : "success"} className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-bold">
-            {STATUS_SHORT[r.status]}
+      <StatusCard status={r.status} title={title}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             {r.provider && (
-              <>
-                {" "}
-                · {glyphFor(r.provider.kind)} {r.provider.name}
-              </>
+              <p className="font-semibold truncate">
+                {glyphFor(r.provider.kind)} {r.provider.name}
+              </p>
             )}
-          </p>
-          <p className="text-xs">
-            {live ? (
-              <>
-                {live.target === "PICKUP" ? "Llega al punto en" : "Llega al destino en"} <b>{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)} · señal {relativeTime(live.updatedAt, now)}
-              </>
-            ) : (
-              <span className="text-warning font-semibold">Sin ubicación del proveedor todavía</span>
-            )}
-          </p>
+            <p className="tenue">
+              {live ? (
+                <>
+                  {live.target === "PICKUP" ? "Llega al vehículo en" : "Llega al destino en"} <b className="text-foreground">{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)} · señal{" "}
+                  {relativeTime(live.updatedAt, now)}
+                </>
+              ) : (
+                <span className="text-rojo font-semibold">Sin ubicación del piloto todavía</span>
+              )}
+            </p>
+          </div>
+          {live && (
+            <LinkButton href={mapsLink(live)} size="sm" title="Ubicación del piloto en Google Maps">
+              🗺️
+            </LinkButton>
+          )}
         </div>
-        {live && (
-          <LinkButton href={mapsLink(live)} size="sm" title="Ubicación del proveedor en Google Maps">
-            🗺️
-          </LinkButton>
-        )}
-      </Notice>
+      </StatusCard>
     );
   }
   return (
-    <Notice tone={r.status === "COMPLETED" ? "neutral" : "danger"}>
-      <p className="font-bold">
-        {STATUS_SHORT[r.status]} · {formatDateTime(r.timestamps.completedAt ?? r.timestamps.cancelledAt ?? r.updatedAt)}
-      </p>
-    </Notice>
+    <StatusCard status={r.status} title={title}>
+      <p className="tenue">{formatDateTime(r.timestamps.completedAt ?? r.timestamps.cancelledAt ?? r.updatedAt)}</p>
+    </StatusCard>
   );
 }
 
@@ -477,7 +471,7 @@ function PlaceRow({ icon, label, place }: { icon: string; label: string; place: 
         {icon}
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] uppercase tracking-wide text-muted">{label}</p>
+        <p className="tenue chico">{label}</p>
         <p className="text-sm font-semibold break-words">{placeLabel(place)}</p>
         {place.address && <p className="text-[11px] text-muted font-mono">{coordsLabel(place)}</p>}
       </div>
@@ -490,7 +484,7 @@ function PlaceRow({ icon, label, place }: { icon: string; label: string; place: 
 
 function DetailMap({ r }: { r: RequestView }) {
   const markers = useMemo<MapMarker[]>(() => {
-    const out: MapMarker[] = [{ id: "pickup", lat: r.pickup.lat, lng: r.pickup.lng, kind: "pickup", label: "Recogida" }];
+    const out: MapMarker[] = [{ id: "pickup", lat: r.pickup.lat, lng: r.pickup.lng, kind: "pickup", label: "Vehículo" }];
     if (r.dropoff) out.push({ id: "dropoff", lat: r.dropoff.lat, lng: r.dropoff.lng, kind: "dropoff", label: "Destino" });
     if (r.providerLive && r.provider) {
       out.push({
@@ -509,38 +503,33 @@ function DetailMap({ r }: { r: RequestView }) {
   return <MapView className="h-full w-full" markers={markers} polyline={polyline} fitToMarkers zoom={14} />;
 }
 
-// ---------- Proveedor ----------
+// ---------- Piloto ----------
 
 function ProviderBox({ r, now }: { r: RequestView; now: number }) {
   const p = r.provider!;
   const live = r.providerLive;
   return (
-    <Box tone={ASSIGNED_STATUSES.includes(r.status) ? "success" : undefined}>
-      <SectionTitle right={p.isExternal ? <Pill tone="neutral">externo</Pill> : <Pill tone="success">de la red</Pill>}>Proveedor asignado</SectionTitle>
+    <Box tone={ASSIGNED_STATUSES.includes(r.status) ? "info" : undefined}>
+      <SectionTitle right={p.isExternal ? <Pill tone="neutral">externo</Pill> : <Pill tone="success">de la red</Pill>}>Piloto asignado</SectionTitle>
       <div className="flex items-start gap-3">
         <span className="text-3xl leading-none" aria-hidden>
           {glyphFor(p.kind)}
         </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-base font-bold truncate">{p.name}</p>
-          <p className="text-xs text-muted">
-            {PROVIDER_KIND_LABELS[p.kind]}
-            {p.vehicleLabel ? ` · ${p.vehicleLabel}` : ""}
-            {p.plate ? ` · ${p.plate}` : ""}
-            {p.rating != null ? ` · ★ ${p.rating.toFixed(1)} (${p.ratingCount})` : " · sin calificaciones"}
-          </p>
-          {p.phone && (
-            <div className="mt-2">
-              <ContactLinks phone={p.phone} whatsapp={p.whatsapp} />
-            </div>
-          )}
+        <div className="flex-1 min-w-0 flex flex-col gap-2">
+          <div>
+            <p className="text-base font-bold truncate">{p.name}</p>
+            <p className="tenue chico">
+              {[p.plate, p.vehicleLabel ?? PROVIDER_KIND_LABELS[p.kind], p.rating != null ? `★ ${p.rating.toFixed(1)} (${p.ratingCount})` : "★ sin calificar"].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+          {p.phone && <ContactLinks phone={p.phone} whatsapp={p.whatsapp} />}
         </div>
       </div>
       {ASSIGNED_STATUSES.includes(r.status) && (
-        <div className="mt-2 pt-2 border-t border-border/60 text-sm">
+        <div className="pt-2 border-t border-border/60">
           {live ? (
             <KV
-              k={live.target === "PICKUP" ? "Hacia la recogida" : "Hacia el destino"}
+              k={live.target === "PICKUP" ? "Hacia el vehículo" : "Hacia el destino"}
               v={
                 <>
                   <b>{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)} · señal {relativeTime(live.updatedAt, now)}
@@ -548,7 +537,7 @@ function ProviderBox({ r, now }: { r: RequestView; now: number }) {
               }
             />
           ) : (
-            <p className="text-xs text-warning">Sin ubicación todavía. Si es externo, pídele que abra su enlace.</p>
+            <p className="chico text-rojo">Sin ubicación todavía. Si es externo, pídele que abra su enlace.</p>
           )}
         </div>
       )}
@@ -585,16 +574,16 @@ function Timeline({ r, overview }: { r: RequestView; overview: PbxOverview | nul
         .map(({ e }) => e),
     [r.events],
   );
-  if (events.length === 0) return <p className="text-sm text-muted">Sin eventos.</p>;
+  if (events.length === 0) return <p className="tenue">Sin eventos.</p>;
   return (
     <ol className="flex flex-col">
       {events.map((e, i) => (
         <li key={`${e.type}-${e.at}-${i}`} className="flex gap-3 py-1.5 border-b border-border/60 last:border-0">
-          <time className="text-xs text-muted tabular-nums whitespace-nowrap w-[4.75rem] shrink-0 pt-0.5" dateTime={e.at} title={formatDateTime(e.at)}>
+          <time className="tenue chico tabular-nums whitespace-nowrap w-[4.75rem] shrink-0 pt-0.5" dateTime={e.at} title={formatDateTime(e.at)}>
             {formatTime(e.at)}
           </time>
           <div className="min-w-0 flex-1">
-            <p className={cn("text-sm", isOfferEvent(e) && "text-foreground", e.type === "ESCALATED" && "text-warning font-semibold", e.type === "CANCELLED" && "text-danger font-semibold")}>
+            <p className={cn("text-sm", isOfferEvent(e) && "text-foreground", e.type === "ESCALATED" && "text-rojo font-semibold", e.type === "CANCELLED" && "text-rojo font-semibold")}>
               {PBX_EVENT_OVERRIDES[e.type] ?? EVENT_LABELS[e.type] ?? e.type}
             </p>
             <EventDetail e={e} byId={byId} byOffer={byOffer} />
@@ -609,12 +598,12 @@ function EventDetail({ e, byId, byOffer }: { e: RequestEventView; byId: Map<stri
   const d = e.data;
   if (!d) return null;
   if (isOfferEvent(e)) {
-    const name = providerNameFrom(d, byId, byOffer) ?? "proveedor";
+    const name = providerNameFrom(d, byId, byOffer) ?? "piloto";
     const round = num(d.round);
     const km = num(d.distanceKm);
     return (
-      <p className="text-xs text-muted font-mono">
-        proveedor: {name}
+      <p className="tenue chico font-mono">
+        piloto: {name}
         {round != null ? ` · ronda ${round}` : ""}
         {` · respuesta: ${OFFER_RESPONSE_LABELS[e.type] ?? e.type.replace("OFFER_", "").toLowerCase()}`}
         {km != null ? ` · ${formatKm(km)}` : ""}
@@ -624,14 +613,14 @@ function EventDetail({ e, byId, byOffer }: { e: RequestEventView; byId: Map<stri
   switch (e.type) {
     case "ESCALATED": {
       const reason = str(d.reason);
-      return reason ? <p className="text-xs text-muted">{escalationReasonLabel(reason)}</p> : null;
+      return reason ? <p className="tenue chico">{escalationReasonLabel(reason)}</p> : null;
     }
     case "ASSIGNED": {
       const name = providerNameFrom(d, byId, byOffer);
       const by = str(d.by);
       return (
-        <p className="text-xs text-muted">
-          {name ?? "proveedor"}
+        <p className="tenue chico">
+          {name ?? "piloto"}
           {by ? ` · ${ASSIGNED_BY_LABELS[by] ?? by}` : ""}
           {d.external === true ? " · externo" : ""}
         </p>
@@ -642,7 +631,7 @@ function EventDetail({ e, byId, byOffer }: { e: RequestEventView; byId: Map<stri
       const reason = str(d.reason);
       const fee = num(d.feeQ);
       return (
-        <p className="text-xs text-muted">
+        <p className="tenue chico">
           por {by ? CANCELLED_BY_LABELS[by] ?? by : "—"}
           {reason ? ` · “${reason}”` : ""}
           {fee != null && fee > 0 ? ` · cargo ${formatQ(fee)}` : ""}
@@ -653,23 +642,27 @@ function EventDetail({ e, byId, byOffer }: { e: RequestEventView; byId: Map<stri
       const name = providerNameFrom(d, byId, byOffer);
       const reason = str(d.reason);
       return (
-        <p className="text-xs text-muted">
-          {name ?? "proveedor"}
+        <p className="tenue chico">
+          {name ?? "piloto"}
           {reason ? ` · “${reason}”` : ""}
         </p>
       );
     }
     case "SEARCH_RESTARTED": {
       const epoch = num(d.epoch);
-      return epoch != null ? <p className="text-xs text-muted">intento {epoch}</p> : null;
+      return epoch != null ? <p className="tenue chico">intento {epoch}</p> : null;
     }
     case "CREATED": {
       const price = num(d.priceTotal);
-      return price != null ? <p className="text-xs text-muted">{formatQ(price)} · {d.isMember === true ? "socio" : "no socio"}</p> : null;
+      return price != null ? (
+        <p className="tenue chico">
+          {formatQ(price)} · {d.isMember === true ? "socio" : "no socio"}
+        </p>
+      ) : null;
     }
     case "RATED": {
       const stars = num(d.stars);
-      return stars != null ? <p className="text-xs text-muted">{"★".repeat(stars)}</p> : null;
+      return stars != null ? <p className="chico text-amarillo">{"★".repeat(stars)}</p> : null;
     }
     default:
       return null;

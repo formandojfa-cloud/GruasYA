@@ -5,28 +5,29 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/components/ui";
 
-const ROUND = "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-background text-2xl shadow-md hover:bg-surface";
+const TEXT = "inline-flex h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-muted hover:bg-surface";
 
+/** Enlace o botón de texto "‹ Volver" para la esquina de una tarjeta. */
 export function BackButton({ onClick, href, label = "Volver", className }: { onClick?: () => void; href?: string; label?: string; className?: string }) {
   if (href) {
     return (
-      <Link href={href} aria-label={label} className={cn(ROUND, className)}>
-        ‹
+      <Link href={href} className={cn(TEXT, className)}>
+        ‹ {label}
       </Link>
     );
   }
   return (
-    <button type="button" onClick={onClick} aria-label={label} className={cn(ROUND, className)}>
-      ‹
+    <button type="button" onClick={onClick} className={cn(TEXT, className)}>
+      ‹ {label}
     </button>
   );
 }
 
-/** Clases para que un <Link> se vea como el botón primario / secundario. */
+/** Clases para que un <Link> se vea como el botón principal (amarillo) / secundario (blanco con borde). */
 export const LINK_PRIMARY =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 font-semibold text-primary-foreground hover:opacity-90 active:opacity-80";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amarillo bg-amarillo px-5 font-bold text-primary-foreground hover:brightness-95 active:brightness-90";
 export const LINK_SECONDARY =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 font-semibold text-foreground hover:bg-surface-2";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-background px-5 font-bold text-foreground hover:bg-surface";
 
 export function Toast({ message }: { message: string | null }) {
   if (!message) return null;

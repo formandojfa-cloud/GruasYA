@@ -1,10 +1,10 @@
-# Asistencia Vial — grúa a un toque con respaldo del PBX
+# GruaYa — grúa por demanda con respaldo de la central
 
-Prototipo funcional de una plataforma de asistencia vial para Guatemala:
+Plataforma de asistencia vial para Guatemala, con la cara del prototipo GruaYa (precio fijo, grúa en minutos, seguimiento en vivo) y un motor real por debajo:
 
-- **Cliente** (PWA, se instala desde el navegador): fija dónde está y a dónde va, ve el precio antes de pedir (Q275 de banderazo + Q20/km; los socios no pagan recargo), sigue a la grúa en el mapa en vivo, confirma con PIN y califica.
-- **Gruero / motorista**: entra con un enlace de WhatsApp, se conecta, recibe ofertas con cuenta regresiva de 40 s, acepta, navega, marca llegada y cobra.
-- **PBX**: si la app no encuentra grúa (nadie conectado, nadie aceptó, se agotó el tiempo o el cliente pidió hablar con alguien) salta una alerta; el operador asigna una grúa de la red o coordina una externa por teléfono y le manda su enlace para que comparta ubicación. El cliente no nota la diferencia.
+- **Conductor** (PWA, se instala desde el navegador): marca dónde está y a dónde va, ve el **precio fijo** antes de pedir (banderazo Q300 con 10 km incluidos + Q15/km; los socios no pagan recargo), sigue a la grúa en el mapa en vivo, confirma con PIN y califica. Las asistencias ligeras de la membresía siguen incluidas.
+- **Piloto (gruero / motorista)**: entra con un enlace de WhatsApp, se pone disponible, recibe ofertas con cuenta regresiva, acepta, navega, marca "Llegué" y cobra en efectivo.
+- **Central**: si la app no encuentra grúa (nadie conectado, nadie aceptó, se agotó el tiempo o el cliente pidió hablar con alguien) salta una alerta; la central asigna una grúa de la red o coordina una externa por teléfono y le manda su enlace para que comparta ubicación. El conductor no nota la diferencia.
 
 ## Probarlo en línea sin instalar nada (Render, gratis)
 

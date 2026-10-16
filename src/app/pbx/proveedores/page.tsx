@@ -4,8 +4,8 @@ import { BootSpinner } from "@/components/pbx/bits";
 import PbxApp from "@/components/pbx/PbxApp";
 
 export const metadata: Metadata = {
-  title: "Proveedores · PBX",
-  description: "Red de grúas y motoristas: estado, enlaces de acceso y alta de proveedores.",
+  title: "Pilotos · Central",
+  description: "Red de grúas y motoristas: estado, enlaces de acceso y alta de pilotos.",
 };
 
 export default function PbxProvidersPage() {

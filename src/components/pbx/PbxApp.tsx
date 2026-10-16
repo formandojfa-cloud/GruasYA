@@ -1,19 +1,18 @@
 "use client";
 
 /**
- * Árbol del panel del operador. Una sola fuente de datos (GET /api/pbx/overview
- * cada 3 s) alimenta el tablero, la pestaña de proveedores y el detalle de una
- * solicitud (/pbx?request=<id>). Sin sesión (401) muestra el ingreso.
+ * Árbol de la Central. Una sola fuente de datos (GET /api/pbx/overview cada
+ * 3 s) alimenta el tablero de servicios, la pestaña de pilotos y el detalle de
+ * una solicitud (/pbx?request=<id>). Sin sesión (401) muestra el ingreso.
  */
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Button, cn } from "@/components/ui";
+import { Button, cn, Notice } from "@/components/ui";
 import { api, ApiClientError, errorMessage } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 import { useLocalStorage, useNow, usePolling } from "@/lib/hooks";
 import type { OperatorSelf, PbxOverview } from "@/lib/types";
-import { BootSpinner, Centered } from "./bits";
+import { BootSpinner, Centered, CentralBar, CentralShell, type PbxSection } from "./bits";
 import Dashboard from "./Dashboard";
 import LoginScreen from "./LoginScreen";
 import ProvidersTab from "./ProvidersTab";
@@ -21,7 +20,7 @@ import RequestDetail from "./RequestDetail";
 import { useAlertSignals } from "./useAlertSignals";
 
 type Session = "checking" | "anon" | "authed";
-type Tab = "panel" | "providers";
+type Tab = PbxSection;
 const POLL_MS = 3000;
 const LS_NAME = "pbx.operatorName";
 const CACHE_TTL_MS = 30_000;
@@ -115,27 +114,50 @@ export default function PbxApp({ tab }: { tab: Tab }) {
   if (session === "checking" && !data) {
     if (error) {
       return (
-        <Centered>
-          <p className="text-sm text-danger">{errorMessage(error)}</p>
-          <Button variant="secondary" onClick={() => void refresh()}>
-            Reintentar
-          </Button>
-        </Centered>
+        <CentralShell>
+          <Centered>
+            <p className="text-sm text-rojo">{errorMessage(error)}</p>
+            <Button variant="secondary" onClick={() => void refresh()}>
+              Reintentar
+            </Button>
+          </Centered>
+        </CentralShell>
       );
     }
-    return <BootSpinner />;
+    return (
+      <CentralShell>
+        <BootSpinner />
+      </CentralShell>
+    );
   }
 
   const unackCount = overview?.alerts.filter((a) => !a.acknowledgedAt).length ?? 0;
+  const pollError = error ? errorMessage(error) : null;
 
   return (
-    <div className="flex-1 flex flex-col min-h-dvh bg-background">
-      <TopBar tab={tab} operatorName={overview?.operator.name ?? storedName} serverTime={overview?.serverTime ?? null} pollError={error ? errorMessage(error) : null} unackCount={unackCount} hasUnseen={unseen.size > 0} onLogout={logout} />
+    <CentralShell
+      section={tab}
+      bar={
+        <CentralBar
+          section={tab}
+          unackCount={unackCount}
+          hasUnseen={unseen.size > 0}
+          right={<OperatorStatus operatorName={overview?.operator.name ?? storedName} serverTime={overview?.serverTime ?? null} pollError={pollError} onLogout={logout} />}
+        />
+      }
+    >
+      {pollError && (
+        <div role="status">
+          <Notice tone="danger">
+            No se pudo actualizar: {pollError}. Reintentando cada {POLL_MS / 1000} s…
+          </Notice>
+        </div>
+      )}
 
       {!overview ? (
         error ? (
           <Centered>
-            <p className="text-sm text-danger">{errorMessage(error)}</p>
+            <p className="text-sm text-rojo">{errorMessage(error)}</p>
             <Button variant="secondary" onClick={() => void refresh()}>
               Reintentar
             </Button>
@@ -150,72 +172,29 @@ export default function PbxApp({ tab }: { tab: Tab }) {
       )}
 
       {selectedId && <RequestDetail id={selectedId} overview={overview} onClose={closeRequest} onChanged={refresh} onAck={ack} />}
-    </div>
+    </CentralShell>
   );
 }
 
-// ---------- Barra superior ----------
+// ---------- Operador y estado de la conexión (lado derecho de la barra) ----------
 
-function TopBar({
-  tab,
-  operatorName,
-  serverTime,
-  pollError,
-  unackCount,
-  hasUnseen,
-  onLogout,
-}: {
-  tab: Tab;
-  operatorName: string;
-  serverTime: string | null;
-  pollError: string | null;
-  unackCount: number;
-  hasUnseen: boolean;
-  onLogout: () => void;
-}) {
+function OperatorStatus({ operatorName, serverTime, pollError, onLogout }: { operatorName: string; serverTime: string | null; pollError: string | null; onLogout: () => void }) {
   const now = useNow(1000);
-  const tabCls = (active: boolean) =>
-    cn("relative h-9 px-3 inline-flex items-center gap-1.5 rounded-lg text-sm font-semibold transition", active ? "bg-primary text-primary-foreground" : "text-muted hover:bg-surface hover:text-foreground");
   return (
-    <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border safe-top">
-      <div className="h-14 flex items-center gap-2 px-3 lg:px-4">
-        <Link href="/pbx" className="font-bold text-base leading-none shrink-0">
-          PBX <span className="hidden sm:inline text-muted font-normal text-sm">· Asistencia Vial</span>
-        </Link>
-        <nav className="flex items-center gap-1 ml-2" aria-label="Secciones">
-          <Link href="/pbx" className={tabCls(tab === "panel")} aria-current={tab === "panel" ? "page" : undefined}>
-            Panel
-            {unackCount > 0 && (
-              <span className={cn("inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-danger text-white text-[11px] font-bold tabular-nums", hasUnseen && "animate-pulse")} aria-label={`${unackCount} alertas sin atender`}>
-                {unackCount}
-              </span>
-            )}
-          </Link>
-          <Link href="/pbx/proveedores" className={tabCls(tab === "providers")} aria-current={tab === "providers" ? "page" : undefined}>
-            Proveedores
-          </Link>
-        </nav>
-        <div className="ml-auto flex items-center gap-2 min-w-0">
-          <span className="hidden md:inline text-xs text-muted truncate" title={serverTime ? `Última actualización ${relativeTime(serverTime, now)}` : undefined}>
-            {operatorName}
-            {serverTime && (
-              <>
-                {" · "}
-                <span className={cn("inline-block h-2 w-2 rounded-full align-middle mr-1", pollError ? "bg-danger" : "bg-success")} />
-                {pollError ? "sin conexión" : `al día ${relativeTime(serverTime, now)}`}
-              </>
-            )}
-          </span>
-          <Button size="sm" variant="ghost" onClick={onLogout} className="text-muted">
-            Salir
-          </Button>
-        </div>
-      </div>
-      {pollError && (
-        <div role="status" className="bg-danger-soft text-danger text-xs px-3 py-1.5 text-center">
-          No se pudo actualizar: {pollError}. Reintentando cada {POLL_MS / 1000} s…
-        </div>
-      )}
-    </header>
+    <>
+      <span className="hidden md:inline tenue chico truncate" title={serverTime ? `Última actualización ${relativeTime(serverTime, now)}` : undefined}>
+        {operatorName}
+        {serverTime && (
+          <>
+            {" · "}
+            <span className={cn("inline-block h-2 w-2 rounded-full align-middle mr-1", pollError ? "bg-rojo" : "bg-verde")} />
+            {pollError ? "sin conexión" : `al día ${relativeTime(serverTime, now)}`}
+          </>
+        )}
+      </span>
+      <Button size="sm" variant="secondary" onClick={onLogout}>
+        Salir
+      </Button>
+    </>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * Asignación manual desde el detalle: un proveedor de la red (ordenados por
- * distancia al punto de recogida) o un gruero externo coordinado por teléfono.
+ * Asignación manual desde el detalle: un piloto de la red (ordenados por
+ * distancia al vehículo) o un gruero externo coordinado por teléfono.
  */
 import { type FormEvent, useMemo, useState } from "react";
-import { Button, cn, Field, Input, Pill, Select } from "@/components/ui";
+import { Button, cn, Field, Input, Pill, Segments, Select } from "@/components/ui";
 import { api, ApiClientError, errorMessage } from "@/lib/api";
 import { formatKm, formatPhone, PROVIDER_KIND_LABELS, relativeTime } from "@/lib/format";
 import { useNow } from "@/lib/hooks";
@@ -39,30 +39,21 @@ export function describeError(err: unknown): string {
   return base;
 }
 
+type Mode = "network" | "external";
+
 export default function AssignPanel({ request, providers, onAssigned }: Props) {
-  const [mode, setMode] = useState<"network" | "external">("network");
+  const [mode, setMode] = useState<Mode>("network");
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-surface p-1" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "network"}
-          onClick={() => setMode("network")}
-          className={cn("h-10 rounded-lg text-sm font-semibold transition", mode === "network" ? "bg-background shadow-sm" : "text-muted hover:text-foreground")}
-        >
-          Asignar de la red
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "external"}
-          onClick={() => setMode("external")}
-          className={cn("h-10 rounded-lg text-sm font-semibold transition", mode === "external" ? "bg-background shadow-sm" : "text-muted hover:text-foreground")}
-        >
-          Gruero externo
-        </button>
-      </div>
+      <Segments<Mode>
+        items={[
+          { key: "network", label: "De la red" },
+          { key: "external", label: "Gruero externo" },
+        ]}
+        value={mode}
+        onChange={setMode}
+        label="Cómo asignar"
+      />
       {mode === "network" ? <NetworkList request={request} providers={providers} onAssigned={onAssigned} /> : <ExternalForm request={request} onAssigned={onAssigned} />}
     </div>
   );
@@ -113,9 +104,9 @@ function NetworkList({ request, providers, onAssigned }: Props) {
   const label = kind === "TOW" ? "grúas" : "motoristas";
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2 text-xs text-muted">
+      <div className="flex items-center justify-between gap-2 tenue chico">
         <span>
-          {rows.length} {label} · por distancia al punto de recogida
+          {rows.length} {label} · por distancia al vehículo
         </span>
         <label className="inline-flex items-center gap-1 cursor-pointer select-none">
           <input type="checkbox" checked={onlyConnected} onChange={(e) => setOnlyConnected(e.target.checked)} />
@@ -124,17 +115,17 @@ function NetworkList({ request, providers, onAssigned }: Props) {
       </div>
       <ErrorText>{error}</ErrorText>
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted">
-          {onlyConnected ? `Ninguna de las ${label} tiene señal ahora. Quita el filtro o asigna un gruero externo.` : `No hay ${label} registradas. Agrega una en Proveedores o asigna un gruero externo.`}
+        <div className="rounded-[10px] bg-surface p-4 text-center tenue">
+          {onlyConnected ? `Ninguna de las ${label} tiene señal ahora. Quita el filtro o asigna un gruero externo.` : `No hay ${label} registradas. Agrega una en Pilotos o asigna un gruero externo.`}
         </div>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border">
+        <ul className="rounded-[10px] bg-surface divide-y divide-border">
           {rows.map(({ p, km }) => {
             const isBusy = p.status === "BUSY";
             const rejected = rejectedIds.has(p.id);
             const hasOffer = pendingOfferProviderId === p.id;
             return (
-              <li key={p.id} className="flex items-center gap-2 px-3 py-2">
+              <li key={p.id} className="flex items-center gap-2 px-3 py-2.5">
                 <span className="text-xl shrink-0" aria-hidden>
                   {glyphFor(p.kind)}
                 </span>
@@ -145,7 +136,7 @@ function NetworkList({ request, providers, onAssigned }: Props) {
                     {hasOffer && <Pill tone="info">oferta en curso</Pill>}
                     {rejected && <Pill tone="warning">ya rechazó</Pill>}
                   </div>
-                  <div className="text-xs text-muted truncate">
+                  <div className="tenue chico truncate">
                     <span className={cn("font-semibold tabular-nums", km != null && "text-foreground")}>{km != null ? formatKm(km) : "sin ubicación"}</span>
                     {" · "}
                     {p.plate ?? p.vehicleLabel ?? formatPhone(p.phone)}
@@ -161,7 +152,7 @@ function NetworkList({ request, providers, onAssigned }: Props) {
                   loading={busy === p.id}
                   disabled={isBusy || (busy !== null && busy !== p.id)}
                   confirmLabel="¿Asignar?"
-                  className="shrink-0 min-w-[84px]"
+                  className="shrink-0 min-w-[88px]"
                 >
                   {isBusy ? "Ocupado" : "Asignar"}
                 </ConfirmButton>
@@ -210,8 +201,8 @@ function ExternalForm({ request, onAssigned }: Omit<Props, "providers">) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <p className="text-xs text-muted">
-        Para un gruero que coordinas por teléfono. Se crea como proveedor externo (o se reutiliza si el teléfono ya existe) y te damos su enlace para mandárselo por WhatsApp.
+      <p className="tenue chico">
+        Para un gruero que coordinas por teléfono. Se crea como piloto externo (o se reutiliza si el teléfono ya existe) y te damos su enlace para mandárselo por WhatsApp.
       </p>
       <div className="grid sm:grid-cols-2 gap-3">
         <Field label="Nombre">
@@ -233,7 +224,7 @@ function ExternalForm({ request, onAssigned }: Omit<Props, "providers">) {
           <Input value={vehicleLabel} onChange={(e) => setVehicleLabel(e.target.value)} placeholder="Grúa de plataforma blanca" maxLength={80} />
         </Field>
       </div>
-      {kind !== defaultKind && <p className="text-xs text-warning">Este servicio necesita {defaultKind === "TOW" ? "una grúa" : "un motorista"}; la API rechazará otro tipo.</p>}
+      {kind !== defaultKind && <p className="chico text-rojo">Este servicio necesita {defaultKind === "TOW" ? "una grúa" : "un motorista"}; la API rechazará otro tipo.</p>}
       <ErrorText>{error}</ErrorText>
       <Button type="submit" loading={busy} fullWidth>
         Asignar y generar enlace

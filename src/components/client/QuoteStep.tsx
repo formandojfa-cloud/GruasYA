@@ -1,17 +1,17 @@
 "use client";
 
-/** Cotización antes de pedir: desglose, total y botón "Pedir grúa". */
+/** Cotización antes de pedir: tarjeta "Precio fijo" con borde amarillo y botón "Pedir grúa". */
 import { useEffect, useState } from "react";
 import MapView, { type MapMarker } from "@/components/map/Map";
-import { Button, Input, Notice, Spinner } from "@/components/ui";
+import { Aviso, Button, Input, Notice, Spinner } from "@/components/ui";
 import { api, ApiClientError } from "@/lib/api";
 import { formatKm, formatMinutes, formatQ, KIND_ICONS, KIND_LABELS, VEHICLE_LABELS } from "@/lib/format";
 import type { LatLng } from "@/lib/geo";
 import type { ClientSelf, CreateRequestInput, Place, Quote, RequestView, ServiceKind } from "@/lib/types";
 import { BackButton } from "./bits";
+import { ClientShell } from "./ClientShell";
 import { apiErrorMessage, isLightKind, NON_MEMBER_TOW_FEE_Q, placeLabel, VEHICLE_ICONS } from "./constants";
-import { MapScreen } from "./MapScreen";
-import { QuoteLines } from "./RequestCard";
+import { quoteOneLine } from "./RequestCard";
 import type { VehicleDraft } from "./useVehicle";
 
 type QuoteResponse = { quote: Quote; distanceKm: number; towMinutes: number; isMember: boolean };
@@ -91,94 +91,84 @@ export function QuoteStep({ kind, pickup, dropoff, vehicle, me, onBack, onEditPi
     }
   }
 
-  const markers: MapMarker[] = [{ id: "pickup", lat: pickup.lat, lng: pickup.lng, kind: "pickup", label: "Recogida" }];
+  const markers: MapMarker[] = [{ id: "pickup", lat: pickup.lat, lng: pickup.lng, kind: "pickup", label: "Tu vehículo" }];
   if (dropoff) markers.push({ id: "dropoff", lat: dropoff.lat, lng: dropoff.lng, kind: "dropoff", label: "Destino" });
   const polyline: LatLng[] | undefined = dropoff ? [pickup, dropoff] : undefined;
 
   const isMember = quote?.isMember ?? me.isMember;
   const total = quote?.quote.totalQ ?? 0;
+  const included = light && isMember;
   const vehicleText = [VEHICLE_LABELS[vehicle.vehicleKind], vehicle.vehicleLabel, vehicle.plate].filter(Boolean).join(" · ");
 
   return (
-    <MapScreen
-      mapClassName="h-[36dvh]"
-      map={<MapView center={pickup} zoom={14} markers={markers} polyline={polyline} fitToMarkers interactive={false} className="h-full w-full" />}
-      top={<BackButton onClick={onBack} />}
-    >
-      <>
-        <h2 className="text-xl font-bold">
-          <span aria-hidden>{KIND_ICONS[kind]}</span> {KIND_LABELS[kind]}
-        </h2>
-        <div className="mt-3 divide-y divide-border rounded-2xl border border-border">
-          <PlaceRow icon="📍" label="Recogida" value={placeLabel(pickup)} onEdit={onEditPickup} />
+    <ClientShell section="pedir">
+      <section className="tarjeta">
+        <div className="flex items-center justify-between gap-2">
+          <h2>
+            <span aria-hidden>{KIND_ICONS[kind]}</span> {KIND_LABELS[kind]}
+          </h2>
+          <BackButton onClick={onBack} />
+        </div>
+        <div className="divide-y divide-border rounded-[10px] bg-surface">
+          <PlaceRow icon="🚗" label={light ? "Dónde estás" : "Tu vehículo"} value={placeLabel(pickup)} onEdit={onEditPickup} />
           {dropoff && <PlaceRow icon="🏁" label="Destino" value={placeLabel(dropoff)} onEdit={onEditDropoff} />}
           <PlaceRow icon={VEHICLE_ICONS[vehicle.vehicleKind]} label="Vehículo" value={vehicleText} />
         </div>
+      </section>
 
-        {!quote && !quoteError && (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted">
+      <div className="mapa-marco">
+        <MapView center={pickup} zoom={14} markers={markers} polyline={polyline} fitToMarkers interactive={false} className="h-full w-full" />
+      </div>
+
+      {!quote && !quoteError && (
+        <section className="tarjeta items-center justify-center py-6">
+          <p className="flex items-center gap-2 text-sm text-muted">
             <Spinner /> Calculando precio…
-          </div>
-        )}
-        {quoteError && (
-          <Notice tone="danger" className="mt-3 flex items-center justify-between gap-3">
-            <span>{quoteError}</span>
-            <Button size="sm" variant="secondary" onClick={retry}>
-              Reintentar
-            </Button>
-          </Notice>
-        )}
+          </p>
+        </section>
+      )}
+      {quoteError && (
+        <section className="tarjeta">
+          <Notice tone="danger">{quoteError}</Notice>
+          <Button variant="secondary" fullWidth onClick={retry}>
+            Reintentar
+          </Button>
+        </section>
+      )}
 
-        {quote && (
-          <div className="mt-3">
-            {kind === "TOW" && (
-              <p className="text-sm text-muted">
-                {formatKm(quote.distanceKm)} de remolque · aprox. {formatMinutes(quote.towMinutes)}
-              </p>
-            )}
-            {kind === "TOW" && quote.distanceKm < 0.05 && (
-              <Notice tone="warning" className="mt-2 text-xs">
-                El destino está en el mismo punto que la recogida. Si quieres que llevemos tu vehículo a otro lugar, edita el destino.
-              </Notice>
-            )}
-            <div className="mt-1">
-              <QuoteLines quote={quote.quote} total={total} />
-            </div>
-            {light && isMember ? (
-              <Notice tone="success" className="mt-2 font-semibold">
-                ✓ Incluido en tu membresía
-              </Notice>
-            ) : (
-              <p className="mt-1 text-xs text-muted">
-                {quote.quote.summary}
-                {total > 0 && " · Pagas en efectivo al terminar"}
-              </p>
-            )}
-            {!isMember && (
-              <Notice tone="info" className="mt-2 text-xs">
-                Hazte socio: {kind === "TOW" ? `ahorras ${formatQ(NON_MEMBER_TOW_FEE_Q)} en cada grúa` : "esta asistencia iría incluida"} y las asistencias ligeras van sin costo.
-              </Notice>
-            )}
-            <Input
-              className="mt-3"
-              placeholder="Nota para el gruero (opcional): referencia, color…"
-              aria-label="Nota para el gruero"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              maxLength={300}
-            />
-            {requestError && (
-              <Notice tone="danger" className="mt-2">
-                {requestError}
-              </Notice>
-            )}
-            <Button size="lg" fullWidth className="mt-3" loading={requesting} onClick={create}>
-              {kind === "TOW" ? "Pedir grúa" : "Pedir asistencia"}
-            </Button>
+      {quote && (
+        <section className="tarjeta precio">
+          <div className="flex items-start justify-between gap-3">
+            <h2>Precio fijo</h2>
+            <span className="grande tabular-nums">{included ? "Incluido" : formatQ(total)}</span>
           </div>
-        )}
-      </>
-    </MapScreen>
+          {kind === "TOW" && (
+            <p className="tenue">
+              {formatKm(quote.distanceKm)} y unos {formatMinutes(quote.towMinutes)} de viaje
+            </p>
+          )}
+          {kind === "TOW" && quote.distanceKm < 0.05 && (
+            <Aviso>El destino está en el mismo punto que la recogida. Si quieres que llevemos tu vehículo a otro lugar, edita el destino.</Aviso>
+          )}
+          <p className="tenue">{quoteOneLine(quote.quote)}</p>
+          {!isMember && (
+            <Aviso>Hazte socio: {kind === "TOW" ? `ahorras ${formatQ(NON_MEMBER_TOW_FEE_Q)} en cada grúa` : "esta asistencia iría incluida"} y las asistencias ligeras van sin costo.</Aviso>
+          )}
+          <Input
+            placeholder="Nota para el gruero (opcional): referencia, color…"
+            aria-label="Nota para el gruero"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            maxLength={300}
+          />
+          {requestError && <Notice tone="danger">{requestError}</Notice>}
+          <p className="tenue">{total > 0 ? "Pago en efectivo al gruero." : "Sin costo: incluido en tu membresía."}</p>
+          <Button size="lg" fullWidth loading={requesting} onClick={create}>
+            {kind === "TOW" ? "Pedir grúa" : "Pedir asistencia"}
+          </Button>
+        </section>
+      )}
+    </ClientShell>
   );
 }
 
@@ -189,11 +179,11 @@ function PlaceRow({ icon, label, value, onEdit }: { icon: string; label: string;
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p>
-        <p className="truncate text-sm font-medium">{value}</p>
+        <p className="text-xs text-muted">{label}</p>
+        <p className="truncate text-[15px] font-medium">{value}</p>
       </div>
       {onEdit && (
-        <button type="button" onClick={onEdit} className="h-10 px-2 text-sm font-semibold underline-offset-2 hover:underline">
+        <button type="button" onClick={onEdit} className="h-10 px-2 text-sm font-bold underline-offset-2 hover:underline">
           Editar
         </button>
       )}

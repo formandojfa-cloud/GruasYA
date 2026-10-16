@@ -1,13 +1,15 @@
 "use client";
 
 /**
- * Primitivas de interfaz compartidas (botones, tarjetas, hoja inferior, chips,
- * cuenta regresiva…). Pensadas para pantalla de teléfono con una mano.
+ * Primitivas de interfaz compartidas con el aspecto GruaYa (docs/GRUAYA.md §1):
+ * tarjetas blancas con borde fino, botón principal amarillo con texto tinta,
+ * segmentos negros, tarjetas de estado con borde izquierdo de color, avisos
+ * amarillo suave. Pensadas para pantalla de teléfono con una mano (44 px).
  */
 import Link from "next/link";
 import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useEffect } from "react";
 import { useNow } from "@/lib/hooks";
-import { secondsUntil, STATUS_SHORT, STATUS_TONE, type Tone } from "@/lib/format";
+import { secondsUntil, STATUS_LABELS, STATUS_SHORT, STATUS_TONE, type Tone } from "@/lib/format";
 import type { RequestStatus } from "@/lib/types";
 
 export function cn(...parts: Array<string | false | null | undefined>): string {
@@ -23,18 +25,19 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   fullWidth?: boolean;
 };
 
+/** principal = amarillo con texto tinta; secundario = tarjeta con borde; peligro = texto rojo. */
 const VARIANT: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  primary: "bg-primary text-primary-foreground hover:opacity-90 active:opacity-80",
-  secondary: "bg-surface text-foreground hover:bg-surface-2 border border-border",
-  ghost: "bg-transparent text-foreground hover:bg-surface",
-  danger: "bg-danger text-white hover:opacity-90",
-  success: "bg-success text-black hover:opacity-90",
+  primary: "bg-amarillo text-primary-foreground border-amarillo hover:brightness-95 active:brightness-90",
+  secondary: "bg-background text-foreground border-border hover:bg-surface active:bg-surface-2",
+  ghost: "bg-transparent text-foreground border-transparent hover:bg-surface",
+  danger: "bg-background text-rojo border-border hover:bg-danger-soft",
+  success: "bg-verde text-white border-verde hover:brightness-95",
 };
 
 const SIZE: Record<NonNullable<ButtonProps["size"]>, string> = {
   sm: "h-9 px-3 text-sm",
-  md: "h-12 px-4 text-base",
-  lg: "h-14 px-5 text-lg",
+  md: "h-11 px-4 text-base",
+  lg: "h-[52px] px-5 text-[17px]",
 };
 
 export function Button({ variant = "primary", size = "md", loading, fullWidth, className, children, disabled, ...rest }: ButtonProps) {
@@ -43,7 +46,7 @@ export function Button({ variant = "primary", size = "md", loading, fullWidth, c
       {...rest}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none",
+        "inline-flex items-center justify-center gap-2 rounded-xl border font-bold transition disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none",
         VARIANT[variant],
         SIZE[size],
         fullWidth && "w-full",
@@ -60,10 +63,7 @@ export function Button({ variant = "primary", size = "md", loading, fullWidth, c
 
 export function Card({ className, children, onClick }: { className?: string; children: ReactNode; onClick?: () => void }) {
   return (
-    <div
-      onClick={onClick}
-      className={cn("rounded-2xl bg-background border border-border shadow-sm p-4", onClick && "cursor-pointer hover:bg-surface", className)}
-    >
+    <div onClick={onClick} className={cn("rounded-card border border-border bg-background p-3.5", onClick && "cursor-pointer hover:bg-surface", className)}>
       {children}
     </div>
   );
@@ -72,16 +72,16 @@ export function Card({ className, children, onClick }: { className?: string; chi
 // ---------- Chip de estado ----------
 
 const TONE: Record<Tone, string> = {
-  neutral: "bg-surface-2 text-foreground",
-  success: "bg-success-soft text-success",
-  warning: "bg-warning-soft text-warning",
-  danger: "bg-danger-soft text-danger",
-  info: "bg-info-soft text-info",
+  neutral: "bg-surface text-foreground",
+  success: "bg-success-soft text-verde",
+  warning: "bg-amarillo-suave text-foreground",
+  danger: "bg-danger-soft text-rojo",
+  info: "bg-info-soft text-azul",
 };
 
 export function Pill({ tone = "neutral", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", TONE[tone], className)}>{children}</span>
+    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold", TONE[tone], className)}>{children}</span>
   );
 }
 
@@ -96,7 +96,7 @@ export function Spinner({ size = "md", className }: { size?: "sm" | "md" | "lg";
   return <span aria-label="Cargando" className={cn("inline-block rounded-full border-current border-r-transparent animate-spin", px, className)} />;
 }
 
-// ---------- Cuenta regresiva (oferta de 40 s) ----------
+// ---------- Cuenta regresiva (oferta) ----------
 
 export function Countdown({ until, totalSeconds, onExpire, className }: { until: string; totalSeconds: number; onExpire?: () => void; className?: string }) {
   const now = useNow(250);
@@ -111,13 +111,13 @@ export function Countdown({ until, totalSeconds, onExpire, className }: { until:
   return (
     <div className={cn("relative h-16 w-16", className)} role="timer" aria-live="polite" aria-label={`${left} segundos`}>
       <svg viewBox="0 0 60 60" className="h-16 w-16 -rotate-90">
-        <circle cx="30" cy="30" r={r} fill="none" stroke="var(--surface-2)" strokeWidth="5" />
+        <circle cx="30" cy="30" r={r} fill="none" stroke="var(--border)" strokeWidth="5" />
         <circle
           cx="30"
           cy="30"
           r={r}
           fill="none"
-          stroke={left <= 10 ? "var(--danger)" : "var(--foreground)"}
+          stroke={left <= 10 ? "var(--rojo)" : "var(--amarillo)"}
           strokeWidth="5"
           strokeLinecap="round"
           strokeDasharray={c}
@@ -125,7 +125,7 @@ export function Countdown({ until, totalSeconds, onExpire, className }: { until:
           style={{ transition: "stroke-dashoffset 250ms linear" }}
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-xl font-bold tabular-nums">{left}</span>
+      <span className="contador absolute inset-0 flex items-center justify-center">{left}</span>
     </div>
   );
 }
@@ -137,19 +137,29 @@ export function Sheet({ open, onClose, title, children, className }: { open: boo
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className={cn("relative z-10 rounded-t-3xl bg-background p-5 safe-bottom shadow-2xl max-h-[88vh] overflow-y-auto", className)}>
-        <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-surface-2" />
-        {title && <h2 className="text-lg font-bold mb-3">{title}</h2>}
+      <div
+        className={cn(
+          "relative z-10 mx-auto w-full max-w-[560px] rounded-t-2xl border-t border-border bg-background p-4 safe-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.12)] max-h-[88vh] overflow-y-auto",
+          className,
+        )}
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+        {title && <h2 className="mb-3 text-xl font-bold">{title}</h2>}
         {children}
       </div>
     </div>
   );
 }
 
-/** Panel fijo abajo sobre el mapa (sin fondo oscuro), como la tarjeta de Uber. */
+/** Panel fijo abajo sobre el mapa (sin fondo oscuro). */
 export function BottomPanel({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("absolute inset-x-0 bottom-0 z-20 rounded-t-3xl bg-background p-4 safe-bottom shadow-[0_-8px_30px_rgba(0,0,0,0.15)] max-h-[70vh] overflow-y-auto", className)}>
+    <div
+      className={cn(
+        "absolute inset-x-0 bottom-0 z-20 mx-auto max-w-[560px] rounded-t-2xl border-t border-border bg-background p-4 safe-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.12)] max-h-[70vh] overflow-y-auto",
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -160,31 +170,23 @@ export function BottomPanel({ children, className }: { children: ReactNode; clas
 export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-sm font-semibold mb-1">{label}</span>
+      <span className="mb-1 block text-sm text-muted">{label}</span>
       {children}
-      {error ? <span className="block text-xs text-danger mt-1">{error}</span> : hint ? <span className="block text-xs text-muted mt-1">{hint}</span> : null}
+      {error ? <span className="mt-1 block text-xs text-rojo">{error}</span> : hint ? <span className="mt-1 block text-xs text-muted">{hint}</span> : null}
     </label>
   );
 }
 
+const CONTROL =
+  "h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-base text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50";
+
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...rest}
-      className={cn(
-        "h-12 w-full rounded-xl border border-border bg-background px-3 text-base focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted",
-        className,
-      )}
-    />
-  );
+  return <input {...rest} className={cn(CONTROL, className)} />;
 }
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select
-      {...rest}
-      className={cn("h-12 w-full rounded-xl border border-border bg-background px-3 text-base focus:outline-none focus:ring-2 focus:ring-ring", className)}
-    >
+    <select {...rest} className={cn(CONTROL, className)}>
       {children}
     </select>
   );
@@ -203,7 +205,7 @@ export function Stars({ value, onChange, size = "md" }: { value: number | null; 
           disabled={!onChange}
           onClick={() => onChange?.(n)}
           aria-label={`${n} estrellas`}
-          className={cn("leading-none transition", (value ?? 0) >= n ? "text-warning" : "text-surface-2", onChange && "hover:scale-110")}
+          className={cn("leading-none transition", (value ?? 0) >= n ? "text-amarillo" : "text-border", onChange && "hover:scale-110")}
         >
           ★
         </button>
@@ -212,21 +214,105 @@ export function Stars({ value, onChange, size = "md" }: { value: number | null; 
   );
 }
 
+// ---------- Marca y segmentos ----------
+
+/** "Grua" en tinta + "Ya" en amarillo, con sufijo pequeño en gris opcional (p. ej. "piloto"). */
+export function Wordmark({ suffix, className }: { suffix?: ReactNode; className?: string }) {
+  return (
+    <span className={cn("marca", className)}>
+      Grua<span className="ya">Ya</span>
+      {suffix && <small>{suffix}</small>}
+    </span>
+  );
+}
+
+/** Botones en fila; el activo es tinta con texto claro. */
+export function Segments<K extends string>({
+  items,
+  value,
+  onChange,
+  className,
+  label,
+}: {
+  items: Array<{ key: K; label: ReactNode; disabled?: boolean }>;
+  value: K;
+  onChange: (key: K) => void;
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <div className={cn("segmentos", className)} role="group" aria-label={label}>
+      {items.map((it) => (
+        <button
+          key={it.key}
+          type="button"
+          disabled={it.disabled}
+          aria-pressed={it.key === value}
+          className={it.key === value ? "activo" : undefined}
+          onClick={() => onChange(it.key)}
+        >
+          {it.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ---------- Tarjeta de estado ----------
+
+/** Estado de la solicitud → clase del prototipo (color del borde izquierdo). */
+export const STATUS_CLASS: Record<RequestStatus, string> = {
+  SEARCHING: "estado-buscando",
+  ESCALATED: "estado-sin_grua",
+  EN_ROUTE: "estado-asignado",
+  ARRIVED: "estado-en_sitio",
+  IN_PROGRESS: "estado-en_ruta",
+  COMPLETED: "estado-pagado",
+  CANCELLED: "estado-cancelado",
+};
+
+export function statusClass(status: RequestStatus): string {
+  return `estado ${STATUS_CLASS[status]}`;
+}
+
+/** Tarjeta con borde izquierdo de 5 px según el estado; sin `title` usa el texto largo del estado. */
+export function StatusCard({ status, title, children, className }: { status: RequestStatus; title?: ReactNode; children?: ReactNode; className?: string }) {
+  return (
+    <section className={cn("tarjeta", statusClass(status), className)}>
+      <h2 className="text-[22px] font-bold leading-tight">{title ?? STATUS_LABELS[status]}</h2>
+      {children}
+    </section>
+  );
+}
+
+/** Aviso en amarillo suave. */
+export function Aviso({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("aviso", className)}>{children}</div>;
+}
+
 // ---------- Barra superior ----------
 
 export function TopBar({ title, back, right, subtitle }: { title: string; back?: string; right?: ReactNode; subtitle?: string }) {
   return (
-    <header className="safe-top sticky top-0 z-30 flex items-center gap-3 bg-background/90 backdrop-blur px-4 py-3 border-b border-border">
-      {back && (
-        <Link href={back} aria-label="Volver" className="h-10 w-10 -ml-2 inline-flex items-center justify-center rounded-full hover:bg-surface text-xl">
-          ‹
-        </Link>
-      )}
-      <div className="flex-1 min-w-0">
-        <h1 className="text-lg font-bold truncate">{title}</h1>
-        {subtitle && <p className="text-xs text-muted truncate">{subtitle}</p>}
+    <header className="safe-top sticky top-0 z-30 bg-surface">
+      <div className="mx-auto flex max-w-[560px] items-center gap-2 px-3 py-3">
+        {back && (
+          <Link
+            href={back}
+            aria-label="Volver"
+            className="-ml-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-xl hover:bg-surface"
+          >
+            ‹
+          </Link>
+        )}
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate">
+            <Wordmark suffix={title} />
+          </h1>
+          {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
+        </div>
+        {right}
       </div>
-      {right}
     </header>
   );
 }
@@ -235,24 +321,32 @@ export function TopBar({ title, back, right, subtitle }: { title: string; back?:
 
 export function EmptyState({ icon, title, body, action }: { icon?: string; title: string; body?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center text-center gap-2 py-10 px-6">
-      {icon && <div className="text-5xl">{icon}</div>}
-      <h3 className="text-lg font-bold">{title}</h3>
-      {body && <p className="text-muted text-sm max-w-xs">{body}</p>}
-      {action && <div className="mt-3">{action}</div>}
+    <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+      {icon && <div className="text-4xl">{icon}</div>}
+      <h3 className="text-[17px] font-semibold">{title}</h3>
+      {body && <p className="max-w-xs text-sm text-muted">{body}</p>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }
 
+const NOTICE_TONE: Record<Tone, string> = {
+  neutral: "bg-surface text-foreground",
+  info: "bg-amarillo-suave text-foreground",
+  warning: "bg-amarillo-suave text-foreground",
+  success: "bg-success-soft text-verde",
+  danger: "bg-danger-soft text-rojo",
+};
+
 export function Notice({ tone = "info", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-xl px-4 py-3 text-sm", TONE[tone], className)}>{children}</div>;
+  return <div className={cn("rounded-[10px] px-2.5 py-2 text-sm", NOTICE_TONE[tone], className)}>{children}</div>;
 }
 
 export function Row({ label, value, strong }: { label: string; value: ReactNode; strong?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5">
-      <span className="text-sm text-muted">{label}</span>
-      <span className={cn("text-sm text-right", strong && "font-bold text-base")}>{value}</span>
+      <span className="text-[15px]">{label}</span>
+      <span className={cn("text-right font-semibold tabular-nums", strong && "text-lg font-bold")}>{value}</span>
     </div>
   );
 }

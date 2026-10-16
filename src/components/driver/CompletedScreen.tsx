@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, Notice, Row, Stars } from "@/components/ui";
+import { Button, Notice, Row, Stars, StatusCard } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { formatKm, formatQ, formatTime, KIND_LABELS } from "@/lib/format";
 import type { RequestView } from "@/lib/types";
 
 /**
- * Resumen al terminar: lo que ganó, el cliente y la calificación al cliente.
- * "Listo" vuelve a la pantalla principal (sigue conectado salvo que sea externo).
+ * Resumen al terminar (tarjeta con borde verde): lo que ganó, el cliente y la
+ * calificación al cliente. "Listo" vuelve a la pantalla principal.
  */
 export default function CompletedScreen({ job, clientName, onDone }: { job: RequestView; clientName?: string | null; onDone: () => void }) {
   const [stars, setStars] = useState<number | null>(job.ratings.provider);
@@ -34,38 +34,30 @@ export default function CompletedScreen({ job, clientName, onDone }: { job: Requ
   const completedAt = job.timestamps.completedAt;
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-1 flex-col justify-center gap-4 px-5 py-8 safe-top safe-bottom">
-      <Card className="flex flex-col gap-4">
-        <div className="flex flex-col items-center gap-1 pt-2 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success-soft text-3xl" aria-hidden>
-            ✅
-          </div>
-          <h1 className="text-2xl font-black">Servicio completado</h1>
-          <p className="text-sm text-muted">{completedAt ? `Terminado a las ${formatTime(completedAt)}` : KIND_LABELS[job.kind]}</p>
-        </div>
+    <StatusCard status="COMPLETED" title="Servicio completado">
+      <p className="tenue -mt-1">{completedAt ? `Terminado a las ${formatTime(completedAt)} · ${KIND_LABELS[job.kind]}` : KIND_LABELS[job.kind]}</p>
 
-        <div className="rounded-2xl bg-surface px-4 py-4 text-center">
-          <p className="text-sm font-semibold text-muted">Ganaste</p>
-          <p className="text-5xl font-black tabular-nums">{formatQ(job.quote.providerPayoutQ)}</p>
-        </div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[17px]">Ganaste</span>
+        <span className="grande tabular-nums">{formatQ(job.quote.providerPayoutQ)}</span>
+      </div>
 
-        <div className="px-1">
-          <Row label="Cliente" value={name} />
-          <Row label="Servicio" value={KIND_LABELS[job.kind]} />
-          {job.kind === "TOW" && <Row label="Remolque" value={formatKm(job.distanceKm)} />}
-          <Row label="Cobro al cliente (efectivo)" value={formatQ(job.priceTotal)} />
-        </div>
+      <div className="rounded-[10px] bg-surface px-3 py-0.5">
+        <Row label="Cliente" value={name} />
+        <Row label="Servicio" value={KIND_LABELS[job.kind]} />
+        {job.kind === "TOW" && <Row label="Viaje" value={formatKm(job.distanceKm)} />}
+        <Row label="Cobrado en efectivo" value={formatQ(job.priceTotal)} />
+      </div>
 
-        <div className="flex flex-col items-center gap-2 border-t border-border pt-4">
-          <p className="text-sm font-semibold">{rated ? "¡Gracias por calificar!" : `¿Cómo fue ${name}?`}</p>
-          <Stars value={stars} onChange={busy ? undefined : (n) => void rate(n)} size="lg" />
-          {error && <Notice tone="danger">{error}</Notice>}
-        </div>
+      <div className="flex flex-col items-center gap-2 border-t border-border pt-3">
+        <p className="text-sm font-semibold">{rated ? "¡Gracias por calificar!" : `¿Cómo fue ${name}?`}</p>
+        <Stars value={stars} onChange={busy ? undefined : (n) => void rate(n)} size="lg" />
+        {error && <Notice tone="danger">{error}</Notice>}
+      </div>
 
-        <Button size="lg" fullWidth onClick={onDone}>
-          Listo
-        </Button>
-      </Card>
-    </main>
+      <Button size="lg" fullWidth onClick={onDone}>
+        Listo
+      </Button>
+    </StatusCard>
   );
 }

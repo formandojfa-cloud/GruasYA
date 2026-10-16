@@ -21,8 +21,9 @@ export function providerKindFor(kind: ServiceKind): ProviderKind {
   return kind === "TOW" ? "TOW" : "MOTO";
 }
 
+/** Emoji del prototipo: 🚚 grúa, 🏍️ motorista. */
 export function glyphFor(kind: ProviderKind): string {
-  return kind === "TOW" ? "🚛" : "🏍️";
+  return kind === "TOW" ? "🚚" : "🏍️";
 }
 
 export function shortId(id: string): string {
@@ -48,26 +49,26 @@ export const CANCELLABLE_STATUSES: readonly RequestStatus[] = ["SEARCHING", "ESC
 
 export const ASSIGNED_BY_LABELS: Record<string, string> = {
   AUTO: "Cascada automática",
-  PBX: "Operador del PBX",
+  PBX: "La central",
 };
 
 export const CANCELLED_BY_LABELS: Record<string, string> = {
-  CLIENT: "el cliente",
-  PROVIDER: "el proveedor",
-  PBX: "el operador",
+  CLIENT: "el conductor",
+  PROVIDER: "el piloto",
+  PBX: "la central",
   SYSTEM: "el sistema",
 };
 
-/** Las etiquetas de src/lib/format hablan al cliente; en el PBX hablamos del cliente. */
+/** Las etiquetas de src/lib/format hablan al conductor; en la Central hablamos del conductor y del piloto. */
 export const PBX_EVENT_OVERRIDES: Record<string, string> = {
-  HELP_REQUESTED: "El cliente pidió hablar con un operador",
-  RATED: "El cliente calificó el servicio",
-  OFFER_SENT: "Se contactó a un proveedor",
-  OFFER_REJECTED: "El proveedor rechazó la oferta",
-  OFFER_EXPIRED: "El proveedor no respondió",
-  ASSIGNED: "Proveedor asignado",
-  ARRIVED: "El proveedor llegó al punto",
-  PROVIDER_CANCELLED: "El proveedor asignado se bajó",
+  HELP_REQUESTED: "El conductor pidió hablar con la central",
+  RATED: "El conductor calificó el servicio",
+  OFFER_SENT: "Se ofreció el servicio a un piloto",
+  OFFER_REJECTED: "El piloto rechazó la oferta",
+  OFFER_EXPIRED: "El piloto no respondió",
+  ASSIGNED: "Piloto asignado",
+  ARRIVED: "El piloto llegó al punto",
+  PROVIDER_CANCELLED: "El piloto asignado se bajó",
 };
 
 export const OFFER_RESPONSE_LABELS: Record<string, string> = {

@@ -1,17 +1,16 @@
 "use client";
 
-/** Enlace de acceso de un proveedor + botón grande para mandárselo por WhatsApp. */
-import { Notice } from "@/components/ui";
-import { CopyButton, LinkButton } from "./bits";
+/** Enlace de acceso de un piloto + botón grande para mandárselo por WhatsApp. */
+import { Box, CopyButton, LinkButton } from "./bits";
 
 export default function InviteBox({ accessLink, whatsapp, title, name }: { accessLink: string; whatsapp: string; title?: string; name?: string }) {
   return (
-    <Notice tone="success" className="flex flex-col gap-2">
-      <p className="font-bold">{title ?? "Enlace de acceso listo"}</p>
-      <p className="text-xs opacity-90">
-        {name ? `${name} entra` : "El proveedor entra"} con este enlace, sin instalar nada: ve el servicio, comparte su ubicación y marca cuando llega.
+    <Box tone="success" className="gap-2">
+      <h3 className="text-[17px] font-semibold leading-tight">{title ?? "Enlace de acceso listo"}</h3>
+      <p className="tenue chico">
+        {name ? `${name} entra` : "El piloto entra"} con este enlace, sin instalar nada: ve el servicio, comparte su ubicación y marca cuando llega.
       </p>
-      <div className="flex items-center gap-2 rounded-lg bg-background/70 px-2 py-1.5">
+      <div className="flex items-center gap-2 rounded-[10px] bg-surface px-2.5 py-1.5">
         <code className="flex-1 min-w-0 truncate text-xs text-foreground" title={accessLink}>
           {accessLink}
         </code>
@@ -20,6 +19,6 @@ export default function InviteBox({ accessLink, whatsapp, title, name }: { acces
       <LinkButton href={whatsapp} variant="success" size="md" className="w-full">
         Enviar por WhatsApp
       </LinkButton>
-    </Notice>
+    </Box>
   );
 }

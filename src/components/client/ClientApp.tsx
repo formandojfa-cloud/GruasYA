@@ -6,7 +6,7 @@
  * sessionStorage y la solicitud en curso se retoma desde /api/me al recargar.
  */
 import { useEffect, useMemo, useState } from "react";
-import { KIND_LABELS } from "@/lib/format";
+import { KIND_ICONS, KIND_LABELS } from "@/lib/format";
 import { useGeolocationWatch } from "@/lib/hooks";
 import type { ClientSelf, Place, RequestView, ServiceKind } from "@/lib/types";
 import { ActiveRequest } from "./ActiveRequest";
@@ -90,12 +90,12 @@ function ClientFlow({ me }: { me: ClientSelf }) {
         <LocationStep
           key="pickup"
           kind="pickup"
-          title="¿Dónde estás?"
-          subtitle={KIND_LABELS[step.kind]}
+          title={`${KIND_ICONS[step.kind]} ${KIND_LABELS[step.kind]}`}
           initial={step.pickup ?? gps ?? GUATEMALA_CITY}
           gps={gps}
           gpsError={geo.error}
-          cta={light ? "Confirmar mi ubicación" : "Confirmar recogida"}
+          cta={light ? "Confirmar mi ubicación" : "Confirmar dónde estás"}
+          hasDropoff={!light}
           onBack={() => setStep({ step: "home" })}
           onConfirm={(pickup) =>
             setStep(light ? { step: "quote", kind: step.kind, pickup, dropoff: null } : { step: "dropoff", kind: step.kind, pickup, dropoff: step.dropoff })
@@ -108,12 +108,13 @@ function ClientFlow({ me }: { me: ClientSelf }) {
         <LocationStep
           key="dropoff"
           kind="dropoff"
-          title="¿A dónde llevamos tu vehículo?"
-          subtitle={`Recogida: ${placeLabel(step.pickup)}`}
+          title={`${KIND_ICONS[step.kind]} ${KIND_LABELS[step.kind]}`}
+          subtitle={`Tu vehículo: ${placeLabel(step.pickup)}`}
           initial={step.dropoff ?? step.pickup}
           gps={gps}
           cta="Confirmar destino"
-          markers={[{ id: "pickup", lat: step.pickup.lat, lng: step.pickup.lng, kind: "pickup", label: "Recogida" }]}
+          hasDropoff
+          markers={[{ id: "pickup", lat: step.pickup.lat, lng: step.pickup.lng, kind: "pickup", label: "Tu vehículo" }]}
           onBack={() => setStep({ step: "pickup", kind: step.kind, pickup: step.pickup, dropoff: step.dropoff })}
           onConfirm={(dropoff) => setStep({ step: "quote", kind: step.kind, pickup: step.pickup, dropoff })}
         />

@@ -9,7 +9,7 @@ import { ProviderLoginSchema } from "@/lib/types";
 export const POST = handle(async (req) => {
   const { token } = await parseBody(req, ProviderLoginSchema);
   const provider = await prisma.provider.findUnique({ where: { accessToken: token } });
-  if (!provider) return fail("INVALID_TOKEN", "Enlace inválido. Pide uno nuevo al PBX.", 401);
+  if (!provider) return fail("INVALID_TOKEN", "Enlace inválido. Pide uno nuevo a la central.", 401);
   await setSession(SESSION.cookieProvider, provider.id);
   return ok(await getProviderSelf(provider));
 });

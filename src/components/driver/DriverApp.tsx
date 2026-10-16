@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * Árbol de la app del gruero. Todo lo dirige `ProviderSelf` (GET /api/provider/me
- * cada 2.5 s): oferta pendiente → pantalla de oferta; servicio activo →
- * pantalla de servicio; si no, la principal. Al recargar, el estado vuelve del
+ * Árbol de la app del piloto. Todo lo dirige `ProviderSelf` (GET /api/provider/me
+ * cada 2.5 s): oferta pendiente → tarjeta de oferta; servicio activo →
+ * tarjeta de servicio; si no, la principal. Al recargar, el estado vuelve del
  * servidor; el resumen de un servicio recién terminado se recuerda en
- * localStorage hasta que el gruero toca "Listo".
+ * localStorage hasta que el piloto toca "Listo".
  */
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +14,7 @@ import { api, ApiClientError, errorMessage } from "@/lib/api";
 import { useLocalStorage, usePolling } from "@/lib/hooks";
 import type { ProviderSelf, RequestView } from "@/lib/types";
 import ActiveJobScreen from "./ActiveJobScreen";
-import { ConnectionBanner, FullScreen, FullScreenSpinner } from "./bits";
+import { ConnectionBanner, DriverShell, FullScreen, FullScreenSpinner, NumbersCard, ProfileCard } from "./bits";
 import CompletedScreen from "./CompletedScreen";
 import HomeScreen from "./HomeScreen";
 import LoginScreen from "./LoginScreen";
@@ -168,7 +168,7 @@ export default function DriverApp() {
   };
 
   const onJobCancelled = (requestStatus: string) => {
-    setNotice(requestStatus === "ESCALATED" ? "Te bajaste del servicio. Un operador lo coordinará." : "Te bajaste del servicio. Se ofrecerá a otra grúa.");
+    setNotice(requestStatus === "ESCALATED" ? "Te bajaste del servicio. La central lo coordinará." : "Te bajaste del servicio. Se ofrecerá a otra grúa.");
     setData((s) => (s ? { ...s, activeJob: null } : s));
     void refresh();
   };
@@ -186,11 +186,8 @@ export default function DriverApp() {
   if (session === "error") {
     return (
       <FullScreen>
-        <p className="text-4xl" aria-hidden>
-          📡
-        </p>
-        <h1 className="text-xl font-bold">No se pudo conectar</h1>
-        <p className="max-w-xs text-sm text-muted">{bootError ?? "Revisa tu internet e inténtalo de nuevo."}</p>
+        <h2 className="text-[22px]">No se pudo conectar</h2>
+        <p className="tenue max-w-xs">{bootError ?? "Revisa tu internet e inténtalo de nuevo."}</p>
         <Button onClick={() => setSession("checking")}>Reintentar</Button>
       </FullScreen>
     );
@@ -212,8 +209,8 @@ export default function DriverApp() {
   if (!self) {
     return pollError ? (
       <FullScreen>
-        <h1 className="text-xl font-bold">No se pudo cargar tu estado</h1>
-        <p className="max-w-xs text-sm text-muted">{pollError.message}</p>
+        <h2 className="text-[22px]">No se pudo cargar tu estado</h2>
+        <p className="tenue max-w-xs">{pollError.message}</p>
         <Button onClick={() => void refresh()}>Reintentar</Button>
       </FullScreen>
     ) : (
@@ -226,35 +223,41 @@ export default function DriverApp() {
   if (self.pendingOffer) {
     const offer = self.pendingOffer;
     return (
-      <>
+      <DriverShell section="servicios">
         {banner}
+        <ProfileCard self={self} />
         <OfferScreen key={offer.id} offer={offer} position={shownPosition} onAccept={() => acceptOffer(offer.id)} onReject={() => rejectOffer(offer.id)} onExpire={() => void refresh()} />
-      </>
+        <NumbersCard today={self.today} />
+      </DriverShell>
     );
   }
 
   if (self.activeJob) {
     return (
-      <>
+      <DriverShell section="servicios">
         {banner}
+        <ProfileCard self={self} />
         <ActiveJobScreen job={self.activeJob} position={shownPosition} onUpdated={onJobUpdated} onCompleted={onJobCompleted} onCancelled={onJobCancelled} onRefresh={() => void refresh()} />
-      </>
+        <NumbersCard today={self.today} />
+      </DriverShell>
     );
   }
 
   if (completed) {
     return (
-      <>
+      <DriverShell section="servicios">
         {banner}
+        <ProfileCard self={self} />
         <CompletedScreen job={completed.job} clientName={completed.clientName} onDone={finishSummary} />
-      </>
+        <NumbersCard today={self.today} />
+      </DriverShell>
     );
   }
 
   return (
-    <>
+    <DriverShell section="servicios">
       {banner}
       <HomeScreen self={self} loc={loc} notice={notice} onToggle={toggleStatus} onLogout={logout} />
-    </>
+    </DriverShell>
   );
 }

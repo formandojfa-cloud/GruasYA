@@ -1,16 +1,15 @@
 "use client";
 
 /**
- * Sesión del cliente: GET /api/me al cargar; si responde 401 se muestra la hoja
- * de ingreso (teléfono + nombre → POST /api/auth/client). La cookie la pone la
+ * Sesión del cliente: GET /api/me al cargar; si responde 401 se muestra la
+ * tarjeta de ingreso (teléfono + nombre → POST /api/auth/client). La cookie la pone la
  * API; aquí solo guardamos `me` en memoria.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import MapView from "@/components/map/Map";
-import { Button, Field, Input, Notice, Pill, Sheet, Spinner } from "@/components/ui";
+import { Aviso, Button, Field, Input, Notice, Pill, Spinner, Wordmark } from "@/components/ui";
 import { api, ApiClientError, errorMessage } from "@/lib/api";
 import type { ClientSelf } from "@/lib/types";
-import { apiErrorMessage, GUATEMALA_CITY, STORAGE_DRAFT, STORAGE_VEHICLE } from "./constants";
+import { apiErrorMessage, STORAGE_DRAFT, STORAGE_VEHICLE } from "./constants";
 
 type SessionState = {
   me: ClientSelf | null;
@@ -87,7 +86,7 @@ export function SessionGate({ children }: { children: (me: ClientSelf) => ReactN
   const { me, loading, error, refresh } = useSession();
   if (loading) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-background">
+      <div className="pagina flex items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -101,27 +100,34 @@ export function MemberBadge({ isMember }: { isMember: boolean }) {
   return <Pill tone="success">Socio</Pill>;
 }
 
+/** Tarjeta "Crea tu cuenta / Entrar" del prototipo (sin código SMS en el MVP). */
 function LoginScreen({ error, onRetry }: { error: string | null; onRetry: () => Promise<unknown> }) {
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-surface">
-      <div className="absolute inset-0">
-        <MapView center={GUATEMALA_CITY} zoom={13} interactive={false} className="h-full w-full" />
-      </div>
-      <div className="safe-top absolute inset-x-0 top-0 z-20 p-4">
-        <span className="rounded-full bg-background px-3 py-2 text-sm font-bold shadow-md">🚛 Asistencia Vial</span>
-      </div>
-      <Sheet open title={error ? "No pudimos conectar" : "Bienvenido"}>
-        {error ? (
-          <>
-            <Notice tone="danger">{error}</Notice>
-            <Button className="mt-3" size="lg" fullWidth onClick={() => void onRetry()}>
-              Reintentar
-            </Button>
-          </>
-        ) : (
-          <LoginForm />
-        )}
-      </Sheet>
+    <div className="pagina">
+      <header className="barra">
+        <div className="columna">
+          <h1 className="leading-none">
+            <Wordmark suffix="conductor" />
+          </h1>
+        </div>
+      </header>
+      <main className="columna">
+        <section className="tarjeta">
+          {error ? (
+            <>
+              <h2>No pudimos conectar</h2>
+              <Notice tone="danger">{error}</Notice>
+              <Button size="lg" fullWidth onClick={() => void onRetry()}>
+                Reintentar
+              </Button>
+            </>
+          ) : (
+            <LoginForm />
+          )}
+        </section>
+        <Aviso>Grúa en minutos con precio fijo; pagas en efectivo al gruero al terminar.</Aviso>
+      </main>
+      <p className="pie">GruaYa · Grúa por demanda en Guatemala</p>
     </div>
   );
 }
@@ -156,14 +162,15 @@ function LoginForm() {
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-3" noValidate>
-      <p className="-mt-2 text-sm text-muted">Grúa y asistencia en carretera a un toque. Entra con tu número para pedir ayuda y seguir tu servicio en vivo.</p>
-      <Field label="Teléfono" hint="8 dígitos, sin código de país">
+    <form onSubmit={submit} className="flex flex-col gap-3" noValidate>
+      <h2>Crea tu cuenta o entra</h2>
+      <p className="tenue">Regístrate antes de una emergencia: así pedir la grúa toma segundos.</p>
+      <Field label="Celular" hint="8 dígitos, sin código de país">
         <Input
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          placeholder="5555-0001"
+          placeholder="5555 5555"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
@@ -174,9 +181,9 @@ function LoginForm() {
       </Field>
       {err && <Notice tone="danger">{err}</Notice>}
       <Button type="submit" size="lg" fullWidth loading={busy}>
-        Continuar
+        Entrar
       </Button>
-      <p className="text-center text-xs text-muted">Te contactaremos por este número para coordinar tu servicio.</p>
+      <p className="tenue chico text-center">Te contactaremos por este número para coordinar tu grúa.</p>
     </form>
   );
 }

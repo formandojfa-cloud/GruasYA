@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Pestaña de proveedores: tabla densa de la red (grúas y motoristas) con
- * acciones por fila y alta de proveedor nuevo con su enlace de acceso.
+ * Pestaña "Pilotos": la red de grúas y motoristas como tarjetas del prototipo
+ * ("{nombre} · estado · {placa} · {tipo} · ★") en teléfono y tabla densa en
+ * escritorio, con acciones por fila y alta de piloto nuevo con su enlace.
  */
 import { type FormEvent, useMemo, useState } from "react";
 import { Button, cn, Field, Input, Pill, Select, Sheet } from "@/components/ui";
@@ -65,42 +66,41 @@ export default function ProvidersTab({ providers, onChanged, onOpenRequest }: Pr
   }
 
   return (
-    <div className="flex flex-col gap-3 p-3 lg:p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="text-sm">
-          <span className="font-bold">{providers.length}</span> proveedores ·{" "}
-          <span className="text-success font-semibold">{counts.online} disponibles</span> · <span className="text-info font-semibold">{counts.busy} en servicio</span> ·{" "}
-          <span className="text-muted">{counts.offline} desconectados</span>
-          {counts.stale > 0 && <span className="text-warning font-semibold"> · {counts.stale} sin señal</span>}
+    <>
+      <section className="tarjeta" aria-label="Resumen de pilotos">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-[15px]">
+            <strong>{providers.length}</strong> pilotos · <span className="text-verde font-semibold">{counts.online} disponibles</span> ·{" "}
+            <span className="text-azul font-semibold">{counts.busy} en servicio</span> · <span className="text-muted">{counts.offline} no disponibles</span>
+            {counts.stale > 0 && <span className="text-rojo font-semibold"> · {counts.stale} sin señal</span>}
+          </div>
+          <div className="ml-auto flex items-center gap-2 w-full sm:w-auto">
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nombre, teléfono o placa" className="sm:w-72" aria-label="Buscar piloto" />
+            <Button className="whitespace-nowrap" onClick={() => setAdding(true)}>
+              + Agregar
+            </Button>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-2 w-full sm:w-auto">
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nombre, teléfono o placa" className="h-10 sm:w-72" aria-label="Buscar proveedor" />
-          <Button size="md" className="h-10 whitespace-nowrap" onClick={() => setAdding(true)}>
-            + Agregar
-          </Button>
-        </div>
-      </div>
+      </section>
 
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
-          {providers.length === 0 ? "Aún no hay proveedores. Agrega la primera grúa para empezar." : "Nadie coincide con la búsqueda."}
-        </div>
+        <div className="tarjeta tenue">{providers.length === 0 ? "Aún no hay pilotos. Agrega la primera grúa para empezar." : "Nadie coincide con la búsqueda."}</div>
       ) : (
         <>
           {/* Escritorio: tabla */}
-          <div className="hidden md:block rounded-xl border border-border overflow-x-auto">
+          <section className="hidden md:block tarjeta p-0 overflow-x-auto" aria-label="Pilotos">
             <table className="w-full text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wide text-muted">
+              <thead className="bg-surface text-xs text-muted">
                 <tr>
-                  <th className="text-left font-semibold px-2 py-2">Proveedor</th>
-                  <th className="text-left font-semibold px-2 py-2 hidden xl:table-cell">Tipo</th>
-                  <th className="text-left font-semibold px-2 py-2">Estado</th>
-                  <th className="text-left font-semibold px-2 py-2">Teléfono</th>
-                  <th className="text-left font-semibold px-2 py-2">Vehículo</th>
-                  <th className="text-left font-semibold px-2 py-2">Última señal</th>
-                  <th className="text-left font-semibold px-2 py-2 hidden xl:table-cell">Calif.</th>
-                  <th className="text-left font-semibold px-2 py-2">Servicio</th>
-                  <th className="text-right font-semibold px-2 py-2 w-[280px]">Acciones</th>
+                  <th className="text-left font-semibold px-3 py-2.5">Piloto</th>
+                  <th className="text-left font-semibold px-2 py-2.5 hidden xl:table-cell">Tipo</th>
+                  <th className="text-left font-semibold px-2 py-2.5">Estado</th>
+                  <th className="text-left font-semibold px-2 py-2.5">Teléfono</th>
+                  <th className="text-left font-semibold px-2 py-2.5">Vehículo</th>
+                  <th className="text-left font-semibold px-2 py-2.5">Última señal</th>
+                  <th className="text-left font-semibold px-2 py-2.5 hidden xl:table-cell">Calif.</th>
+                  <th className="text-left font-semibold px-2 py-2.5">Servicio</th>
+                  <th className="text-right font-semibold px-3 py-2.5 w-[300px]">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -118,9 +118,9 @@ export default function ProvidersTab({ providers, onChanged, onOpenRequest }: Pr
                 ))}
               </tbody>
             </table>
-          </div>
+          </section>
           {/* Teléfono: tarjetas */}
-          <ul className="md:hidden flex flex-col gap-2">
+          <ul className="md:hidden flex flex-col gap-3">
             {rows.map((p) => (
               <li key={p.id}>
                 <ProviderCard p={p} now={now} busy={busy} error={errors[p.id]} rotated={rotated[p.id]} onPatch={(body, key) => patch(p, body, key)} onOpenRequest={onOpenRequest} />
@@ -130,7 +130,7 @@ export default function ProvidersTab({ providers, onChanged, onOpenRequest }: Pr
         </>
       )}
 
-      <Sheet open={adding} onClose={() => setAdding(false)} title="Agregar proveedor">
+      <Sheet open={adding} onClose={() => setAdding(false)} title="Agregar piloto">
         <AddProviderForm
           onDone={() => {
             setAdding(false);
@@ -139,7 +139,7 @@ export default function ProvidersTab({ providers, onChanged, onOpenRequest }: Pr
           onCreated={() => void onChanged()}
         />
       </Sheet>
-    </div>
+    </>
   );
 }
 
@@ -155,11 +155,11 @@ type RowProps = {
   onOpenRequest: (id: string) => void;
 };
 
-function Actions({ p, busy, onPatch }: Pick<RowProps, "p" | "busy" | "onPatch">) {
+function Actions({ p, busy, onPatch, className }: Pick<RowProps, "p" | "busy" | "onPatch"> & { className?: string }) {
   const is = (k: string) => busy === `${p.id}:${k}`;
   const anyBusy = busy?.startsWith(`${p.id}:`) ?? false;
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1">
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
       <CopyButton text={p.accessLink} label="Copiar enlace" />
       <LinkButton href={p.whatsappInvite} variant="success" size="sm" title="Mandar el enlace por WhatsApp">
         WhatsApp
@@ -190,7 +190,7 @@ function Rating({ p }: { p: ProviderAdminView }) {
       ★ {p.rating.toFixed(1)} <span className="text-muted text-xs">({p.ratingCount})</span>
     </span>
   ) : (
-    <span className="text-muted text-xs">—</span>
+    <span className="text-muted text-xs">★ sin calificar</span>
   );
 }
 
@@ -198,7 +198,7 @@ function ProviderTableRow({ p, now, busy, error, rotated, onPatch, onOpenRequest
   return (
     <>
       <tr className={cn("align-top", p.status === "OFFLINE" && "text-muted")}>
-        <td className="px-2 py-2">
+        <td className="px-3 py-2.5">
           <div className="flex items-center gap-1.5">
             <span aria-hidden>{glyphFor(p.kind)}</span>
             <span className="font-semibold text-foreground">{p.name}</span>
@@ -206,41 +206,41 @@ function ProviderTableRow({ p, now, busy, error, rotated, onPatch, onOpenRequest
           </div>
           <div className="text-[11px] text-muted font-mono">#{shortId(p.id)}</div>
         </td>
-        <td className="px-2 py-2 whitespace-nowrap hidden xl:table-cell">{PROVIDER_KIND_LABELS[p.kind]}</td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td className="px-2 py-2.5 whitespace-nowrap hidden xl:table-cell">{PROVIDER_KIND_LABELS[p.kind]}</td>
+        <td className="px-2 py-2.5 whitespace-nowrap">
           <ProviderStatusPill status={p.status} stale={p.isStale} />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td className="px-2 py-2.5 whitespace-nowrap">
           <a href={`tel:+502${p.phone}`} className="underline-offset-2 hover:underline text-foreground">
             {formatPhone(p.phone)}
           </a>
         </td>
-        <td className="px-2 py-2">
+        <td className="px-2 py-2.5">
           <div className="font-mono text-xs text-foreground">{p.plate ?? "—"}</div>
           <div className="text-xs text-muted max-w-[150px] truncate" title={p.vehicleLabel ?? undefined}>
             {p.vehicleLabel ?? ""}
           </div>
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-xs">{p.location ? relativeTime(p.location.updatedAt, now) : <span className="text-muted">nunca</span>}</td>
-        <td className="px-2 py-2 whitespace-nowrap hidden xl:table-cell">
+        <td className="px-2 py-2.5 whitespace-nowrap text-xs">{p.location ? relativeTime(p.location.updatedAt, now) : <span className="text-muted">nunca</span>}</td>
+        <td className="px-2 py-2.5 whitespace-nowrap hidden xl:table-cell">
           <Rating p={p} />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td className="px-2 py-2.5 whitespace-nowrap">
           {p.activeRequestId ? (
-            <button type="button" onClick={() => onOpenRequest(p.activeRequestId!)} className="text-info font-semibold underline-offset-2 hover:underline text-xs">
+            <button type="button" onClick={() => onOpenRequest(p.activeRequestId!)} className="text-azul font-semibold underline-offset-2 hover:underline text-xs">
               Ver #{shortId(p.activeRequestId)}
             </button>
           ) : (
             <span className="text-muted text-xs">—</span>
           )}
         </td>
-        <td className="px-2 py-2">
-          <Actions p={p} busy={busy} onPatch={onPatch} />
+        <td className="px-3 py-2.5">
+          <Actions p={p} busy={busy} onPatch={onPatch} className="justify-end" />
         </td>
       </tr>
       {(error || rotated) && (
         <tr>
-          <td colSpan={9} className="px-3 pb-2">
+          <td colSpan={9} className="px-3 pb-3">
             {error && <ErrorText>{error}</ErrorText>}
             {rotated && <InviteBox accessLink={rotated.accessLink} whatsapp={rotated.whatsapp} name={p.name} title={`Nuevo enlace de ${p.name} (el anterior ya no sirve)`} />}
           </td>
@@ -250,31 +250,30 @@ function ProviderTableRow({ p, now, busy, error, rotated, onPatch, onOpenRequest
   );
 }
 
+/** Tarjeta del prototipo: nombre y estado arriba; "{placa} · {tipo} · ★" en gris. */
 function ProviderCard({ p, now, busy, error, rotated, onPatch, onOpenRequest }: RowProps) {
   return (
-    <div className="rounded-xl border border-border bg-background p-3 flex flex-col gap-2">
+    <article className="tarjeta">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span aria-hidden>{glyphFor(p.kind)}</span>
-            <span className="font-semibold truncate">{p.name}</span>
+            <strong className="truncate">{p.name}</strong>
             {p.isExternal ? <Pill tone="neutral">externo</Pill> : <Pill tone="success">red</Pill>}
           </div>
-          <p className="text-xs text-muted">
-            {PROVIDER_KIND_LABELS[p.kind]} · {p.plate ?? "sin placa"}
-            {p.vehicleLabel ? ` · ${p.vehicleLabel}` : ""}
+          <p className="tenue">
+            {p.plate ?? "sin placa"} · {p.vehicleLabel ?? PROVIDER_KIND_LABELS[p.kind]} · <Rating p={p} />
           </p>
         </div>
         <ProviderStatusPill status={p.status} stale={p.isStale} />
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 tenue chico">
         <a href={`tel:+502${p.phone}`} className="text-foreground font-semibold">
           📞 {formatPhone(p.phone)}
         </a>
         <span>señal {p.location ? relativeTime(p.location.updatedAt, now) : "nunca"}</span>
-        <Rating p={p} />
         {p.activeRequestId && (
-          <button type="button" onClick={() => onOpenRequest(p.activeRequestId!)} className="text-info font-semibold">
+          <button type="button" onClick={() => onOpenRequest(p.activeRequestId!)} className="text-azul font-semibold">
             Ver servicio #{shortId(p.activeRequestId)}
           </button>
         )}
@@ -282,7 +281,7 @@ function ProviderCard({ p, now, busy, error, rotated, onPatch, onOpenRequest }: 
       <Actions p={p} busy={busy} onPatch={onPatch} />
       {error && <ErrorText>{error}</ErrorText>}
       {rotated && <InviteBox accessLink={rotated.accessLink} whatsapp={rotated.whatsapp} name={p.name} title="Nuevo enlace (el anterior ya no sirve)" />}
-    </div>
+    </article>
   );
 }
 
@@ -323,7 +322,7 @@ function AddProviderForm({ onDone, onCreated }: { onDone: () => void; onCreated:
     return (
       <div className="flex flex-col gap-3">
         <p className="text-sm">
-          <b>{created.name}</b> quedó registrado como {PROVIDER_KIND_LABELS[created.kind].toLowerCase()} externo. Puedes pasarlo a la red desde la tabla.
+          <b>{created.name}</b> quedó registrado como {PROVIDER_KIND_LABELS[created.kind].toLowerCase()} externo. Puedes pasarlo a la red desde la lista.
         </p>
         <InviteBox accessLink={created.accessLink} whatsapp={created.whatsappInvite} name={created.name} />
         <div className="flex gap-2">
@@ -350,7 +349,7 @@ function AddProviderForm({ onDone, onCreated }: { onDone: () => void; onCreated:
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <SectionTitle>Datos del proveedor</SectionTitle>
+      <SectionTitle>Datos del piloto</SectionTitle>
       <div className="grid sm:grid-cols-2 gap-3">
         <Field label="Nombre">
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Grúas Don Chepe" required minLength={2} maxLength={60} autoFocus />

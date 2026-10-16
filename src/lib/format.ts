@@ -1,5 +1,6 @@
 /**
- * Textos en español y formatos compartidos por las tres interfaces.
+ * Textos en español (los del prototipo GruaYa) y formatos compartidos por las
+ * tres interfaces: Conductor (cliente), Piloto (gruero) y Central (PBX).
  */
 import type { ProviderKind, ProviderStatus, RequestStatus, ServiceKind, VehicleKind } from "./types";
 
@@ -23,9 +24,9 @@ export const KIND_ICONS: Record<ServiceKind, string> = {
 };
 
 export const VEHICLE_LABELS: Record<VehicleKind, string> = {
-  SEDAN: "Sedán",
+  SEDAN: "Carro",
   SUV: "Camioneta / SUV",
-  PICKUP: "Pick-up",
+  PICKUP: "Pickup",
   MOTO: "Moto",
 };
 
@@ -35,48 +36,59 @@ export const PROVIDER_KIND_LABELS: Record<ProviderKind, string> = {
 };
 
 export const PROVIDER_STATUS_LABELS: Record<ProviderStatus, string> = {
-  OFFLINE: "Desconectado",
+  OFFLINE: "No disponible",
   ONLINE: "Disponible",
   BUSY: "En servicio",
 };
 
-/** Lo que ve el cliente en cada estado. */
+/** Cómo se llama cada rol en la interfaz (prototipo: Conductor · Piloto · Admin/Central). */
+export const ROLE_LABELS = {
+  client: "Conductor",
+  provider: "Piloto",
+  pbx: "Central",
+} as const;
+
+/** Título de la tarjeta de estado (textos del prototipo). */
 export const STATUS_LABELS: Record<RequestStatus, string> = {
-  SEARCHING: "Buscando grúa cercana…",
-  ESCALATED: "Un operador está coordinando tu servicio",
-  EN_ROUTE: "Tu grúa va en camino",
-  ARRIVED: "Tu grúa llegó",
-  IN_PROGRESS: "Servicio en curso",
-  COMPLETED: "Servicio completado",
-  CANCELLED: "Servicio cancelado",
+  SEARCHING: "Buscando grúa",
+  ESCALATED: "Sin grúa: la central te llama",
+  EN_ROUTE: "Grúa en camino",
+  ARRIVED: "La grúa llegó",
+  IN_PROGRESS: "Vehículo cargado, en ruta",
+  COMPLETED: "Completado",
+  CANCELLED: "Cancelado",
 };
 
 /** Versión corta para listas y chips. */
 export const STATUS_SHORT: Record<RequestStatus, string> = {
-  SEARCHING: "Buscando",
-  ESCALATED: "Escalado al PBX",
+  SEARCHING: "Buscando grúa",
+  ESCALATED: "Sin grúa",
   EN_ROUTE: "En camino",
-  ARRIVED: "En el punto",
-  IN_PROGRESS: "En curso",
+  ARRIVED: "Llegó",
+  IN_PROGRESS: "En ruta",
   COMPLETED: "Completado",
   CANCELLED: "Cancelado",
 };
 
 export type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 
+/** Colores del prototipo: amarillo buscando, azul asignado/en sitio/en ruta, verde pagado, rojo sin grúa/cancelado. */
 export const STATUS_TONE: Record<RequestStatus, Tone> = {
-  SEARCHING: "info",
-  ESCALATED: "warning",
+  SEARCHING: "warning",
+  ESCALATED: "danger",
   EN_ROUTE: "info",
-  ARRIVED: "success",
-  IN_PROGRESS: "success",
-  COMPLETED: "neutral",
+  ARRIVED: "info",
+  IN_PROGRESS: "info",
+  COMPLETED: "success",
   CANCELLED: "danger",
 };
 
+/** Para las asistencias ligeras de la membresía no se habla de grúa ni de vehículo cargado. */
 export function statusLabelFor(status: RequestStatus, kind: ServiceKind): string {
   const label = STATUS_LABELS[status];
-  return kind === "TOW" ? label : label.replace("grúa", "asistencia").replace("Grúa", "Asistencia");
+  if (kind === "TOW") return label;
+  if (status === "IN_PROGRESS") return "Servicio en curso";
+  return label.replace("grúa", "asistencia").replace("Grúa", "Asistencia");
 }
 
 export function formatKm(km: number): string {
@@ -125,16 +137,16 @@ export function formatPhone(phone: string): string {
 
 export const EVENT_LABELS: Record<string, string> = {
   CREATED: "Solicitud creada",
-  OFFER_SENT: "Se contactó a una grúa",
+  OFFER_SENT: "Se ofreció el servicio a una grúa",
   OFFER_REJECTED: "La grúa no pudo tomar el servicio",
   OFFER_EXPIRED: "La grúa no respondió",
-  ESCALATED: "Pasó a un operador",
-  HELP_REQUESTED: "Pediste ayuda a un operador",
+  ESCALATED: "Pasó a la central",
+  HELP_REQUESTED: "Pediste ayuda a la central",
   SEARCH_RESTARTED: "Se reinició la búsqueda",
-  ASSIGNED: "Grúa asignada",
+  ASSIGNED: "Grúa en camino",
   ARRIVED: "La grúa llegó",
-  IN_PROGRESS: "Servicio iniciado",
-  COMPLETED: "Servicio completado",
+  IN_PROGRESS: "Vehículo cargado, en ruta",
+  COMPLETED: "Completado",
   CANCELLED: "Cancelado",
   PROVIDER_CANCELLED: "La grúa asignada canceló",
   RATED: "Calificación enviada",

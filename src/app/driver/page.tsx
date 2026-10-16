@@ -4,8 +4,8 @@ import DriverApp from "@/components/driver/DriverApp";
 import { FullScreenSpinner } from "@/components/driver/bits";
 
 export const metadata: Metadata = {
-  title: "Gruero",
-  description: "App del gruero: conéctate, recibe ofertas y lleva el servicio hasta el final.",
+  title: "Piloto",
+  description: "App del piloto: actívate, recibe solicitudes y lleva el servicio hasta el final.",
 };
 
 /** `useSearchParams` (token del enlace mágico) exige un límite de Suspense. */

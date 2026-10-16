@@ -52,7 +52,7 @@ export function serviceNoun(kind: ServiceKind): "grúa" | "asistencia" {
 }
 
 export function providerGlyph(kind: ProviderKind): string {
-  return kind === "MOTO" ? "🏍️" : "🚛";
+  return kind === "MOTO" ? "🏍️" : "🚚";
 }
 
 export function providerNoun(kind: ProviderKind): "gruero" | "motorista" {
