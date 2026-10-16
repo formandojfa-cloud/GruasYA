@@ -17,10 +17,14 @@ export function usePolling<T>(
   const { enabled = true, deps = [] } = options;
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<ApiClientError | Error | null>(null);
-  const [loading, setLoading] = useState<boolean>(enabled);
+  const [settled, setSettled] = useState(false);
   const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
   const inFlight = useRef(false);
+
+  // Siempre se usa la última versión del fetcher sin reiniciar el intervalo.
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  });
 
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
@@ -33,16 +37,12 @@ export function usePolling<T>(
       setError(e instanceof Error ? e : new Error(String(e)));
     } finally {
       inFlight.current = false;
-      setLoading(false);
+      setSettled(true);
     }
   }, []);
 
   useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    if (!enabled) return;
     void refresh();
     const id = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
@@ -59,6 +59,7 @@ export function usePolling<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, intervalMs, refresh, ...deps]);
 
+  const loading = enabled && !settled;
   return { data, error, loading, refresh, setData };
 }
 
@@ -84,11 +85,13 @@ export type GeoState = {
  */
 export function useGeolocationWatch(enabled: boolean, options: { highAccuracy?: boolean } = {}): GeoState {
   const [state, setState] = useState<GeoState>({ position: null, error: null, supported: true });
+  const highAccuracy = options.highAccuracy ?? true;
   useEffect(() => {
     if (!enabled) return;
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setState({ position: null, error: "Tu navegador no permite ubicación", supported: false });
-      return;
+      // Diferido: el estado se actualiza fuera del cuerpo del efecto.
+      const t = setTimeout(() => setState({ position: null, error: "Tu navegador no permite ubicación", supported: false }), 0);
+      return () => clearTimeout(t);
     }
     const id = navigator.geolocation.watchPosition(
       (pos) => {
@@ -112,10 +115,10 @@ export function useGeolocationWatch(enabled: boolean, options: { highAccuracy?: 
               : "La ubicación tardó demasiado";
         setState((s) => ({ ...s, error: msg }));
       },
-      { enableHighAccuracy: options.highAccuracy ?? true, maximumAge: 5_000, timeout: 15_000 },
+      { enableHighAccuracy: highAccuracy, maximumAge: 5_000, timeout: 15_000 },
     );
     return () => navigator.geolocation.clearWatch(id);
-  }, [enabled, options.highAccuracy]);
+  }, [enabled, highAccuracy]);
   return state;
 }
 
@@ -123,12 +126,23 @@ export function useGeolocationWatch(enabled: boolean, options: { highAccuracy?: 
 export function useLocalStorage<T>(key: string, initial: T): [T, (v: T) => void] {
   const [value, setValue] = useState<T>(initial);
   useEffect(() => {
+    // Se lee tras montar (en el servidor no hay localStorage) y se aplica
+    // diferido para no disparar un render en cascada dentro del efecto.
+    let raw: string | null = null;
     try {
-      const raw = window.localStorage.getItem(key);
-      if (raw != null) setValue(JSON.parse(raw) as T);
+      raw = window.localStorage.getItem(key);
     } catch {
       /* sin almacenamiento */
     }
+    if (raw == null) return;
+    const t = setTimeout(() => {
+      try {
+        setValue(JSON.parse(raw) as T);
+      } catch {
+        /* valor corrupto: se ignora */
+      }
+    }, 0);
+    return () => clearTimeout(t);
   }, [key]);
   const set = useCallback(
     (v: T) => {

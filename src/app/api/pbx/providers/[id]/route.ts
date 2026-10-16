@@ -36,10 +36,10 @@ export const PATCH = handle<Ctx>(async (req, ctx) => {
       return fail(err.code, err.message, err.status);
     }
   }
-  const { status: _s, rotateToken, ...fields } = input;
+  const { rotateToken, name, phone, plate, vehicleLabel, isExternal } = input;
   const updated = await prisma.provider.update({
     where: { id },
-    data: { ...fields, ...(rotateToken ? { accessToken: newAccessToken() } : {}) },
+    data: { name, phone, plate, vehicleLabel, isExternal, ...(rotateToken ? { accessToken: newAccessToken() } : {}) },
     include: { requests: { where: { status: { in: ["EN_ROUTE", "ARRIVED", "IN_PROGRESS"] } }, select: { id: true } } },
   });
   return ok(toProviderAdminView(updated, new Date()));

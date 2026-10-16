@@ -4,7 +4,7 @@
  * PIN y cierre. Corre contra el servidor que levanta playwright.config.ts con
  * ofertas de 6 s para no esperar 40 s.
  */
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, request, test, type APIRequestContext, type APIResponse } from "@playwright/test";
 import type { OfferView, PbxOverview, ProviderSelf, RequestView } from "@/lib/types";
 
 const PICKUP = { lat: 14.5995, lng: -90.5069, address: "Zona 10" };
@@ -13,29 +13,29 @@ const DROPOFF = { lat: 14.6151, lng: -90.5569, address: "Taller zona 11" };
 const RUN = String(Date.now()).slice(-4);
 const PHONE = (n: number) => `555${n}${RUN}`;
 
-async function json<T>(res: Promise<import("@playwright/test").APIResponse> | import("@playwright/test").APIResponse): Promise<T> {
+async function json<T>(res: Promise<APIResponse> | APIResponse): Promise<T> {
   const r = await res;
   const body = (await r.json()) as T & { error?: { code: string; message: string } };
   if (!r.ok()) throw new Error(`${r.status()} ${body.error?.code}: ${body.error?.message}`);
   return body;
 }
 
-async function clientCtx(playwright: typeof import("@playwright/test"), baseURL: string, phone: string, name: string) {
-  const ctx = await playwright.request.newContext({ baseURL });
+async function clientCtx(baseURL: string, phone: string, name: string) {
+  const ctx = await request.newContext({ baseURL });
   await json(ctx.post("/api/auth/client", { data: { phone, name } }));
   return ctx;
 }
 
-async function providerCtx(playwright: typeof import("@playwright/test"), baseURL: string, token: string, at: { lat: number; lng: number }) {
-  const ctx = await playwright.request.newContext({ baseURL });
+async function providerCtx(baseURL: string, token: string, at: { lat: number; lng: number }) {
+  const ctx = await request.newContext({ baseURL });
   await json(ctx.post("/api/provider/auth", { data: { token } }));
   await json(ctx.post("/api/provider/location", { data: at }));
   await json(ctx.post("/api/provider/status", { data: { status: "ONLINE" } }));
   return ctx;
 }
 
-async function pbxCtx(playwright: typeof import("@playwright/test"), baseURL: string) {
-  const ctx = await playwright.request.newContext({ baseURL });
+async function pbxCtx(baseURL: string) {
+  const ctx = await request.newContext({ baseURL });
   await json(ctx.post("/api/pbx/auth", { data: { password: "e2e-pbx", name: "Operador E2E" } }));
   return ctx;
 }
@@ -47,9 +47,9 @@ async function pendingOffer(ctx: APIRequestContext): Promise<OfferView | null> {
 
 test.describe.configure({ mode: "serial" });
 
-test("sin grúas conectadas: escala al PBX, el operador asigna un gruero externo y el servicio se completa con PIN", async ({ playwright, baseURL }) => {
-  const client = await clientCtx(playwright, baseURL!, PHONE(1), "Cliente Uno");
-  const pbx = await pbxCtx(playwright, baseURL!);
+test("sin grúas conectadas: escala al PBX, el operador asigna un gruero externo y el servicio se completa con PIN", async ({ baseURL }) => {
+  const client = await clientCtx(baseURL!, PHONE(1), "Cliente Uno");
+  const pbx = await pbxCtx(baseURL!);
 
   const req = await json<RequestView>(
     client.post("/api/requests", { data: { kind: "TOW", vehicleKind: "SEDAN", pickup: PICKUP, dropoff: DROPOFF } }),
@@ -72,7 +72,7 @@ test("sin grúas conectadas: escala al PBX, el operador asigna un gruero externo
   expect(assigned.invite.whatsapp).toContain("wa.me/5024999");
   const token = new URL(assigned.invite.accessLink).searchParams.get("token")!;
 
-  const ext = await playwright.request.newContext({ baseURL });
+  const ext = await request.newContext({ baseURL });
   const me = await json<ProviderSelf>(ext.post("/api/provider/auth", { data: { token } }));
   expect(me.status).toBe("BUSY");
   expect(me.activeJob?.id).toBe(req.id);
@@ -104,11 +104,11 @@ test("sin grúas conectadas: escala al PBX, el operador asigna un gruero externo
   expect(after.status).toBe("OFFLINE");
 });
 
-test("cascada: el más cercano rechaza, el siguiente deja expirar, el tercero acepta; el cliente ve la grúa en vivo", async ({ playwright, baseURL }) => {
-  const client = await clientCtx(playwright, baseURL!, PHONE(2), "Cliente Dos");
-  const near = await providerCtx(playwright, baseURL!, "tow-zona10", { lat: 14.5995, lng: -90.5069 });
-  const mid = await providerCtx(playwright, baseURL!, "tow-zona11", { lat: 14.6151, lng: -90.5569 });
-  const far = await providerCtx(playwright, baseURL!, "tow-mixco", { lat: 14.6333, lng: -90.6064 });
+test("cascada: el más cercano rechaza, el siguiente deja expirar, el tercero acepta; el cliente ve la grúa en vivo", async ({ baseURL }) => {
+  const client = await clientCtx(baseURL!, PHONE(2), "Cliente Dos");
+  const near = await providerCtx(baseURL!, "tow-zona10", { lat: 14.5995, lng: -90.5069 });
+  const mid = await providerCtx(baseURL!, "tow-zona11", { lat: 14.6151, lng: -90.5569 });
+  const far = await providerCtx(baseURL!, "tow-mixco", { lat: 14.6333, lng: -90.6064 });
 
   const req = await json<RequestView>(
     client.post("/api/requests", { data: { kind: "TOW", vehicleKind: "SUV", pickup: PICKUP, dropoff: DROPOFF } }),
@@ -149,9 +149,9 @@ test("cascada: el más cercano rechaza, el siguiente deja expirar, el tercero ac
   for (const ctx of [near, mid, far]) await json(ctx.post("/api/provider/status", { data: { status: "OFFLINE" } }));
 });
 
-test("el gruero asignado se baja: vuelve a buscar sin él y escala si nadie más puede", async ({ playwright, baseURL }) => {
-  const client = await clientCtx(playwright, baseURL!, PHONE(3), "Cliente Tres");
-  const only = await providerCtx(playwright, baseURL!, "tow-villanueva", { lat: 14.6, lng: -90.51 });
+test("el gruero asignado se baja: vuelve a buscar sin él y escala si nadie más puede", async ({ baseURL }) => {
+  const client = await clientCtx(baseURL!, PHONE(3), "Cliente Tres");
+  const only = await providerCtx(baseURL!, "tow-villanueva", { lat: 14.6, lng: -90.51 });
 
   const req = await json<RequestView>(
     client.post("/api/requests", { data: { kind: "TOW", vehicleKind: "PICKUP", pickup: PICKUP, dropoff: DROPOFF } }),

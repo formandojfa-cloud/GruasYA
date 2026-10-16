@@ -79,6 +79,8 @@ const CLIENT_EVENT_TYPES = new Set([
   "RATED",
 ]);
 
+const INTERNAL_EVENT_KEYS = new Set(["providerId", "operatorId", "offerId"]);
+
 function toEvents(req: RequestWithRelations, role: ViewerRole): RequestEventView[] {
   return req.events
     .filter((e) => role === "PBX" || CLIENT_EVENT_TYPES.has(e.type))
@@ -86,8 +88,7 @@ function toEvents(req: RequestWithRelations, role: ViewerRole): RequestEventView
       let data: Record<string, unknown> | null = e.data ? (JSON.parse(e.data) as Record<string, unknown>) : null;
       if (data && role !== "PBX") {
         // Los clientes no necesitan ids internos de proveedores.
-        const { providerId: _p, operatorId: _o, offerId: _f, ...rest } = data;
-        data = rest;
+        data = Object.fromEntries(Object.entries(data).filter(([k]) => !INTERNAL_EVENT_KEYS.has(k)));
       }
       return { type: e.type, at: e.at.toISOString(), data };
     });
