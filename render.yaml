@@ -19,3 +19,7 @@ services:
         value: pbx123
       - key: NOMINATIM_USER_AGENT
         value: asistencia-vial-demo/0.1
+      # Rutas con tráfico en vivo (opcional). Sin él se usa OSRM gratis por calles.
+      # Pega aquí el mismo token pk... que usabas en el prototipo (Supabase/GitHub).
+      - key: MAPBOX_TOKEN
+        sync: false
