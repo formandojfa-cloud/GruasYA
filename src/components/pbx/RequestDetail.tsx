@@ -82,7 +82,7 @@ export default function RequestDetail({ id, overview, onClose, onChanged, onAck 
         <Body key={request.id} request={request} alert={alert} overview={overview} onClose={onClose} onChanged={onChanged} onAck={onAck} />
       ) : (
         <div className="flex-1 flex flex-col">
-          <header className="flex items-center justify-between px-4 h-14 border-b border-border bg-background safe-top">
+          <header className="flex items-center justify-between px-4 h-14 bg-surface safe-top">
             <span className="tenue">Solicitud #{shortId(id)}</span>
             <CloseButton onClose={onClose} />
           </header>
@@ -113,7 +113,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
       type="button"
       onClick={onClose}
       aria-label="Cerrar"
-      className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl border border-border bg-background hover:bg-surface text-2xl leading-none"
+      className="pildora !px-0 h-10 w-10 shrink-0 justify-center cursor-pointer hover:bg-surface-2 text-2xl leading-none"
     >
       ×
     </button>
@@ -174,7 +174,7 @@ function Body({
 
   return (
     <>
-      <header className="flex items-start gap-2 px-3.5 py-3 border-b border-border bg-background safe-top">
+      <header className="flex items-start gap-2 px-3.5 py-3 bg-surface safe-top">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <StatusPill status={r.status} />
@@ -328,10 +328,10 @@ function Body({
               <span className="text-[15px] font-bold">Total en efectivo</span>
               <span className="grande tabular-nums">{formatQ(r.quote.totalQ)}</span>
             </div>
-            <p className="tenue chico">{r.quote.summary} · Pago en efectivo al gruero.</p>
+            <p className="tenue chico">{r.quote.summary} · Pago en efectivo al piloto.</p>
             <div className="pt-2 border-t border-border/60">
               <KV k="Pago al piloto" v={formatQ(r.quote.providerPayoutQ)} />
-              <KV k="Ingreso GruaYa" v={formatQ(r.quote.platformRevenueQ)} />
+              <KV k="Ingreso GrúaYa" v={formatQ(r.quote.platformRevenueQ)} />
             </div>
             {r.cancellation && (
               <p className="chico text-rojo">

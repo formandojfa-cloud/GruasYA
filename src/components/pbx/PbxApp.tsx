@@ -12,7 +12,7 @@ import { api, ApiClientError, errorMessage } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 import { useLocalStorage, useNow, usePolling } from "@/lib/hooks";
 import type { OperatorSelf, PbxOverview } from "@/lib/types";
-import { BootSpinner, Centered, CentralBar, CentralShell, type PbxSection } from "./bits";
+import { BootSpinner, Centered, CentralShell, type PbxSection } from "./bits";
 import Dashboard from "./Dashboard";
 import LoginScreen from "./LoginScreen";
 import ProvidersTab from "./ProvidersTab";
@@ -137,14 +137,9 @@ export default function PbxApp({ tab }: { tab: Tab }) {
   return (
     <CentralShell
       section={tab}
-      bar={
-        <CentralBar
-          section={tab}
-          unackCount={unackCount}
-          hasUnseen={unseen.size > 0}
-          right={<OperatorStatus operatorName={overview?.operator.name ?? storedName} serverTime={overview?.serverTime ?? null} pollError={pollError} onLogout={logout} />}
-        />
-      }
+      unackCount={unackCount}
+      hasUnseen={unseen.size > 0}
+      right={<OperatorStatus operatorName={overview?.operator.name ?? storedName} serverTime={overview?.serverTime ?? null} pollError={pollError} onLogout={logout} />}
     >
       {pollError && (
         <div role="status">
@@ -176,25 +171,24 @@ export default function PbxApp({ tab }: { tab: Tab }) {
   );
 }
 
-// ---------- Operador y estado de la conexión (lado derecho de la barra) ----------
+// ---------- Operador y estado de la conexión (píldoras del lado derecho de la barra) ----------
 
 function OperatorStatus({ operatorName, serverTime, pollError, onLogout }: { operatorName: string; serverTime: string | null; pollError: string | null; onLogout: () => void }) {
   const now = useNow(1000);
   return (
     <>
-      <span className="hidden md:inline tenue chico truncate" title={serverTime ? `Última actualización ${relativeTime(serverTime, now)}` : undefined}>
-        {operatorName}
+      <span className="pildora hidden md:inline-flex max-w-[320px] text-muted" title={serverTime ? `Última actualización ${relativeTime(serverTime, now)}` : undefined}>
+        <span className="truncate text-foreground">{operatorName}</span>
         {serverTime && (
           <>
-            {" · "}
-            <span className={cn("inline-block h-2 w-2 rounded-full align-middle mr-1", pollError ? "bg-rojo" : "bg-verde")} />
-            {pollError ? "sin conexión" : `al día ${relativeTime(serverTime, now)}`}
+            <span className={cn("estado-punto !h-2 !w-2", !pollError && "en-linea")} aria-hidden />
+            <span className="whitespace-nowrap">{pollError ? "sin conexión" : `al día ${relativeTime(serverTime, now)}`}</span>
           </>
         )}
       </span>
-      <Button size="sm" variant="secondary" onClick={onLogout}>
+      <button type="button" onClick={onLogout} className="pildora cursor-pointer hover:bg-surface-2 transition">
         Salir
-      </Button>
+      </button>
     </>
   );
 }

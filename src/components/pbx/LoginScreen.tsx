@@ -72,7 +72,7 @@ export default function LoginScreen({
           </form>
         </section>
       </main>
-      <p className="pie">Central GruaYa · solo para el equipo que coordina las grúas</p>
+      <p className="pie">Central GrúaYa · solo para el equipo que coordina las grúas</p>
     </div>
   );
 }

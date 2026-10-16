@@ -99,3 +99,27 @@ export function apiErrorMessage(err: unknown): string {
   }
   return errorMessage(err);
 }
+
+/** Opciones de servicio de grúa del prototipo ("GrúaYa Moto / Carro / Pickup"), sobre los VehicleKind existentes. */
+export const VEHICLE_OPTIONS: ReadonlyArray<{ kind: VehicleKind; name: string; detail: string }> = [
+  { kind: "MOTO", name: "Moto", detail: "Plataforma para motocicleta" },
+  { kind: "SEDAN", name: "Carro", detail: "Sedán, hatchback o SUV pequeña" },
+  { kind: "SUV", name: "Camioneta", detail: "SUV o camioneta mediana" },
+  { kind: "PICKUP", name: "Pickup", detail: "Pickup, camioneta o SUV grande" },
+];
+
+export const VEHICLE_SHORT: Record<VehicleKind, string> = { MOTO: "Moto", SEDAN: "Carro", SUV: "Camioneta", PICKUP: "Pickup" };
+
+/** Chips "Qué pasó": su texto va al campo `notes` de la solicitud. */
+export const PROBLEM_CHIPS = ["No arranca", "Choque", "Llanta sin repuesto", "Otro"] as const;
+export type ProblemChip = (typeof PROBLEM_CHIPS)[number];
+
+/** Iniciales para el avatar ("Ana López" → "AL"). */
+export function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((p) => /^\p{L}/u.test(p))
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join("");
+}

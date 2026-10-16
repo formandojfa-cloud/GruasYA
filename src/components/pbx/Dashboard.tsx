@@ -36,8 +36,8 @@ type Props = {
   onAck: (alertId: string) => Promise<void>;
 };
 
-/** En escritorio la rejilla ocupa lo que queda bajo la barra y las métricas; en teléfono fluye. */
-const GRID_H = "lg:h-[calc(100dvh-236px)] lg:min-h-[480px]";
+/** En escritorio la rejilla ocupa lo que queda bajo la barra, las pestañas y las métricas; en teléfono fluye. */
+const GRID_H = "lg:h-[calc(100dvh-268px)] lg:min-h-[480px]";
 
 export default function Dashboard({ overview, unseen, onOpen, onAck }: Props) {
   const now = useNow(1000);
@@ -58,15 +58,16 @@ export default function Dashboard({ overview, unseen, onOpen, onAck }: Props) {
 
 // ---------- Métricas (tarjeta "Servicios" del prototipo) ----------
 
+/** Filas "etiqueta … valor" como la tarjeta del prototipo; en escritorio, tres columnas dentro de la misma tarjeta. */
 function StatsCard({ stats }: { stats: PbxOverview["stats"] }) {
   const rate = stats.escalationRate7d;
   return (
-    <section className="tarjeta gap-0 lg:flex-row lg:items-stretch lg:py-3" aria-label="Resumen">
+    <section className="tarjeta gap-1 lg:grid lg:grid-cols-3 lg:gap-x-10 lg:gap-y-0 lg:py-3" aria-label="Resumen">
       <Stat label="Servicios completados hoy" value={stats.completedToday} />
       <Stat label="Sin grúa (pasaron a la central)" value={stats.escalated} tone={stats.escalated > 0 ? "danger" : "neutral"} />
       <Stat label="Grúas disponibles" value={stats.online} tone={stats.online === 0 ? "danger" : "success"} />
       <Stat label="En servicio" value={stats.busy} tone="info" hint={`${stats.inService} servicio${stats.inService === 1 ? "" : "s"} activo${stats.inService === 1 ? "" : "s"}`} />
-      <Stat label="Buscando grúa" value={stats.searching} tone={stats.searching > 0 ? "warning" : "neutral"} />
+      <Stat label="Buscando grúa" value={stats.searching} />
       <Stat label="Sin grúa en 7 días" value={rate == null ? "—" : `${Math.round(rate * 100)} %`} tone={rate != null && rate > 0.3 ? "danger" : "neutral"} />
     </section>
   );
@@ -230,7 +231,7 @@ function PbxMap({ providers, active }: { providers: ProviderAdminView[]; active:
     return out;
   }, [providers, active, showOffline]);
   const located = providers.filter((p) => p.location && p.status !== "OFFLINE").length;
-  const chip = "rounded-full bg-background/90 backdrop-blur px-2 py-1 border border-border text-[11px] text-foreground";
+  const chip = "rounded-full bg-background/95 shadow-pildora px-2.5 py-1 text-[12px] font-semibold text-foreground";
 
   return (
     <section className="mapa-marco min-w-0 lg:h-full" aria-label="Mapa de la red">
@@ -258,7 +259,7 @@ function PbxMap({ providers, active }: { providers: ProviderAdminView[]; active:
       </div>
       {markers.length === 0 && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <span className="rounded-[10px] bg-background/90 px-3 py-2 text-sm text-muted border border-border">
+          <span className="rounded-[12px] bg-background/95 shadow-pildora px-3 py-2 text-sm text-muted">
             {located === 0 ? "Ninguna grúa conectada con ubicación" : "Sin marcadores"}
           </span>
         </div>

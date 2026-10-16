@@ -2,9 +2,10 @@
 
 /**
  * Piezas pequeñas propias de la Central (complementan src/components/ui) con el
- * aspecto GruaYa: barra pegajosa con el wordmark "GruaYa central" y los
- * segmentos Servicios · Pilotos, columna de tarjetas (560 px en teléfono, ancha
- * en escritorio para conservar la rejilla del panel) y botones del prototipo.
+ * aspecto GrúaYa final: barra pegajosa con la píldora "GrúaYa Admin" y píldoras
+ * a la derecha, pestañas en píldora (Servicios · Pilotos) debajo, columna de
+ * tarjetas blancas (560 px en teléfono, ancha en escritorio para conservar la
+ * rejilla del panel) y botones del prototipo (principal negro, peligro en rojo).
  */
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
@@ -23,18 +24,22 @@ const SECTIONS: Array<{ key: PbxSection; label: string; href: string }> = [
 /** La columna del prototipo mide 560 px; en escritorio la Central se ensancha para la rejilla alertas · mapa · activos. */
 export const WIDE = "lg:max-w-[1440px]";
 
-/** Barra pegajosa: wordmark, segmentos (con la cuenta de alertas sin atender) y, a la derecha, operador y "Salir". */
-export function CentralBar({
-  section,
-  unackCount = 0,
-  hasUnseen,
-  right,
-}: {
-  section?: PbxSection;
-  unackCount?: number;
-  hasUnseen?: boolean;
-  right?: ReactNode;
-}) {
+/** Barra pegajosa del Admin: píldora de marca "GrúaYa Admin" a la izquierda y, a la derecha, las píldoras del operador y "Salir". */
+export function CentralBar({ right }: { right?: ReactNode }) {
+  return (
+    <header className="barra">
+      <div className={cn("columna flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2", WIDE)}>
+        <h1 className="leading-none">
+          <Wordmark suffix="Admin" />
+        </h1>
+        {right && <div className="ml-auto flex items-center gap-2 min-w-0">{right}</div>}
+      </div>
+    </header>
+  );
+}
+
+/** Pestañas en píldora del prototipo (la activa blanca con sombra): Servicios (con la cuenta de alertas sin atender) · Pilotos. */
+export function CentralTabs({ section, unackCount = 0, hasUnseen }: { section: PbxSection; unackCount?: number; hasUnseen?: boolean }) {
   const router = useRouter();
   const items = SECTIONS.map((s) => ({
     key: s.key,
@@ -43,7 +48,7 @@ export function CentralBar({
         <span className="inline-flex items-center gap-1.5">
           {s.label}
           <span
-            className={cn("inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-rojo text-white text-[11px] font-bold tabular-nums", hasUnseen && "animate-pulse")}
+            className={cn("inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-rojo text-white text-[12px] font-bold tabular-nums", hasUnseen && "animate-pulse")}
             aria-label={`${unackCount} alertas sin atender`}
           >
             {unackCount}
@@ -54,33 +59,36 @@ export function CentralBar({
       ),
   }));
   return (
-    <header className="barra">
-      <div className={cn("columna flex-row flex-wrap items-center gap-x-4 gap-y-2.5", WIDE)}>
-        <h1 className="order-1 leading-none">
-          <Wordmark suffix="central" />
-        </h1>
-        {right && <div className="order-2 ml-auto flex items-center gap-2 min-w-0 lg:order-3">{right}</div>}
-        {section && (
-          <Segments
-            items={items}
-            value={section}
-            onChange={(key) => router.push(SECTIONS.find((s) => s.key === key)?.href ?? "/pbx")}
-            label="Secciones"
-            className="order-3 w-full lg:order-2 lg:w-auto lg:[&>button]:flex-none lg:[&>button]:px-6"
-          />
-        )}
-      </div>
-    </header>
+    <nav aria-label="Secciones" className="-mx-4 px-4 lg:mx-0 lg:px-0">
+      <Segments variant="pestanas" items={items} value={section} onChange={(key) => router.push(SECTIONS.find((s) => s.key === key)?.href ?? "/pbx")} label="Secciones" />
+    </nav>
   );
 }
 
-/** Página completa de la Central: barra + columna de tarjetas + pie. */
-export function CentralShell({ section, bar, children, footer }: { section?: PbxSection; bar?: ReactNode; children: ReactNode; footer?: ReactNode }) {
+/** Página completa de la Central: barra + pestañas + columna de tarjetas + pie. */
+export function CentralShell({
+  section,
+  right,
+  unackCount,
+  hasUnseen,
+  children,
+  footer,
+}: {
+  section?: PbxSection;
+  right?: ReactNode;
+  unackCount?: number;
+  hasUnseen?: boolean;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
   return (
     <div className="pagina">
-      {bar ?? <CentralBar section={section} />}
-      <main className={cn("columna", WIDE)}>{children}</main>
-      <p className="pie">{footer ?? "Central GruaYa · Precio fijo · Pago en efectivo al gruero"}</p>
+      <CentralBar right={right} />
+      <main className={cn("columna", WIDE)}>
+        {section && <CentralTabs section={section} unackCount={unackCount} hasUnseen={hasUnseen} />}
+        {children}
+      </main>
+      <p className="pie">{footer ?? "Central GrúaYa · Precio fijo · Pago en efectivo al piloto"}</p>
     </div>
   );
 }
@@ -88,20 +96,19 @@ export function CentralShell({ section, bar, children, footer }: { section?: Pbx
 // ---------- Métricas ----------
 
 /**
- * Métrica como en la tarjeta "Servicios" del prototipo: en teléfono una fila
- * (texto a la izquierda, número en negrita a la derecha); en escritorio, celda
- * con el número grande.
+ * Métrica como en la tarjeta "Servicios" del prototipo: una fila con el texto a
+ * la izquierda y el número en negrita a la derecha (en escritorio las filas se
+ * reparten en columnas dentro de la misma tarjeta).
  */
 export function Stat({ label, value, tone = "neutral", hint }: { label: ReactNode; value: ReactNode; tone?: Tone; hint?: string }) {
-  const color =
-    tone === "danger" ? "text-rojo" : tone === "warning" ? "text-amarillo" : tone === "success" ? "text-verde" : tone === "info" ? "text-azul" : "text-foreground";
+  const color = tone === "danger" ? "text-rojo" : tone === "success" ? "text-verde" : tone === "info" ? "text-azul" : "text-foreground";
   return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5 min-w-0 lg:flex-1 lg:flex-col lg:items-start lg:gap-0 lg:py-0 lg:px-4 lg:border-l lg:border-border lg:first:border-0 lg:first:pl-0">
-      <span className="text-[15px] leading-snug lg:text-[13px] lg:text-muted">
+    <div className="flex items-center justify-between gap-3 min-h-10 min-w-0">
+      <span className="text-[16px] leading-snug">
         {label}
         {hint && <span className="tenue chico"> · {hint}</span>}
       </span>
-      <strong className={cn("tabular-nums text-[17px] lg:text-[28px] lg:font-bold lg:leading-[1.1] lg:tracking-[-0.5px]", color)}>{value}</strong>
+      <strong className={cn("tabular-nums text-[17px] whitespace-nowrap", color)}>{value}</strong>
     </div>
   );
 }
@@ -120,7 +127,7 @@ export function KV({ k, v, mono, className }: { k: string; v: ReactNode; mono?: 
   return (
     <div className={cn("flex items-baseline justify-between gap-3 py-1 border-b border-border/60 last:border-0", className)}>
       <span className="tenue chico shrink-0">{k}</span>
-      <span className={cn("text-sm text-right min-w-0 break-words", mono && "font-mono")}>{v}</span>
+      <span className={cn("text-sm text-right min-w-0 break-words font-semibold", mono && "font-mono")}>{v}</span>
     </div>
   );
 }
@@ -140,12 +147,12 @@ export function Box({ children, className, tone }: { children: ReactNode; classN
   return <section className={cn("tarjeta min-w-0", accent, className)}>{children}</section>;
 }
 
-// ---------- Botones del prototipo (44 px, radio 12 px, borde de 1 px) ----------
+// ---------- Botones del prototipo (principal negro; radio 12 px; peligro = texto rojo) ----------
 
 const BTN = "inline-flex items-center justify-center gap-1.5 rounded-xl border font-bold select-none transition active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed";
 const BTN_SIZE = { sm: "h-10 px-3 text-[13px]", md: "h-11 px-4 text-[15px]", lg: "h-[52px] px-5 text-[17px]" } as const;
 const BTN_LOOK = {
-  primary: "bg-amarillo text-primary-foreground border-amarillo hover:brightness-95",
+  primary: "bg-primary text-primary-foreground border-primary hover:opacity-90",
   secondary: "bg-background text-foreground border-border hover:bg-surface",
   success: "bg-verde text-white border-verde hover:brightness-95",
   ghost: "bg-transparent text-foreground border-transparent hover:bg-surface",
@@ -285,7 +292,7 @@ export function ConfirmButton({
   );
 }
 
-/** Panel lateral (escritorio) / pantalla completa (teléfono) sobre fondo hueso, con tarjetas dentro. */
+/** Panel lateral (escritorio) / pantalla completa (teléfono) sobre fondo gris de página, con tarjetas blancas dentro. */
 export function Drawer({ open, onClose, children, label }: { open: boolean; onClose: () => void; children: ReactNode; label: string }) {
   useEffect(() => {
     if (!open) return;
@@ -299,7 +306,7 @@ export function Drawer({ open, onClose, children, label }: { open: boolean; onCl
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label={label}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <aside className="absolute inset-y-0 right-0 w-full md:w-[640px] bg-surface shadow-2xl flex flex-col md:border-l md:border-border">{children}</aside>
+      <aside className="absolute inset-y-0 right-0 w-full md:w-[640px] bg-surface shadow-2xl flex flex-col">{children}</aside>
     </div>
   );
 }
