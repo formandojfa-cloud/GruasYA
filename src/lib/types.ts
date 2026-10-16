@@ -7,16 +7,43 @@ import { z } from "zod";
 import type {
   AssignedBy,
   CancelledBy,
+  ChatRole,
+  IdentityStatus,
+  MediaKind,
+  MediaOwnerType,
+  PauseReason,
+  Problem,
   ProviderKind,
   ProviderStatus,
   RequestStatus,
   ServiceKind,
+  TowVehicleType,
   VehicleKind,
+  Weather,
 } from "@/generated/prisma/enums";
 import type { Quote } from "./pricing";
+import type { RouteSource } from "./routes";
 
-export type { AssignedBy, CancelledBy, ProviderKind, ProviderStatus, RequestStatus, ServiceKind, VehicleKind };
-export type { Quote, QuoteLine } from "./pricing";
+export type {
+  AssignedBy,
+  CancelledBy,
+  ChatRole,
+  IdentityStatus,
+  MediaKind,
+  MediaOwnerType,
+  PauseReason,
+  Problem,
+  ProviderKind,
+  ProviderStatus,
+  RequestStatus,
+  ServiceKind,
+  TowVehicleType,
+  VehicleKind,
+  Weather,
+};
+export type { Quote, QuoteLine, Tariff, VehicleClass } from "./pricing";
+export type { RouteSource } from "./routes";
+export type { AppSettings, DispatchSettings, Flags, PublicConfig, SettingsPatch } from "./settings";
 
 // ---------- Entrada ----------
 
@@ -32,6 +59,10 @@ export type Place = z.infer<typeof PlaceSchema>;
 
 export const ServiceKindSchema = z.enum(["TOW", "TIRE", "BATTERY", "FUEL", "LOCKSMITH"]);
 export const VehicleKindSchema = z.enum(["SEDAN", "SUV", "PICKUP", "MOTO"]);
+/** Qué pasó: No arranca · Choque · Llanta sin repuesto · Otro. */
+export const ProblemSchema = z.enum(["NO_START", "CRASH", "FLAT_NO_SPARE", "OTHER"]);
+export const WeatherSchema = z.enum(["NONE", "RAIN", "HEAVY_RAIN"]);
+export const TowVehicleTypeSchema = z.enum(["PLATFORM", "DRAG"]);
 
 export const PhoneSchema = z
   .string()
@@ -42,6 +73,8 @@ export const PhoneSchema = z
 
 export const QuoteRequestSchema = z.object({
   kind: ServiceKindSchema,
+  /** Para el factor por vehículo (Moto 0.8 · Carro 1 · Pickup o camioneta 1.2); por defecto Carro. */
+  vehicleKind: VehicleKindSchema.optional(),
   pickup: LatLngSchema,
   dropoff: LatLngSchema.optional(),
 });
@@ -54,6 +87,7 @@ export const CreateRequestSchema = z
     vehicleLabel: z.string().trim().max(80).optional(),
     plate: z.string().trim().max(12).optional(),
     notes: z.string().trim().max(300).optional(),
+    problem: ProblemSchema.optional(),
     pickup: PlaceSchema,
     dropoff: PlaceSchema.optional(),
   })
@@ -67,6 +101,25 @@ export const ClientLoginSchema = z.object({
   phone: PhoneSchema,
   name: z.string().trim().min(2).max(60),
 });
+
+/** `POST /api/auth/client/start`. */
+export const PhoneStartSchema = z.object({ phone: PhoneSchema });
+
+/** `POST /api/auth/client/verify`: el nombre solo hace falta la primera vez. */
+export const PhoneVerifySchema = z.object({
+  phone: PhoneSchema,
+  code: z.string().trim().regex(/^\d{6}$/, "El código tiene 6 dígitos"),
+  name: z.string().trim().min(2).max(60).optional(),
+  plate: z.string().trim().max(12).optional(),
+  vehicleKind: VehicleKindSchema.optional(),
+});
+
+export const IdentityDecisionSchema = z.object({
+  decision: z.enum(["APPROVED", "REJECTED"]),
+  note: z.string().trim().max(300).optional(),
+});
+
+export const ChatPostSchema = z.object({ text: z.string().trim().min(1).max(500) });
 
 export const ProviderLoginSchema = z.object({ token: z.string().trim().min(8).max(200) });
 
@@ -99,6 +152,8 @@ export const ExternalProviderSchema = z.object({
   kind: z.enum(["TOW", "MOTO"]).default("TOW"),
   plate: z.string().trim().max(12).optional(),
   vehicleLabel: z.string().trim().max(80).optional(),
+  /** Plataforma o arrastre (grúas). */
+  vehicleType: TowVehicleTypeSchema.optional(),
 });
 
 export const PbxAssignSchema = z
@@ -118,11 +173,13 @@ export type ProviderCard = {
   kind: ProviderKind;
   plate: string | null;
   vehicleLabel: string | null;
+  /** Plataforma o arrastre. */
+  vehicleType: TowVehicleType;
   photoUrl: string | null;
   rating: number | null;
   ratingCount: number;
   isExternal: boolean;
-  /** Solo visible para el cliente mientras el servicio está activo, y para el PBX. */
+  /** Solo para el PBX, y para el cliente mientras el servicio está activo si `Settings.shareContactNumbers`. */
   phone?: string;
   /** Enlace de WhatsApp listo para abrir (cuando `phone` es visible). */
   whatsapp?: string;
@@ -166,6 +223,37 @@ export type EscalationView = {
   acknowledgedBy: string | null;
 };
 
+/** Estado de la verificación de identidad de un usuario o gruero. */
+export type IdentityView = {
+  status: IdentityStatus;
+  note: string | null;
+  reviewedAt: string | null;
+  /** Id de `GET /api/media/:id` por tipo de foto. */
+  media: Partial<Record<MediaKind, string>>;
+  required: MediaKind[];
+  missing: MediaKind[];
+};
+
+export type MediaView = {
+  id: string;
+  kind: MediaKind;
+  ownerType: MediaOwnerType;
+  requestId: string | null;
+  mime: string;
+  size: number;
+  url: string;
+  createdAt: string;
+};
+
+export type ChatMessageView = {
+  id: string;
+  senderRole: ChatRole;
+  senderId: string;
+  senderName: string;
+  text: string;
+  at: string;
+};
+
 export type RequestView = {
   id: string;
   kind: ServiceKind;
@@ -174,9 +262,19 @@ export type RequestView = {
   vehicleLabel: string | null;
   plate: string | null;
   notes: string | null;
+  /** Qué pasó (No arranca · Choque · Llanta sin repuesto · Otro). */
+  problem: Problem | null;
   pickup: Place;
   dropoff: Place | null;
   distanceKm: number;
+  /** Duración estimada del remolque al cotizar (min). */
+  estimatedMinutes: number | null;
+  weatherAtRequest: Weather | null;
+  routeSource: RouteSource | null;
+  /** Trazo por calles recogida → destino (null si no hubo ruta). */
+  routeGeometry: Place[] | null;
+  /** Mensajes en el chat del servicio. */
+  chatCount: number;
   isMember: boolean;
   quote: Quote;
   priceTotal: number;
@@ -193,9 +291,13 @@ export type RequestView = {
     assignedAt: string | null;
     arrivedAt: string | null;
     startedAt: string | null;
+    deliveredAt: string | null;
+    paidAt: string | null;
     completedAt: string | null;
     cancelledAt: string | null;
   };
+  /** Evidencias de carga subidas por el gruero (ids de `GET /api/media/:id`). */
+  loadMedia: { photos: string[]; videos: string[] };
   cancellation: { by: CancelledBy; reason: string | null; feeQ: number } | null;
   ratings: { client: number | null; provider: number | null };
   events: RequestEventView[];
@@ -210,6 +312,7 @@ export type OfferView = {
   kind: ServiceKind;
   vehicleKind: VehicleKind;
   vehicleLabel: string | null;
+  problem: Problem | null;
   pickup: Place;
   dropoff: Place | null;
   /** Desde el proveedor hasta el punto de recogida. */
@@ -217,7 +320,10 @@ export type OfferView = {
   etaToPickupMinutes: number;
   /** Distancia del remolque. */
   towDistanceKm: number;
+  towMinutes: number | null;
   payoutQ: number;
+  /** Lo que el cliente paga en efectivo. */
+  totalQ: number;
   clientFirstName: string;
 };
 
@@ -228,10 +334,14 @@ export type ProviderSelf = {
   kind: ProviderKind;
   plate: string | null;
   vehicleLabel: string | null;
+  vehicleType: TowVehicleType;
   status: ProviderStatus;
   isExternal: boolean;
   rating: number | null;
   ratingCount: number;
+  identity: IdentityView;
+  consecutiveMissed: number;
+  pausedReason: PauseReason | null;
   location: { lat: number; lng: number; heading: number | null; updatedAt: string } | null;
   pendingOffer: OfferView | null;
   activeJob: RequestView | null;
@@ -242,10 +352,29 @@ export type ClientSelf = {
   id: string;
   name: string;
   phone: string;
+  phoneVerifiedAt: string | null;
   isMember: boolean;
   membershipExpiresAt: string | null;
+  identity: IdentityView;
+  /** Saldo pendiente (cargos de cancelación) que bloquea pedir otra grúa. */
+  balanceDueQ: number;
   activeRequest: RequestView | null;
   vehicles: { id: string; plate: string; label: string; kind: VehicleKind }[];
+};
+
+/** Conductor en Central → Conductores. */
+export type UserAdminView = {
+  id: string;
+  name: string;
+  phone: string;
+  whatsapp: string;
+  phoneVerifiedAt: string | null;
+  isMember: boolean;
+  membershipExpiresAt: string | null;
+  identity: IdentityView;
+  balanceDueQ: number;
+  requests: { total: number; completed: number; cancelled: number; active: number };
+  createdAt: string;
 };
 
 export type OperatorSelf = { id: string; name: string };
@@ -259,6 +388,10 @@ export type ProviderAdminView = ProviderCard & {
   accessLink: string;
   whatsappInvite: string;
   activeRequestId: string | null;
+  identityStatus: IdentityStatus;
+  identityNote: string | null;
+  consecutiveMissed: number;
+  pausedReason: PauseReason | null;
   createdAt: string;
 };
 
@@ -299,4 +432,18 @@ export const ACTIVE_STATUSES: readonly RequestStatus[] = [
   "EN_ROUTE",
   "ARRIVED",
   "IN_PROGRESS",
+  "DELIVERED",
 ];
+
+/** Respuesta de `POST /api/quote`. */
+export type QuoteResponse = {
+  quote: Quote;
+  distanceKm: number;
+  minutes: number;
+  routeSource: RouteSource | null;
+  weather: Weather;
+  geometry: Place[] | null;
+  isMember: boolean;
+  /** Compatibilidad: igual a `minutes`. */
+  towMinutes: number;
+};
