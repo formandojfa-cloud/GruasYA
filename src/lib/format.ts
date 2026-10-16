@@ -1,6 +1,6 @@
 /**
  * Textos en español (los del prototipo GruaYa) y formatos compartidos por las
- * tres interfaces: Conductor (cliente), Piloto (gruero) y Central (PBX).
+ * tres interfaces: Conductor (cliente), Piloto (gruero) y Admin/Central (PBX).
  */
 import type { ProviderKind, ProviderStatus, RequestStatus, ServiceKind, VehicleKind } from "./types";
 
@@ -41,12 +41,15 @@ export const PROVIDER_STATUS_LABELS: Record<ProviderStatus, string> = {
   BUSY: "En servicio",
 };
 
-/** Cómo se llama cada rol en la interfaz (prototipo: Conductor · Piloto · Admin/Central). */
+/** Cómo se llama cada rol en el selector de la interfaz (prototipo: Conductor · Piloto · Admin). */
 export const ROLE_LABELS = {
   client: "Conductor",
   provider: "Piloto",
-  pbx: "Central",
+  pbx: "Admin",
 } as const;
+
+/** Nombre de la operación humana en los textos ("la central te llama"); no cambia. */
+export const CENTRAL_LABEL = "Central";
 
 /** Título de la tarjeta de estado (textos del prototipo). */
 export const STATUS_LABELS: Record<RequestStatus, string> = {

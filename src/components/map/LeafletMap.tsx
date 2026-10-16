@@ -2,8 +2,10 @@
 
 /**
  * Mapa con Leaflet + OpenStreetMap. Solo se importa en cliente (ver Map.tsx).
- * Los marcadores son divIcon con las clases .pin del prototipo (sin imágenes).
- * La ruta se dibuja azul: sólida cuando viene por calles (>2 puntos), punteada si es línea recta.
+ * Los marcadores son divIcon con las clases .pin-* del prototipo final (sin imágenes):
+ * recogida = punto negro con anillo blanco, destino = cuadrado negro, grúa = círculo
+ * blanco de 40 px con anillo amarillo, "yo" = punto azul. La ruta es NEGRA de 5 px
+ * cuando viene por calles (>2 puntos) y gris punteada si es línea recta.
  */
 import L, { type LatLngBoundsExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -16,9 +18,9 @@ import type { MapMarker, MapProps } from "./types";
 const TILE_URL = process.env.NEXT_PUBLIC_TILE_URL ?? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
-/** Pin del prototipo: círculo blanco de 34 px con emoji (clases .pin* en globals.css). */
+/** Pin de la grúa: círculo blanco de 40 px con anillo de color y glifo (clases .pin-grua* en globals.css). */
 function pinHtml(cls: string, glyph: string): string {
-  return `<div class="pin ${cls}">${glyph}</div>`;
+  return `<div class="${cls}">${glyph}</div>`;
 }
 
 const RING: Record<"provider" | "provider-idle" | "provider-busy", { cls: string; color: string }> = {
@@ -32,16 +34,16 @@ function vehicleHtml(kind: keyof typeof RING, heading: number | null | undefined
   const arrow =
     heading == null
       ? ""
-      : `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" style="transform:rotate(${heading}deg)"><path d="M22 1l6 10h-12z" fill="${color}"/></svg>`;
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" style="transform:rotate(${heading}deg)"><path d="M25 0l6 10H19z" fill="${color}"/></svg>`;
   return `<div class="pin-marco">${arrow}${pinHtml(cls, glyph)}</div>`;
 }
 
 function iconFor(m: MapMarker): L.DivIcon {
   switch (m.kind) {
     case "pickup":
-      return L.divIcon({ html: pinHtml("pin-origen", "🚗"), iconSize: [34, 34], iconAnchor: [17, 17], className: "" });
+      return L.divIcon({ html: `<div class="pin-origen"></div>`, iconSize: [20, 20], iconAnchor: [10, 10], className: "" });
     case "dropoff":
-      return L.divIcon({ html: pinHtml("pin-destino", "🏁"), iconSize: [34, 34], iconAnchor: [17, 17], className: "" });
+      return L.divIcon({ html: `<div class="pin-destino"></div>`, iconSize: [20, 20], iconAnchor: [10, 10], className: "" });
     case "me":
       return L.divIcon({
         html: `<div style="position:relative;width:24px;height:24px"><div class="pulse-ring" style="position:absolute;inset:0;border-radius:50%;background:#2f6fd1;opacity:.4"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#2f6fd1;border:2px solid #fff;box-shadow:0 0 0 2px rgba(47,111,209,.3)"></div></div>`,
@@ -52,7 +54,7 @@ function iconFor(m: MapMarker): L.DivIcon {
     case "provider":
     case "provider-idle":
     case "provider-busy":
-      return L.divIcon({ html: vehicleHtml(m.kind, m.heading, m.glyph ?? "🚚"), iconSize: [44, 44], iconAnchor: [22, 22], className: "" });
+      return L.divIcon({ html: vehicleHtml(m.kind, m.heading, m.glyph ?? "🚛"), iconSize: [50, 50], iconAnchor: [25, 25], className: "" });
   }
 }
 
@@ -130,7 +132,7 @@ export default function LeafletMap({
       {markers.map((m) => (
         <Marker key={m.id} position={[m.lat, m.lng]} icon={iconFor(m)} zIndexOffset={m.kind.startsWith("provider") ? 500 : 0}>
           {m.label && (
-            <Tooltip direction="top" className="pin-etiqueta" offset={[0, m.kind.startsWith("provider") ? -24 : -20]} opacity={1}>
+            <Tooltip direction="top" className="pin-etiqueta" offset={[0, m.kind.startsWith("provider") ? -26 : -12]} opacity={1}>
               {m.label}
             </Tooltip>
           )}
@@ -141,8 +143,8 @@ export default function LeafletMap({
           positions={polyline.map((p) => [p.lat, p.lng] as [number, number])}
           pathOptions={
             polyline.length > 2
-              ? { color: "#2f6fd1", weight: 4, opacity: 0.9, lineCap: "round", lineJoin: "round" }
-              : { color: "#2f6fd1", weight: 4, opacity: 0.8, dashArray: "1 10", lineCap: "round" }
+              ? { color: "#1d1d1f", weight: 5, opacity: 0.9, lineCap: "round", lineJoin: "round" }
+              : { color: "#6b6b70", weight: 4, opacity: 0.8, dashArray: "2 10", lineCap: "round" }
           }
         />
       )}

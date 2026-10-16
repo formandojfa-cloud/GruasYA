@@ -2,11 +2,11 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "GruaYa", template: "%s · GruaYa" },
+  title: { default: "GrúaYa", template: "%s · GrúaYa" },
   description: "Grúa por demanda en Guatemala: precio fijo, grúa en minutos y seguimiento en vivo.",
-  applicationName: "GruaYa",
+  applicationName: "GrúaYa",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "GruaYa" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "GrúaYa" },
   formatDetection: { telephone: true },
 };
 
@@ -15,7 +15,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#f5b301",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#141414" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * Primitivas de interfaz compartidas con el aspecto GruaYa (docs/GRUAYA.md §1):
- * tarjetas blancas con borde fino, botón principal amarillo con texto tinta,
- * segmentos negros, tarjetas de estado con borde izquierdo de color, avisos
- * amarillo suave. Pensadas para pantalla de teléfono con una mano (44 px).
+ * Primitivas de interfaz compartidas con el aspecto GrúaYa final (docs/GRUAYA.md §1):
+ * superficies blancas sin borde sobre página gris, botón principal NEGRO con texto
+ * blanco (blanco con texto negro en modo oscuro), píldoras flotantes con sombra
+ * suave, segmentos en píldora con el activo negro, hoja inferior con asa, chips,
+ * filas de opción y bloque origen/destino. Pensadas para teléfono con una mano
+ * (botones de 48–52 px).
  */
 import Link from "next/link";
 import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useEffect } from "react";
@@ -25,19 +27,19 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   fullWidth?: boolean;
 };
 
-/** principal = amarillo con texto tinta; secundario = tarjeta con borde; peligro = texto rojo. */
+/** principal = negro con texto blanco; secundario = blanco con borde de 1 px; peligro = texto rojo. */
 const VARIANT: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  primary: "bg-amarillo text-primary-foreground border-amarillo hover:brightness-95 active:brightness-90",
-  secondary: "bg-background text-foreground border-border hover:bg-surface active:bg-surface-2",
-  ghost: "bg-transparent text-foreground border-transparent hover:bg-surface",
+  primary: "bg-primary text-primary-foreground border-primary hover:opacity-90 active:opacity-80",
+  secondary: "bg-background text-foreground border-border hover:bg-surface-2 active:bg-surface-2",
+  ghost: "bg-transparent text-foreground border-transparent hover:bg-surface-2",
   danger: "bg-background text-rojo border-border hover:bg-danger-soft",
   success: "bg-verde text-white border-verde hover:brightness-95",
 };
 
 const SIZE: Record<NonNullable<ButtonProps["size"]>, string> = {
-  sm: "h-9 px-3 text-sm",
-  md: "h-11 px-4 text-base",
-  lg: "h-[52px] px-5 text-[17px]",
+  sm: "h-9 px-3 text-sm rounded-[10px]",
+  md: "h-12 px-4 text-base rounded-[14px]",
+  lg: "h-[52px] px-5 text-[17px] rounded-[14px]",
 };
 
 export function Button({ variant = "primary", size = "md", loading, fullWidth, className, children, disabled, ...rest }: ButtonProps) {
@@ -46,7 +48,7 @@ export function Button({ variant = "primary", size = "md", loading, fullWidth, c
       {...rest}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl border font-bold transition disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none",
+        "inline-flex items-center justify-center gap-2 border font-bold transition disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 select-none",
         VARIANT[variant],
         SIZE[size],
         fullWidth && "w-full",
@@ -61,25 +63,28 @@ export function Button({ variant = "primary", size = "md", loading, fullWidth, c
 
 // ---------- Tarjeta ----------
 
+/** Tarjeta blanca redondeada (16 px), sin borde. */
 export function Card({ className, children, onClick }: { className?: string; children: ReactNode; onClick?: () => void }) {
   return (
-    <div onClick={onClick} className={cn("rounded-card border border-border bg-background p-3.5", onClick && "cursor-pointer hover:bg-surface", className)}>
+    <div onClick={onClick} className={cn("rounded-2xl bg-background p-4", onClick && "cursor-pointer hover:bg-surface-2", className)}>
       {children}
     </div>
   );
 }
 
-// ---------- Chip de estado ----------
+// ---------- Píldora de estado ----------
 
 const TONE: Record<Tone, string> = {
-  neutral: "bg-surface text-foreground",
+  neutral: "bg-surface-2 text-foreground",
   success: "bg-success-soft text-verde",
   warning: "bg-amarillo-suave text-foreground",
   danger: "bg-danger-soft text-rojo",
   info: "bg-info-soft text-azul",
 };
 
-export function Pill({ tone = "neutral", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
+/** Etiqueta redondeada pequeña con color según el tono. `flotante` = píldora blanca con sombra (.pildora). */
+export function Pill({ tone = "neutral", children, className, flotante }: { tone?: Tone; children: ReactNode; className?: string; flotante?: boolean }) {
+  if (flotante) return <span className={cn("pildora", className)}>{children}</span>;
   return (
     <span className={cn("inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold", TONE[tone], className)}>{children}</span>
   );
@@ -96,8 +101,16 @@ export function Spinner({ size = "md", className }: { size?: "sm" | "md" | "lg";
   return <span aria-label="Cargando" className={cn("inline-block rounded-full border-current border-r-transparent animate-spin", px, className)} />;
 }
 
+// ---------- Barra de progreso ----------
+
+/** Barra fina indeterminada (negra sobre gris), como "Buscando solicitudes cerca de ti". */
+export function ProgressBar({ className, label = "Buscando" }: { className?: string; label?: string }) {
+  return <div className={cn("barra-progreso", className)} role="progressbar" aria-label={label} aria-busy="true" />;
+}
+
 // ---------- Cuenta regresiva (oferta) ----------
 
+/** Anillo de tinta que se vacía; el número va en rojo (.contador). */
 export function Countdown({ until, totalSeconds, onExpire, className }: { until: string; totalSeconds: number; onExpire?: () => void; className?: string }) {
   const now = useNow(250);
   const left = secondsUntil(until, now);
@@ -111,13 +124,13 @@ export function Countdown({ until, totalSeconds, onExpire, className }: { until:
   return (
     <div className={cn("relative h-16 w-16", className)} role="timer" aria-live="polite" aria-label={`${left} segundos`}>
       <svg viewBox="0 0 60 60" className="h-16 w-16 -rotate-90">
-        <circle cx="30" cy="30" r={r} fill="none" stroke="var(--border)" strokeWidth="5" />
+        <circle cx="30" cy="30" r={r} fill="none" stroke="var(--campo)" strokeWidth="5" />
         <circle
           cx="30"
           cy="30"
           r={r}
           fill="none"
-          stroke={left <= 10 ? "var(--rojo)" : "var(--amarillo)"}
+          stroke={left <= 10 ? "var(--rojo)" : "var(--tinta)"}
           strokeWidth="5"
           strokeLinecap="round"
           strokeDasharray={c}
@@ -132,35 +145,42 @@ export function Countdown({ until, totalSeconds, onExpire, className }: { until:
 
 // ---------- Hoja inferior ----------
 
+/** Hoja modal (con fondo oscuro detrás): blanca, esquinas de 24 px, asa y sombra. */
 export function Sheet({ open, onClose, title, children, className }: { open: boolean; onClose?: () => void; title?: string; children: ReactNode; className?: string }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div
-        className={cn(
-          "relative z-10 mx-auto w-full max-w-[560px] rounded-t-2xl border-t border-border bg-background p-4 safe-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.12)] max-h-[88vh] overflow-y-auto",
-          className,
-        )}
-      >
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-        {title && <h2 className="mb-3 text-xl font-bold">{title}</h2>}
-        {children}
+      <div className={cn("hoja alta !relative !z-10 !max-h-[88vh] w-full", className)}>
+        <div className="hoja-cuerpo">
+          {title && <h2 className="titulo-hoja">{title}</h2>}
+          {children}
+        </div>
       </div>
     </div>
   );
 }
 
-/** Panel fijo abajo sobre el mapa (sin fondo oscuro). */
-export function BottomPanel({ children, className }: { children: ReactNode; className?: string }) {
+/**
+ * Hoja fija abajo sobre el mapa (sin fondo oscuro): el aspecto .hoja del prototipo.
+ * `footer` queda siempre a la vista (.hoja-pie); el cuerpo se desplaza.
+ * `height`: "normal" (64 %), "alta" (86 %) o "corta" (52 %).
+ */
+export function BottomPanel({
+  children,
+  footer,
+  className,
+  height = "normal",
+}: {
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+  height?: "normal" | "alta" | "corta";
+}) {
   return (
-    <div
-      className={cn(
-        "absolute inset-x-0 bottom-0 z-20 mx-auto max-w-[560px] rounded-t-2xl border-t border-border bg-background p-4 safe-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.12)] max-h-[70vh] overflow-y-auto",
-        className,
-      )}
-    >
-      {children}
+    <div className={cn("hoja", height !== "normal" && height, className)}>
+      <div className="hoja-cuerpo">{children}</div>
+      {footer && <div className="hoja-pie">{footer}</div>}
     </div>
   );
 }
@@ -177,8 +197,9 @@ export function Field({ label, hint, error, children }: { label: string; hint?: 
   );
 }
 
+/** Campo gris claro sin borde; al enfocar, borde de tinta de 2 px. */
 const CONTROL =
-  "h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-base text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50";
+  "min-h-12 w-full rounded-[12px] border-2 border-transparent bg-surface-2 px-3 text-base text-foreground placeholder:text-muted focus:outline-none focus:border-ring disabled:opacity-50";
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...rest} className={cn(CONTROL, className)} />;
@@ -216,32 +237,41 @@ export function Stars({ value, onChange, size = "md" }: { value: number | null; 
 
 // ---------- Marca y segmentos ----------
 
-/** "Grua" en tinta + "Ya" en amarillo, con sufijo pequeño en gris opcional (p. ej. "piloto"). */
-export function Wordmark({ suffix, className }: { suffix?: ReactNode; className?: string }) {
+/**
+ * "Grúa" en tinta + "Ya" en amarillo dentro de una píldora blanca con sombra (.marca).
+ * `suffix`: texto pequeño gris opcional (p. ej. "piloto"). `plana`: sin píldora, grande (pantallas de inicio de sesión).
+ */
+export function Wordmark({ suffix, className, plana }: { suffix?: ReactNode; className?: string; plana?: boolean }) {
   return (
-    <span className={cn("marca", className)}>
-      Grua<span className="ya">Ya</span>
+    <span className={cn("marca", plana && "marca-plana", className)}>
+      Grúa<span className="ya">Ya</span>
       {suffix && <small>{suffix}</small>}
     </span>
   );
 }
 
-/** Botones en fila; el activo es tinta con texto claro. */
+/**
+ * Selector en píldora blanca con sombra; el activo es una píldora negra (como el
+ * selector de rol del prototipo). `variant="pestanas"`: pestañas del Admin, sin
+ * fondo, la activa blanca con sombra.
+ */
 export function Segments<K extends string>({
   items,
   value,
   onChange,
   className,
   label,
+  variant = "pildora",
 }: {
   items: Array<{ key: K; label: ReactNode; disabled?: boolean }>;
   value: K;
   onChange: (key: K) => void;
   className?: string;
   label?: string;
+  variant?: "pildora" | "pestanas";
 }) {
   return (
-    <div className={cn("segmentos", className)} role="group" aria-label={label}>
+    <div className={cn("segmentos", variant === "pestanas" && "segmentos-pestanas", className)} role="group" aria-label={label}>
       {items.map((it) => (
         <button
           key={it.key}
@@ -254,6 +284,103 @@ export function Segments<K extends string>({
           {it.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+// ---------- Chips, opciones y origen/destino ----------
+
+/** Chip redondeado (Qué pasó); activo = negro con texto blanco. */
+export function Chip({
+  active,
+  children,
+  onClick,
+  disabled,
+  className,
+}: {
+  active?: boolean;
+  children: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button type="button" disabled={disabled} aria-pressed={active} onClick={onClick} className={cn("chip", active && "chip-activo", className)}>
+      {children}
+    </button>
+  );
+}
+
+/** Fila de opción de servicio: ícono, título, subtítulo y precio a la derecha; seleccionada = borde negro. */
+export function OptionRow({
+  icon,
+  title,
+  subtitle,
+  price,
+  active,
+  onClick,
+  disabled,
+  className,
+}: {
+  icon?: ReactNode;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  price?: ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button type="button" disabled={disabled} aria-pressed={active} onClick={onClick} className={cn("opcion", active && "opcion-activa", className)}>
+      {icon && <span className="opcion-icono">{icon}</span>}
+      <span className="opcion-texto">
+        <strong>{title}</strong>
+        {subtitle && <span>{subtitle}</span>}
+      </span>
+      {price != null && <span className="opcion-precio">{price}</span>}
+    </button>
+  );
+}
+
+export type RouteField = {
+  /** Etiqueta pequeña gris ("Recogida · toca el mapa"). */
+  label: ReactNode;
+  /** Valor grande ("Tu ubicación actual"). */
+  value: ReactNode;
+  /** Botón píldora a la derecha (p. ej. "📍 Mi ubicación"). */
+  action?: ReactNode;
+  /** Toque en la fila. */
+  onClick?: () => void;
+  /** Fila resaltada con borde negro. */
+  active?: boolean;
+};
+
+/** Bloque origen/destino con conector vertical (● línea ■). Solo presentación. */
+export function RouteFields({ origin, destination, className }: { origin: RouteField; destination: RouteField; className?: string }) {
+  const row = (f: RouteField, marker: string, key: string) => {
+    const Tag = f.onClick ? "button" : "div";
+    return (
+      <Tag
+        key={key}
+        type={f.onClick ? "button" : undefined}
+        onClick={f.onClick}
+        aria-pressed={f.onClick ? f.active : undefined}
+        className={cn("campo-ruta-fila", f.active && "activo")}
+      >
+        <span className={marker} aria-hidden />
+        <span className="campo-ruta-texto">
+          <small>{f.label}</small>
+          <span>{f.value}</span>
+        </span>
+        {f.action}
+      </Tag>
+    );
+  };
+  return (
+    <div className={cn("campo-ruta", className)}>
+      {row(origin, "marca-origen", "origen")}
+      {row(destination, "marca-destino", "destino")}
     </div>
   );
 }
@@ -275,7 +402,7 @@ export function statusClass(status: RequestStatus): string {
   return `estado ${STATUS_CLASS[status]}`;
 }
 
-/** Tarjeta con borde izquierdo de 5 px según el estado; sin `title` usa el texto largo del estado. */
+/** Tarjeta con borde izquierdo de color según el estado; sin `title` usa el texto largo del estado. */
 export function StatusCard({ status, title, children, className }: { status: RequestStatus; title?: ReactNode; children?: ReactNode; className?: string }) {
   return (
     <section className={cn("tarjeta", statusClass(status), className)}>
@@ -292,27 +419,26 @@ export function Aviso({ children, className }: { children: ReactNode; className?
 
 // ---------- Barra superior ----------
 
-export function TopBar({ title, back, right, subtitle }: { title: string; back?: string; right?: ReactNode; subtitle?: string }) {
+/**
+ * Barra flotante transparente sobre el mapa: marca en píldora a la izquierda y lo
+ * que venga en `right` (normalmente <Segments>) a la derecha. `title` va como
+ * sufijo pequeño de la marca; `back` añade una píldora "‹" antes de la marca.
+ */
+export function TopBar({ title, back, right, subtitle }: { title?: string; back?: string; right?: ReactNode; subtitle?: string }) {
   return (
-    <header className="safe-top sticky top-0 z-30 bg-surface">
-      <div className="mx-auto flex max-w-[560px] items-center gap-2 px-3 py-3">
+    <header className="barra-flotante">
+      <div className="flex min-w-0 items-center gap-2">
         {back && (
-          <Link
-            href={back}
-            aria-label="Volver"
-            className="-ml-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-xl hover:bg-surface"
-          >
+          <Link href={back} aria-label="Volver" className="pildora !px-3 text-xl leading-none">
             ‹
           </Link>
         )}
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate">
-            <Wordmark suffix={title} />
-          </h1>
-          {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
-        </div>
-        {right}
+        <h1 className="min-w-0 leading-none">
+          <Wordmark suffix={title} />
+        </h1>
+        {subtitle && <span className="pildora truncate text-muted">{subtitle}</span>}
       </div>
+      {right}
     </header>
   );
 }
@@ -331,22 +457,22 @@ export function EmptyState({ icon, title, body, action }: { icon?: string; title
 }
 
 const NOTICE_TONE: Record<Tone, string> = {
-  neutral: "bg-surface text-foreground",
-  info: "bg-amarillo-suave text-foreground",
+  neutral: "bg-surface-2 text-foreground",
+  info: "bg-surface-2 text-foreground",
   warning: "bg-amarillo-suave text-foreground",
   success: "bg-success-soft text-verde",
   danger: "bg-danger-soft text-rojo",
 };
 
 export function Notice({ tone = "info", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-[10px] px-2.5 py-2 text-sm", NOTICE_TONE[tone], className)}>{children}</div>;
+  return <div className={cn("rounded-[12px] px-3 py-2.5 text-sm", NOTICE_TONE[tone], className)}>{children}</div>;
 }
 
 export function Row({ label, value, strong }: { label: string; value: ReactNode; strong?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5">
-      <span className="text-[15px]">{label}</span>
-      <span className={cn("text-right font-semibold tabular-nums", strong && "text-lg font-bold")}>{value}</span>
+      <span className="text-[17px]">{label}</span>
+      <span className={cn("text-right text-[17px] font-bold tabular-nums", strong && "text-xl")}>{value}</span>
     </div>
   );
 }
