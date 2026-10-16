@@ -3,7 +3,8 @@
 import { useState } from "react";
 import MapView from "@/components/map/Map";
 import type { MapMarker } from "@/components/map/types";
-import { BottomPanel, Button, Notice, ProgressBar } from "@/components/ui";
+import { SupportSheet } from "@/components/client/bits";
+import { BottomPanel, Button, IconCrosshair, IconHeadset, MapAction, Notice, ProgressBar } from "@/components/ui";
 import { DEFAULT_CENTER, DISPATCH } from "@/lib/config";
 import { relativeTime } from "@/lib/format";
 import { useNow } from "@/lib/hooks";
@@ -32,6 +33,8 @@ export default function HomeScreen({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [recenter, setRecenter] = useState(0);
   const now = useNow(1000);
 
   const online = self.status === "ONLINE";
@@ -79,6 +82,7 @@ export default function HomeScreen({
       zoom={15}
       markers={markers}
       followCenter={!picking}
+      recenterKey={recenter}
       onPick={
         picking
           ? (p) => {
@@ -123,7 +127,17 @@ export default function HomeScreen({
   );
 
   return (
-    <MapScreen map={map} overlay={overlay}>
+    <MapScreen
+      map={map}
+      overlay={overlay}
+      actions={
+        <>
+          <MapAction icon={<IconCrosshair />} label="Centrar" onClick={() => setRecenter((n) => n + 1)} disabled={!shown} />
+          <MapAction icon={<IconHeadset />} label="Central" onClick={() => setSupportOpen(true)} />
+        </>
+      }
+      extra={<SupportSheet open={supportOpen} onClose={() => setSupportOpen(false)} message={`Hola, soy ${self.name} (piloto GrúaYa).`} />}
+    >
       <BottomPanel footer={footer} className={picking ? "corta" : undefined}>
         <div className="flex items-start justify-between gap-3" aria-live="polite">
           <div className="min-w-0">

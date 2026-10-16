@@ -185,6 +185,172 @@ export function BottomPanel({
   );
 }
 
+// ---------- Acciones redondas sobre el mapa (tipo Uber) ----------
+
+/** Columna de botones redondos blancos al borde derecho del mapa (.acciones-mapa). `credit`: crédito de teselas pequeño (solo teléfono). */
+export function MapActions({ children, credit, className }: { children?: ReactNode; credit?: string; className?: string }) {
+  return (
+    <div className={cn("acciones-mapa", className)}>
+      {children}
+      {credit && <span className="credito-mapa">{credit}</span>}
+    </div>
+  );
+}
+
+/** Botón redondo de 44 px con ícono (emoji o SVG). `label` es solo para accesibilidad. `badge`: puntito/número amarillo. */
+export function MapAction({
+  icon,
+  label,
+  onClick,
+  href,
+  external,
+  badge,
+  disabled,
+  className,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick?: () => void;
+  href?: string;
+  external?: boolean;
+  badge?: ReactNode;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const inner = (
+    <>
+      {icon}
+      {badge != null && badge !== false && <span className="insignia">{badge}</span>}
+    </>
+  );
+  if (href && !disabled) {
+    return (
+      <a href={href} aria-label={label} title={label} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} className={cn("accion-mapa", className)}>
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick} className={cn("accion-mapa", className)}>
+      {inner}
+    </button>
+  );
+}
+
+export type ActionSheetItem = {
+  icon?: ReactNode;
+  label: ReactNode;
+  hint?: ReactNode;
+  href?: string;
+  external?: boolean;
+  onClick?: () => void;
+  danger?: boolean;
+};
+
+/** Hoja modal con filas tocables (ícono · texto · pista), para Soporte, Navegar, etc. */
+export function ActionSheet({
+  open,
+  onClose,
+  title,
+  items,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+  items: ActionSheetItem[];
+  children?: ReactNode;
+}) {
+  return (
+    <Sheet open={open} onClose={onClose} title={title}>
+      <div className="filas-accion" role="list">
+        {items.map((it, i) => {
+          const body = (
+            <>
+              {it.icon && <span className="fila-accion-icono">{it.icon}</span>}
+              <span className="fila-accion-texto">
+                <strong>{it.label}</strong>
+                {it.hint && <span>{it.hint}</span>}
+              </span>
+              <span className="fila-accion-flecha" aria-hidden>
+                ›
+              </span>
+            </>
+          );
+          const cls = cn("fila-accion", it.danger && "fila-accion-peligro");
+          if (it.href) {
+            return (
+              <a key={i} role="listitem" href={it.href} target={it.external ? "_blank" : undefined} rel={it.external ? "noopener noreferrer" : undefined} className={cls} onClick={it.onClick}>
+                {body}
+              </a>
+            );
+          }
+          return (
+            <button key={i} role="listitem" type="button" className={cls} onClick={it.onClick}>
+              {body}
+            </button>
+          );
+        })}
+      </div>
+      {children}
+      <Button variant="secondary" fullWidth className="mt-3" onClick={onClose}>
+        Cerrar
+      </Button>
+    </Sheet>
+  );
+}
+
+// ---------- Íconos de línea (22 px, trazo de tinta) ----------
+
+const ICON = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+
+/** Mira (centrar en mi ubicación). */
+export const IconCrosshair = () => (
+  <svg {...ICON}>
+    <circle cx="12" cy="12" r="7" />
+    <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+  </svg>
+);
+/** Salvavidas (soporte). */
+export const IconLifebuoy = () => (
+  <svg {...ICON}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="3.5" />
+    <path d="M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9" />
+  </svg>
+);
+/** Compartir. */
+export const IconShare = () => (
+  <svg {...ICON}>
+    <path d="M12 3v12" />
+    <path d="M8 7l4-4 4 4" />
+    <path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7" />
+  </svg>
+);
+/** Escudo (seguridad). */
+export const IconShield = () => (
+  <svg {...ICON}>
+    <path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+);
+/** Flecha de navegación (Waze / Google Maps). */
+export const IconNavigate = () => (
+  <svg {...ICON}>
+    <path d="M21 3L3 10.5l8 2.5 2.5 8z" />
+  </svg>
+);
+/** Audífonos (Central). */
+export const IconHeadset = () => (
+  <svg {...ICON}>
+    <path d="M4 13a8 8 0 0 1 16 0" />
+    <rect x="3" y="13" width="4" height="6" rx="1.5" />
+    <rect x="17" y="13" width="4" height="6" rx="1.5" />
+    <path d="M19 19v1a2 2 0 0 1-2 2h-4" />
+  </svg>
+);
+
 // ---------- Campos ----------
 
 export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: ReactNode }) {

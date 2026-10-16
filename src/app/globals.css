@@ -780,6 +780,184 @@
   .mapa-aviso a {
     color: var(--azul);
   }
+  /* ---- Acciones redondas al borde derecho del mapa (tipo Uber). ----
+   * En teléfono bajo la barra flotante; en computadora, arriba a la derecha. */
+  .acciones-mapa {
+    position: absolute;
+    right: 16px;
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  @media (max-width: 899px) {
+    .acciones-mapa.acciones-mapa-bajas {
+      top: calc(env(safe-area-inset-top, 0px) + 128px);
+    }
+  }
+  .accion-mapa {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--tarjeta);
+    color: var(--tinta);
+    box-shadow: var(--sombra);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 120ms ease, opacity 120ms ease;
+  }
+  .accion-mapa:active {
+    transform: scale(0.94);
+  }
+  .accion-mapa:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .accion-mapa .insignia {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--amarillo);
+    color: #1d1d1f;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Crédito de las teselas en teléfono (Leaflet queda tapado por la hoja). */
+  .credito-mapa {
+    font-size: 9px;
+    line-height: 1;
+    color: var(--tenue);
+    background: rgb(255 255 255 / 0.6);
+    border-radius: 4px;
+    padding: 2px 4px;
+    white-space: nowrap;
+  }
+
+  /* ---- Filas tocables de una hoja de acciones (Soporte, Navegar). ---- */
+  .filas-accion {
+    display: flex;
+    flex-direction: column;
+  }
+  .fila-accion {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 56px;
+    padding: 8px 4px;
+    text-align: left;
+    color: var(--tinta);
+    background: transparent;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .fila-accion + .fila-accion {
+    border-top: 1px solid var(--borde);
+  }
+  .fila-accion:active {
+    background: var(--campo);
+  }
+  .fila-accion-icono {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--campo);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex: none;
+  }
+  .fila-accion-texto {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .fila-accion-texto strong {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .fila-accion-texto span {
+    color: var(--tenue);
+    font-size: 13px;
+  }
+  .fila-accion-flecha {
+    color: var(--tenue);
+    font-size: 22px;
+    line-height: 1;
+  }
+  .fila-accion-peligro strong {
+    color: var(--rojo);
+  }
+  /* Encabezado pequeño gris dentro de la hoja ("Emergencias"). */
+  .encabezado-hoja {
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--tenue);
+  }
+
+  /* ---- Saludo de la hoja Pedir ("Hola, Ana" / ¿Dónde está tu vehículo?). ---- */
+  .saludo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .saludo strong {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    line-height: 1.1;
+  }
+  .saludo span {
+    color: var(--tenue);
+    font-size: 15px;
+  }
+  /* Ícono del vehículo en cuadro gris claro de 48 px. */
+  .icono-opcion {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--campo);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    line-height: 1;
+  }
+  /* Línea fina entre opciones (empieza después del ícono, como las listas de Uber). */
+  .opciones > .opcion + .opcion::before {
+    content: "";
+    position: absolute;
+    left: 80px;
+    right: 12px;
+    top: -3px;
+    height: 1px;
+    background: var(--borde);
+  }
+  .opciones > .opcion {
+    position: relative;
+  }
+
   .pista {
     position: absolute;
     z-index: 900;
@@ -906,9 +1084,47 @@
   background: var(--mapa);
 }
 .leaflet-container .leaflet-control-attribution {
-  font-size: 10px;
-  color: #333;
-  background: rgb(255 255 255 / 0.7);
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--tenue);
+  background: rgb(255 255 255 / 0.6);
+  padding: 1px 4px;
+  margin: 0 24px 24px 0;
+  border-radius: 4px;
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: inherit;
+}
+/* Zoom tipo píldora blanca (solo computadora). */
+.leaflet-touch .leaflet-bar.leaflet-control-zoom {
+  border: 0;
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+  overflow: hidden;
+  margin: 0 24px 10px 0;
+}
+.leaflet-touch .leaflet-control-zoom a {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  color: var(--tinta);
+  background: var(--tarjeta);
+  border: 0;
+}
+.leaflet-touch .leaflet-control-zoom a + a {
+  border-top: 1px solid var(--borde);
+}
+@media (max-width: 899px) {
+  /* Como Uber: sin botones de zoom en teléfono; la atribución la muestra .credito-mapa (la hoja tapa la de Leaflet). */
+  .leaflet-control-zoom,
+  .leaflet-container .leaflet-control-attribution {
+    display: none;
+  }
+}
+@media (min-width: 900px) {
+  .credito-mapa {
+    display: none;
+  }
 }
 .leaflet-div-icon {
   background: transparent;
@@ -988,8 +1204,12 @@
   }
   .mapa-aviso {
     left: 448px;
-    right: 24px;
+    right: 84px;
     top: 20px;
+  }
+  .acciones-mapa {
+    right: 24px;
+    top: 76px;
   }
 }
 

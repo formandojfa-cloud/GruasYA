@@ -8,7 +8,8 @@
  */
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { cn, Segments, Spinner, TopBar, Wordmark } from "@/components/ui";
+import { TILES } from "@/components/map/tiles";
+import { cn, MapActions, Segments, Spinner, TopBar, Wordmark } from "@/components/ui";
 import { formatQ, PROVIDER_KIND_LABELS } from "@/lib/format";
 import type { ProviderSelf } from "@/lib/types";
 import type { LocationReporter } from "./useLocationReporter";
@@ -58,24 +59,30 @@ export function DriverShell({ section, children, footer }: { section?: DriverSec
 
 /**
  * Pantalla con mapa de fondo: `map` ocupa todo; encima la barra flotante
- * (marca + segmentos), lo que venga en `overlay` (píldoras, avisos) y la hoja.
+ * (marca + segmentos), lo que venga en `overlay` (píldoras, avisos), los botones
+ * redondos `actions` al borde derecho y la hoja. `extra`: hojas modales, fuera
+ * de la .pantalla para quedar por encima de todo.
  */
-export function MapScreen({ map, overlay, children }: { map: ReactNode; overlay?: ReactNode; children: ReactNode }) {
+export function MapScreen({ map, overlay, actions, children, extra }: { map: ReactNode; overlay?: ReactNode; actions?: ReactNode; children: ReactNode; extra?: ReactNode }) {
   return (
-    <div className="pantalla">
-      <div className="mapa-fondo">{map}</div>
-      <TopBar title="piloto" right={<DriverSegments section="servicios" />} />
-      {overlay}
-      {children}
-    </div>
+    <>
+      <div className="pantalla">
+        <div className="mapa-fondo">{map}</div>
+        <TopBar title="piloto" right={<DriverSegments section="servicios" />} />
+        {overlay}
+        <MapActions credit={TILES.credit}>{actions}</MapActions>
+        {children}
+      </div>
+      {extra}
+    </>
   );
 }
 
-/** Capa bajo la barra para píldoras y avisos flotantes (la barra mide ~52 px + zona segura). */
+/** Capa bajo la barra para píldoras y avisos flotantes (la barra mide ~52 px + zona segura); deja libre la columna de acciones a la derecha. */
 export function MapOverlay({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={cn("pointer-events-none absolute left-4 right-4 z-[900] flex flex-col items-start gap-2 [&>*]:pointer-events-auto min-[900px]:left-[448px] min-[900px]:right-6", className)}
+      className={cn("pointer-events-none absolute left-4 right-[72px] z-[900] flex flex-col items-start gap-2 [&>*]:pointer-events-auto min-[900px]:left-[448px] min-[900px]:right-[84px]", className)}
       style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
     >
       {children}

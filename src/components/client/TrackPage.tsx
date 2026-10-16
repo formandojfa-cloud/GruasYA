@@ -7,12 +7,12 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import MapView from "@/components/map/Map";
-import { EmptyState, Notice, ProgressBar, Spinner } from "@/components/ui";
+import { EmptyState, IconCrosshair, IconLifebuoy, MapAction, Notice, ProgressBar, Spinner } from "@/components/ui";
 import { api, ApiClientError } from "@/lib/api";
 import { escalationReasonLabel, formatQ, statusLabelFor } from "@/lib/format";
 import { usePolling } from "@/lib/hooks";
 import type { RequestView } from "@/lib/types";
-import { LINK_PRIMARY } from "./bits";
+import { LINK_PRIMARY, SupportSheet } from "./bits";
 import { ClientScreen } from "./ClientShell";
 import { GUATEMALA_CITY, isActiveStatus, POLL_MS, serviceNoun } from "./constants";
 import { EtaLine, PinBlock, ProgressSteps, ProviderPerson, QuoteLines, ServiceDetail, ServiceHeader, Timeline, towSummary } from "./RequestCard";
@@ -23,6 +23,8 @@ type Mode = "owner" | "share";
 export function TrackPage({ id }: { id: string }) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [done, setDone] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [recenter, setRecenter] = useState(0);
 
   const fetcher = useCallback(async (): Promise<RequestView> => {
     let view: RequestView | null = null;
@@ -95,7 +97,14 @@ export function TrackPage({ id }: { id: string }) {
       hasActive={owner && active}
       showSegments={owner}
       suffix={owner ? undefined : "seguimiento"}
-      map={<RequestMap req={req} className="h-full w-full" />}
+      map={<RequestMap req={req} className="h-full w-full" recenterKey={recenter} />}
+      actions={
+        <>
+          <MapAction icon={<IconCrosshair />} label="Centrar" onClick={() => setRecenter((n) => n + 1)} />
+          <MapAction icon={<IconLifebuoy />} label="Soporte" onClick={() => setSupportOpen(true)} />
+        </>
+      }
+      extra={<SupportSheet open={supportOpen} onClose={() => setSupportOpen(false)} emergenciesFirst={active} message={`Hola, consulto por el servicio GrúaYa ${req.id}.`} />}
       footer={
         owner && active ? (
           <Link href="/" className={`${LINK_PRIMARY} w-full`}>

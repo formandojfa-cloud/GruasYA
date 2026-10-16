@@ -12,7 +12,7 @@ import { providerGlyph, shortAddress } from "./constants";
 
 const LIVE_STATUSES = new Set<RequestView["status"]>(["EN_ROUTE", "ARRIVED", "IN_PROGRESS"]);
 
-export function RequestMap({ req, className }: { req: RequestView; className?: string }) {
+export function RequestMap({ req, className, recenterKey }: { req: RequestView; className?: string; recenterKey?: number }) {
   const searching = req.status === "SEARCHING" || req.status === "ESCALATED";
   const live = LIVE_STATUSES.has(req.status) && req.providerLive && req.provider ? req.providerLive : null;
 
@@ -56,6 +56,7 @@ export function RequestMap({ req, className }: { req: RequestView; className?: s
         polyline={polyline}
         fitToMarkers={!searching}
         followCenter={searching}
+        recenterKey={recenterKey}
         interactive={!searching}
         className="h-full w-full"
       />

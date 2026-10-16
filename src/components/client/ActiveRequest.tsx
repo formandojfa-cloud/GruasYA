@@ -7,12 +7,12 @@
  * calificar) actualizan la vista.
  */
 import { useCallback, useState, type ReactNode } from "react";
-import { Button, Input, Notice, ProgressBar, Sheet, Stars } from "@/components/ui";
+import { Button, IconCrosshair, IconShare, IconShield, Input, MapAction, Notice, ProgressBar, Sheet, Stars } from "@/components/ui";
 import { api } from "@/lib/api";
 import { escalationReasonLabel, formatDateTime, formatQ, statusLabelFor } from "@/lib/format";
 import { useNow, usePolling } from "@/lib/hooks";
 import type { RequestView } from "@/lib/types";
-import { Toast, useToast } from "./bits";
+import { SupportSheet, Toast, useToast } from "./bits";
 import { ClientScreen } from "./ClientShell";
 import { apiErrorMessage, CANCELLATION_FEE_Q, elapsedLabel, isActiveStatus, POLL_MS, serviceNoun } from "./constants";
 import { ActionButton, ContactActions, EtaLine, PinBlock, ProgressSteps, ProviderPerson, QuoteLines, ServiceDetail, ServiceHeader, Timeline, towSummary } from "./RequestCard";
@@ -35,6 +35,8 @@ export function ActiveRequest({ initial, onNewService }: Props) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [recenter, setRecenter] = useState(0);
   const [toast, showToast] = useToast();
   const now = useNow(1000);
 
@@ -200,11 +202,19 @@ export function ActiveRequest({ initial, onNewService }: Props) {
       hasActive
       onPedir={active ? undefined : onNewService}
       pedirDisabled={active}
-      map={<RequestMap req={req} className="h-full w-full" />}
+      map={<RequestMap req={req} className="h-full w-full" recenterKey={recenter} />}
       footer={footer}
+      actions={
+        <>
+          <MapAction icon={<IconCrosshair />} label="Centrar" onClick={() => setRecenter((n) => n + 1)} />
+          <MapAction icon={<IconShield />} label="Seguridad" onClick={() => setSupportOpen(true)} />
+          {active && req.status !== "SEARCHING" && req.status !== "ESCALATED" && <MapAction icon={<IconShare />} label="Compartir" onClick={() => void share()} />}
+        </>
+      }
       extra={
         <>
           <Toast message={toast} />
+          <SupportSheet open={supportOpen} onClose={() => setSupportOpen(false)} emergenciesFirst={active} message={`Hola, necesito ayuda con mi ${noun} GrúaYa (servicio ${req.id}).`} />
           <Sheet open={cancelOpen} onClose={() => setCancelOpen(false)} title={`¿Cancelar la ${noun}?`}>
             {feeWarn ? (
               <Notice tone="warning">

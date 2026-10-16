@@ -3,7 +3,8 @@
 import { type ChangeEvent, useEffect, useState } from "react";
 import MapView from "@/components/map/Map";
 import type { MapMarker } from "@/components/map/types";
-import { BottomPanel, Button, cn, Input, Notice, Sheet } from "@/components/ui";
+import { SupportSheet } from "@/components/client/bits";
+import { ActionSheet, BottomPanel, Button, cn, IconCrosshair, IconHeadset, IconNavigate, Input, MapAction, Notice, Sheet } from "@/components/ui";
 import { api, ApiClientError, errorMessage } from "@/lib/api";
 import { formatKm, formatMinutes, formatQ, KIND_LABELS, statusLabelFor, VEHICLE_LABELS } from "@/lib/format";
 import type { LatLng } from "@/lib/geo";
@@ -48,6 +49,8 @@ export default function ActiveJobScreen({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState<string>(CANCEL_REASONS[0]);
   const [cancelOther, setCancelOther] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   // Encuadre automático breve (al entrar y al pedirlo); luego el piloto manda.
   const [fit, setFit] = useState(true);
   useEffect(() => {
@@ -197,11 +200,29 @@ export default function ActiveJobScreen({
                 {approx}
               </span>
             )}
-            <button type="button" onClick={() => setFit(true)} aria-label="Centrar mapa" className="pildora shrink-0 !px-3 text-lg leading-none">
-              ⌖
-            </button>
           </div>
         </MapOverlay>
+      }
+      actions={
+        <>
+          <MapAction icon={<IconCrosshair />} label="Centrar mapa" onClick={() => setFit(true)} />
+          <MapAction icon={<IconNavigate />} label="Navegar" onClick={() => setNavOpen(true)} />
+          <MapAction icon={<IconHeadset />} label="Central" onClick={() => setSupportOpen(true)} />
+        </>
+      }
+      extra={
+        <>
+          <ActionSheet
+            open={navOpen}
+            onClose={() => setNavOpen(false)}
+            title={`Navegar al ${targetName}`}
+            items={[
+              { icon: "🧭", label: "Waze", hint: placeLabel(inProgress && job.dropoff ? job.dropoff : job.pickup), href: wazeUrl(target), external: true, onClick: () => setNavOpen(false) },
+              { icon: "🗺️", label: "Google Maps", hint: "Indicaciones en el navegador", href: googleMapsUrl(target), external: true, onClick: () => setNavOpen(false) },
+            ]}
+          />
+          <SupportSheet open={supportOpen} onClose={() => setSupportOpen(false)} message={`Hola, soy ${self.name} (piloto GrúaYa). Servicio ${job.id}.`} />
+        </>
       }
     >
       <BottomPanel footer={footer} height={job.status === "ARRIVED" ? "alta" : "normal"}>
@@ -235,15 +256,6 @@ export default function ActiveJobScreen({
             </LinkButton>
           </div>
         )}
-
-        <div className="grid grid-cols-2 gap-2">
-          <LinkButton href={wazeUrl(target)} external className="whitespace-nowrap">
-            🧭 Waze
-          </LinkButton>
-          <LinkButton href={googleMapsUrl(target)} external className="whitespace-nowrap">
-            🗺️ Google Maps
-          </LinkButton>
-        </div>
 
         {job.status === "ARRIVED" && (
           <form

@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Las e2e compilan a otra carpeta para no mezclar su build con `next dev`
   // (un `.next` de producción junto a `.next/dev` provoca recargas en bucle).
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
+  // El MAPBOX_TOKEN del servidor (rutas) también alimenta las teselas del mapa en el
+  // navegador: los tokens pk.* son públicos por diseño.
+  env: { NEXT_PUBLIC_MAPBOX_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? process.env.MAPBOX_TOKEN ?? "" },
   // Native module: must stay outside the bundle.
   serverExternalPackages: ["better-sqlite3"],
   turbopack: {

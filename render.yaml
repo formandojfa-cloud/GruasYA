@@ -21,5 +21,9 @@ services:
         value: asistencia-vial-demo/0.1
       # Rutas con tráfico en vivo (opcional). Sin él se usa OSRM gratis por calles.
       # Pega aquí el mismo token pk... que usabas en el prototipo (Supabase/GitHub).
+      # También pinta las teselas del mapa (Mapbox Light) vía next.config.ts.
       - key: MAPBOX_TOKEN
         sync: false
+      # Teléfono de la Central para "Soporte" (llamar / WhatsApp) en cliente y piloto.
+      - key: NEXT_PUBLIC_CENTRAL_PHONE
+        value: 5555-0000

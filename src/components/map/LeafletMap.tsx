@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Mapa con Leaflet + OpenStreetMap. Solo se importa en cliente (ver Map.tsx).
+ * Mapa con Leaflet sobre teselas claras tipo Uber (ver tiles.ts). Solo se importa en cliente (ver Map.tsx).
  * Los marcadores son divIcon con las clases .pin-* del prototipo final (sin imágenes):
  * recogida = punto negro con anillo blanco, destino = cuadrado negro, grúa = círculo
  * blanco de 40 px con anillo amarillo, "yo" = punto azul. La ruta es NEGRA de 5 px
@@ -10,13 +10,11 @@
 import L, { type LatLngBoundsExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap, useMapEvents, ZoomControl } from "react-leaflet";
 import { DEFAULT_CENTER } from "@/lib/config";
 import type { LatLng } from "@/lib/geo";
+import { TILES } from "./tiles";
 import type { MapMarker, MapProps } from "./types";
-
-const TILE_URL = process.env.NEXT_PUBLIC_TILE_URL ?? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 /** Pin de la grúa: círculo blanco de 40 px con anillo de color y glifo (clases .pin-grua* en globals.css). */
 function pinHtml(cls: string, glyph: string): string {
@@ -87,6 +85,21 @@ function Events({ onPick, onMoveEnd }: Pick<MapProps, "onPick" | "onMoveEnd">) {
   return null;
 }
 
+/** Al cambiar `nonce` (botón "Mi ubicación"/"Centrar"): encuadra los marcadores si hay varios, si no va al centro. */
+function Nudge({ center, points, fit, nonce }: { center?: LatLng; points: LatLng[]; fit: boolean; nonce: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!nonce) return;
+    if (fit && points.length > 1) {
+      map.fitBounds(points.map((p) => [p.lat, p.lng] as [number, number]), { padding: [48, 48], maxZoom: 16, animate: true });
+    } else if (center) {
+      map.setView([center.lat, center.lng], Math.max(map.getZoom(), 15), { animate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonce]);
+  return null;
+}
+
 function Recenter({ center, zoom }: { center?: LatLng; zoom?: number }) {
   const map = useMap();
   const last = useRef<string>("");
@@ -107,6 +120,7 @@ export default function LeafletMap({
   polyline,
   fitToMarkers = false,
   followCenter = false,
+  recenterKey = 0,
   onPick,
   onMoveEnd,
   className,
@@ -128,7 +142,16 @@ export default function LeafletMap({
       touchZoom={interactive}
       keyboard={interactive}
     >
-      <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} maxZoom={19} />
+      <TileLayer
+        url={TILES.url}
+        attribution={TILES.attribution}
+        subdomains={TILES.subdomains}
+        tileSize={TILES.tileSize}
+        zoomOffset={TILES.zoomOffset}
+        maxZoom={TILES.maxZoom}
+      />
+      {/* Solo en computadora (globals.css lo oculta en teléfono, como Uber). */}
+      {interactive && <ZoomControl position="bottomright" />}
       {markers.map((m) => (
         <Marker key={m.id} position={[m.lat, m.lng]} icon={iconFor(m)} zIndexOffset={m.kind.startsWith("provider") ? 500 : 0}>
           {m.label && (
@@ -150,6 +173,7 @@ export default function LeafletMap({
       )}
       <FitBounds points={points} enabled={fitToMarkers} />
       {followCenter && <Recenter center={center} zoom={zoom} />}
+      <Nudge center={center} points={points} fit={fitToMarkers} nonce={recenterKey} />
       <Events onPick={onPick} onMoveEnd={onMoveEnd} />
       {children}
     </MapContainer>

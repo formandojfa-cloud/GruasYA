@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import MapView from "@/components/map/Map";
 import type { MapMarker } from "@/components/map/types";
-import { BottomPanel, Button, Notice } from "@/components/ui";
+import { SupportSheet } from "@/components/client/bits";
+import { BottomPanel, Button, IconHeadset, MapAction, Notice } from "@/components/ui";
 import { DISPATCH } from "@/lib/config";
 import { formatKm, formatMinutes, formatQ, KIND_LABELS, secondsUntil, VEHICLE_LABELS } from "@/lib/format";
 import { useNow } from "@/lib/hooks";
@@ -134,6 +135,7 @@ export default function OfferScreen({
 }) {
   const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   useEffect(() => {
     playOfferAlert(offer.id);
@@ -194,6 +196,8 @@ export default function OfferScreen({
           <GpsPill loc={loc} reporting />
         </MapOverlay>
       }
+      actions={<MapAction icon={<IconHeadset />} label="Central" onClick={() => setSupportOpen(true)} />}
+      extra={<SupportSheet open={supportOpen} onClose={() => setSupportOpen(false)} message={`Hola, soy ${self.name} (piloto GrúaYa). Consulta sobre una oferta.`} />}
     >
       <BottomPanel height="alta">
         <OfferCard offer={offer} busy={busy} error={error} onExpire={onExpire} run={(w) => void run(w)} />

@@ -8,11 +8,12 @@
  */
 import { useEffect, useState } from "react";
 import MapView, { type MapMarker } from "@/components/map/Map";
-import { Aviso, Button, Chip, Field, Input, Notice, OptionRow, RouteFields, Select, Sheet, cn } from "@/components/ui";
+import { Aviso, Button, Chip, Field, IconCrosshair, IconLifebuoy, Input, MapAction, Notice, OptionRow, RouteFields, Select, Sheet, cn } from "@/components/ui";
 import { api, ApiClientError } from "@/lib/api";
 import { formatKm, formatMinutes, formatQ, KIND_ICONS, KIND_LABELS, VEHICLE_LABELS } from "@/lib/format";
 import type { LatLng } from "@/lib/geo";
 import type { ClientSelf, CreateRequestInput, Place, QuoteResponse, RequestView, ServiceKind, VehicleKind } from "@/lib/types";
+import { SupportSheet } from "./bits";
 import type { Draft } from "./ClientApp";
 import { ClientScreen } from "./ClientShell";
 import {
@@ -61,6 +62,15 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
   const [problem, setProblem] = useState<ProblemChip | null>(null);
   const [notes, setNotes] = useState("");
   const [vehicleOpen, setVehicleOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  // "Mi ubicación": vuelve a la recogida por GPS y re-encuadra el mapa.
+  const [recenter, setRecenter] = useState(0);
+  const firstName = me.name.trim().split(/\s+/)[0] || "";
+  function goToGps() {
+    if (!gps) return;
+    onDraftChange({ ...draft, pickup: null });
+    setRecenter((n) => n + 1);
+  }
   // La cotización se guarda con la clave de sus entradas: si cambian, se vuelve a calcular.
   const [quoted, setQuoted] = useState<{ key: string; quote: QuoteResponse | null; error: string | null }>({ key: "", quote: null, error: null });
   const [attempt, setAttempt] = useState(0);
@@ -178,23 +188,37 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
           polyline={polyline}
           fitToMarkers={markers.length > 1}
           followCenter={markers.length <= 1}
+          recenterKey={recenter}
           onPick={(p) => onDraftChange({ ...draft, pickup: p })}
           className="h-full w-full"
         />
       }
+      actions={
+        <>
+          <MapAction icon={<IconCrosshair />} label="Mi ubicación" onClick={goToGps} disabled={!gps} />
+          <MapAction icon={<IconLifebuoy />} label="Soporte" onClick={() => setSupportOpen(true)} />
+        </>
+      }
       extra={
-        <Sheet open={vehicleOpen} onClose={() => setVehicleOpen(false)} title="Tu vehículo">
-          <VehicleForm
-            me={me}
-            value={vehicle}
-            onSave={(v) => {
-              onVehicleChange(v);
-              setVehicleOpen(false);
-            }}
-          />
-        </Sheet>
+        <>
+          <Sheet open={vehicleOpen} onClose={() => setVehicleOpen(false)} title="Tu vehículo">
+            <VehicleForm
+              me={me}
+              value={vehicle}
+              onSave={(v) => {
+                onVehicleChange(v);
+                setVehicleOpen(false);
+              }}
+            />
+          </Sheet>
+          <SupportSheet open={supportOpen} onClose={() => setSupportOpen(false)} message={`Hola, soy ${me.name} (${me.phone}). Necesito ayuda con GrúaYa.`} />
+        </>
       }
     >
+      <div className="saludo">
+        <strong>{firstName ? `Hola, ${firstName}` : "Hola"}</strong>
+        <span>¿Dónde está tu vehículo?</span>
+      </div>
       <RouteFields
         origin={{
           label: "Recogida · toca el mapa",
@@ -209,13 +233,13 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
               className={cn("pildora !min-h-[36px] !px-3 !text-[13px]", !gps && "opacity-40")}
               onClick={(e) => {
                 e.stopPropagation();
-                if (gps) onDraftChange({ ...draft, pickup: null });
+                goToGps();
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (gps) onDraftChange({ ...draft, pickup: null });
+                  goToGps();
                 }
               }}
             >
@@ -254,7 +278,7 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
             <OptionRow
               key={o.kind}
               className="!min-h-[60px]"
-              icon={VEHICLE_ICONS[o.kind]}
+              icon={<span className="icono-opcion">{VEHICLE_ICONS[o.kind]}</span>}
               title={`GrúaYa ${o.name}`}
               subtitle={kind === "TOW" && needsQuote ? (ready ? (towEta ?? `Precio fijo · ${o.detail}`) : quoteError ? o.detail : "Calculando precio…") : o.detail}
               price={kind === "TOW" && ready ? formatQ(total) : `desde ${formatQ(TOW_BASE_Q)}`}
@@ -271,7 +295,7 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
           <OptionRow
             key={k}
             className="!min-h-[56px]"
-            icon={<span className="text-2xl">{KIND_ICONS[k]}</span>}
+            icon={<span className="icono-opcion">{KIND_ICONS[k]}</span>}
             title={KIND_LABELS[k]}
             subtitle={KIND_HINTS[k]}
             price={me.isMember ? "Incluido" : formatQ(LIGHT_NON_MEMBER_Q)}

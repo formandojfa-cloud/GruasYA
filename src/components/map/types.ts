@@ -25,6 +25,8 @@ export type MapProps = {
   fitToMarkers?: boolean;
   /** Mueve la vista cuando cambia `center` (p. ej. seguir al usuario). */
   followCenter?: boolean;
+  /** Súbelo (n+1) para volver a encuadrar: todos los marcadores si `fitToMarkers`, si no `center`. */
+  recenterKey?: number;
   /** Toque en el mapa. */
   onPick?: (p: LatLng) => void;
   /** Centro del mapa al terminar de arrastrar (patrón "pin fijo al centro"). */

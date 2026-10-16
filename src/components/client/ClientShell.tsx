@@ -8,7 +8,8 @@
  */
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { BottomPanel, Segments, Wordmark } from "@/components/ui";
+import { TILES } from "@/components/map/tiles";
+import { BottomPanel, MapActions, Segments, Wordmark } from "@/components/ui";
 
 export type ClientSection = "pedir" | "servicio" | "historial" | "cuenta";
 type Key = ClientSection | "none";
@@ -87,6 +88,8 @@ type ScreenProps = NavProps & {
   map: ReactNode;
   /** Capa sobre el mapa (p. ej. el pin central). */
   overlay?: ReactNode;
+  /** Botones redondos al borde derecho del mapa (<MapAction>), máximo 3. */
+  actions?: ReactNode;
   showSegments?: boolean;
   suffix?: ReactNode;
   /** Píldora "‹" antes de la marca. */
@@ -104,7 +107,7 @@ type ScreenProps = NavProps & {
  * de la ventana, así su centro (y el encuadre automático) cae en la parte visible
  * sobre la hoja; en computadora la hoja es un panel a la izquierda y el mapa va entero.
  */
-export function ClientScreen({ map, overlay, showSegments = true, suffix, onBack, children, footer, height, extra, ...nav }: ScreenProps) {
+export function ClientScreen({ map, overlay, actions, showSegments = true, suffix, onBack, children, footer, height, extra, ...nav }: ScreenProps) {
   return (
     <>
       <div className="pantalla">
@@ -125,6 +128,10 @@ export function ClientScreen({ map, overlay, showSegments = true, suffix, onBack
           </div>
           {showSegments && <ClientSegments {...nav} />}
         </header>
+        {/* Con "Mi servicio" la barra pasa a dos filas en teléfono: las acciones bajan para no rozarla. */}
+        <MapActions credit={TILES.credit} className={showSegments && nav.hasActive ? "acciones-mapa-bajas" : undefined}>
+          {actions}
+        </MapActions>
         <BottomPanel footer={footer} height={height}>
           {children}
         </BottomPanel>
