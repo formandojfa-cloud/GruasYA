@@ -120,7 +120,7 @@ export default function ActiveJobScreen({
     job.status === "ARRIVED"
       ? "Pide el PIN de 4 dígitos al cliente para iniciar."
       : live
-        ? `${targetName === "cliente" ? "Cliente" : "Destino"} a ${formatKm(live.distanceKm)} (unos ${formatMinutes(live.etaMinutes)})`
+        ? `${targetName === "cliente" ? "Cliente" : "Destino"} a ${formatKm(live.distanceKm)} (${live.etaMinutes < 1 ? "menos de 1 min" : `unos ${formatMinutes(live.etaMinutes)}`})`
         : `Rumbo al ${targetName}`;
   const vehicle = [VEHICLE_LABELS[job.vehicleKind], job.vehicleLabel, job.plate].filter(Boolean).join(" · ");
   const what = job.kind === "TOW" ? vehicle : `${KIND_LABELS[job.kind]} · ${vehicle}`;

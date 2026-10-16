@@ -87,7 +87,7 @@ export default function OfferScreen({
         </div>
 
         <p className="tenue">
-          Cliente {offer.clientFirstName} a {formatKm(offer.distanceToPickupKm)} (unos {formatMinutes(offer.etaToPickupMinutes)}) · {what}
+          Cliente {offer.clientFirstName} a {formatKm(offer.distanceToPickupKm)} ({offer.etaToPickupMinutes < 1 ? "menos de 1 min" : `unos ${formatMinutes(offer.etaToPickupMinutes)}`}) · {what}
         </p>
         <p className="tenue">Recogida: {placeLabel(offer.pickup)}</p>
         {offer.dropoff && (

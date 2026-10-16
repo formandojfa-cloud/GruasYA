@@ -144,7 +144,7 @@ export function QuoteStep({ kind, pickup, dropoff, vehicle, me, onBack, onEditPi
           </div>
           {kind === "TOW" && (
             <p className="tenue">
-              {formatKm(quote.distanceKm)} y unos {formatMinutes(quote.towMinutes)} de viaje
+              {formatKm(quote.distanceKm)} y {quote.towMinutes < 1 ? "menos de 1 min" : `unos ${formatMinutes(quote.towMinutes)}`} de viaje
             </p>
           )}
           {kind === "TOW" && quote.distanceKm < 0.05 && (
