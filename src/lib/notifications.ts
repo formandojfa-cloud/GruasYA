@@ -30,7 +30,7 @@ export function clientTrackingLink(requestId: string): string {
 
 export function providerInviteText(name: string, token: string): string {
   return (
-    `Hola ${name}, soy del PBX de asistencia vial. ` +
+    `Hola ${name}, soy de la central de GruaYa. ` +
     `Entra a este enlace para recibir el servicio, compartir tu ubicación y marcar cuando llegues: ` +
     providerAccessLink(token)
   );

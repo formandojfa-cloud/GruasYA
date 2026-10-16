@@ -9,8 +9,8 @@ Plataforma de asistencia vial para Guatemala, con la cara del prototipo GruaYa (
 ## Probarlo en línea sin instalar nada (Render, gratis)
 
 1. Crea una cuenta en [render.com](https://render.com) (con tu cuenta de GitHub).
-2. En el panel: **New → Blueprint**, conecta el repositorio `formandojfa-cloud/777` y elige la rama `claude/roadside-assistance-app-ch0lrd`. Render lee `render.yaml` y crea el servicio solo.
-3. Espera a que el estado sea **Live** (5–8 minutos la primera vez). La URL queda como `https://asistencia-vial-XXXX.onrender.com`.
+2. En el panel: **New → Blueprint**, conecta el repositorio `formandojfa-cloud/GruasYA` y elige la rama `claude/roadside-assistance-app-ch0lrd`. Render lee `render.yaml` y crea el servicio solo.
+3. Espera a que el estado sea **Live** (5–8 minutos la primera vez). La URL queda como `https://asistencia-vial.onrender.com` (o la que Render te asigne).
 4. Abre en el celular: `/` (cliente), `/driver?token=tow-zona10` (gruero), `/pbx` (operador, contraseña `pbx123`).
 
 El plan gratuito se duerme tras 15 minutos sin uso (la primera carga tarda ~1 min) y la base se reinicia con cada despliegue; es suficiente para probar. Para repetir desde cero, en Render usa **Manual Deploy → Restart**.
