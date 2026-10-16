@@ -138,7 +138,7 @@ export function LocationStep({ kind, initial, gps, gpsError, cta, hasDropoff, ma
       <div className="flex items-start gap-3">
         <span className={isPickup ? "marca-origen mt-2" : "marca-destino mt-2"} aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="tenue chico">{isPickup ? "Recogida · mueve el mapa para ajustar" : "Destino · mueve el mapa para ajustar"}</p>
+          <p className="tenue chico">{isPickup ? "Recogida · mueve el mapa" : "Destino · mueve el mapa"}</p>
           {address.loading ? (
             <p className="flex items-center gap-2 text-sm text-muted">
               <Spinner size="sm" /> Buscando dirección…

@@ -199,7 +199,6 @@ export function ActiveRequest({ initial, onNewService }: Props) {
       pedirDisabled={active}
       map={<RequestMap req={req} className="h-full w-full" />}
       footer={footer}
-      height={req.status === "SEARCHING" || req.status === "ESCALATED" ? "normal" : "alta"}
       extra={
         <>
           <Toast message={toast} />

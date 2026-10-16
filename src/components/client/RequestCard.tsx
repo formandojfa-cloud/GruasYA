@@ -73,6 +73,7 @@ export function ActionButton({
   danger,
   disabled,
   ariaLabel,
+  iconOnly,
 }: {
   icon: string;
   label: string;
@@ -81,26 +82,28 @@ export function ActionButton({
   danger?: boolean;
   disabled?: boolean;
   ariaLabel?: string;
+  /** Solo el ícono (cuadrado de 56 px); el texto queda como etiqueta accesible. */
+  iconOnly?: boolean;
 }) {
-  const cls = cn(ICON_BTN, danger && "text-rojo");
+  const cls = cn(ICON_BTN, danger && "text-rojo", iconOnly && "w-14 flex-none");
   const body = (
     <>
-      <span className="text-xl leading-none" aria-hidden>
+      <span className={cn("leading-none", iconOnly ? "text-2xl" : "text-xl")} aria-hidden>
         {icon}
       </span>
-      {label}
+      {!iconOnly && label}
     </>
   );
   if (href) {
     const external = href.startsWith("http");
     return (
-      <a href={href} className={cls} aria-label={ariaLabel} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
+      <a href={href} className={cls} aria-label={ariaLabel ?? (iconOnly ? label : undefined)} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
         {body}
       </a>
     );
   }
   return (
-    <button type="button" className={cls} onClick={onClick} disabled={disabled} aria-label={ariaLabel}>
+    <button type="button" className={cls} onClick={onClick} disabled={disabled} aria-label={ariaLabel ?? (iconOnly ? label : undefined)}>
       {body}
     </button>
   );
@@ -111,8 +114,8 @@ export function ContactActions({ provider }: { provider: ProviderCard }) {
   if (!provider.phone) return null;
   return (
     <>
-      <ActionButton icon="📞" label="Llamar" href={telHref(provider.phone)} ariaLabel={`Llamar a ${provider.name}`} />
-      {provider.whatsapp && <ActionButton icon="💬" label="WhatsApp" href={provider.whatsapp} ariaLabel={`WhatsApp a ${provider.name}`} />}
+      <ActionButton iconOnly icon="📞" label="Llamar" href={telHref(provider.phone)} ariaLabel={`Llamar a ${provider.name}`} />
+      {provider.whatsapp && <ActionButton iconOnly icon="💬" label="WhatsApp" href={provider.whatsapp} ariaLabel={`WhatsApp a ${provider.name}`} />}
     </>
   );
 }
