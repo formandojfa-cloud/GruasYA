@@ -40,6 +40,7 @@ export default defineConfig({
       AUTH_SECRET: "e2e-secret",
       PBX_PASSWORD: "e2e-pbx",
       APP_URL: `http://localhost:${PORT}`,
+      NEXT_DIST_DIR: ".next-e2e",
       // Cascada rápida para que las pruebas no esperen 40 s por oferta.
       DISPATCH_OFFER_TTL_MS: "6000",
       DISPATCH_TICKER_MS: "1000",

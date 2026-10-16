@@ -46,3 +46,4 @@ next-env.d.ts
 /test-results
 /playwright-report
 /tests/unit/.test.db*
+/.next-e2e/
