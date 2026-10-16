@@ -1,0 +1,101 @@
+Taller en Zona 12
+Agencia en Zona 10
+Taller en Zona 1
+Taller en Mixco
+Taller en Zona 18
+Tu grúa (demo)
+Grúas Don Beto
+Grúas Mixco
+Grúas Express 15
+Sí, confirmar
+Grúa: 
+No disponible
+Comisión registrada 
+Aún no hay conductores registrados.
+Km incluidos
+Precio por km adicional (Q)
+Minutos de viaje incluidos
+Precio por minuto adicional (Q)
+Recargo con lluvia (multiplicador)
+Recargo con lluvia fuerte (multiplicador)
+Recargo nocturno (multiplicador)
+Comisión GruaYa (fracción)
+Cargo por cancelar tras aceptar (fracción)
+No value provided for variable 
+Bounds are not valid.
+Set map center and zoom first.
+Zoom in
+Zoom out
+The provided object is not a Layer.
+Circle radius cannot be NaN
+Must add layer to map before using getCenter()
+Unable to get source layer LatLng.
+Close popup
+Attempted to load an infinite number of tiles
+Las calles no cargan en esta vista. Ábrela en
+Tu navegador no comparte ubicación.
+Buscando tu ubicación…
+tu vehículo
+Vehículo
+Qué pasó
+Precio fijo
+No pudimos consultar la ruta por calles; el precio usa una distancia estimada.
+ de una cancelación anterior.
+Pago en efectivo al gruero. 
+No hay grúas libres ahora.
+Calculando precio…
+Pedir grúa
+Tu vehículo
+Compartir viaje
+¿Cancelar la solicitud? Es gratis porque ninguna grúa ha aceptado.
+Sí, cancelar
+Entrar como (demo)
+Actívate para recibir solicitudes.
+Ya llegué, estoy junto a su vehículo.
+Servicios pagados
+Comisión registrada (no cobrada en el piloto)
+Sin grúa (pasaron a la central)
+Aún no hay servicios.
+Rechazar
+Aprobar
+Tarifa
+Demo
+Chat (sin compartir números)
+Sin mensajes todavía.
+Enviar
+formandojfa-cloud.github.io/GruasYA
+Crea tu cuenta
+Regístrate antes de una emergencia: así pedir la grúa toma segundos.
+Enviar código por SMS
+Verificar
+Verifica tu identidad
+Foto de tu DPI por ambos lados y una selfie. Comparamos tu rostro con la foto del DPI.
+Continuar
+Crear cuenta
+Revisando tu identidad
+Esto toma unos momentos. En la demo, administración puede aprobarla a mano.
+No pudimos verificar tu identidad
+Vuelve a intentarlo con fotos claras de tu DPI y de tu rostro.
+Intentar de nuevo
+🚗 Dónde estás
+🏁 A dónde vas
+📍 Usar mi ubicación
+Ofreciendo tu servicio a la grúa más cercana…
+No encontramos grúa libre a 10 km. La central de GruaYa te va a llamar para coordinarla por teléfono.
+Esperando que el gruero confirme el cobro.
+Te pausamos por dejar pasar varias ofertas seguidas. Actívate cuando puedas recibir trabajos.
+Tus números
+Ganancia (efectivo recibido menos comisión)
+Comisión registrada (10%)
+Durante el piloto la comisión se registra pero no se cobra.
+Nueva solicitud
+Ganas
+Aceptar
+Waze
+Google Maps
+Llegué
+Antes de subir el vehículo: 2 fotos y un video de 360°. Protegen a ambos ante reclamos.
+Vehículo cargado, en ruta
+Esperando que el cliente confirme el pago.
+demo
+Demo sin servidor: los datos viven en este navegador. Abre otra pestaña para ver al conductor y al gruero a la vez.
