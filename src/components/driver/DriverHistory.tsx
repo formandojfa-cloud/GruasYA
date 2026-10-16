@@ -35,7 +35,7 @@ export default function DriverHistory() {
             title="Inicia sesión"
             body="Entra con tu enlace de acceso para ver tu historial."
             action={
-              <Link href="/driver" className="inline-flex h-11 items-center justify-center rounded-xl border border-amarillo bg-amarillo px-5 font-bold text-primary-foreground">
+              <Link href="/driver" className="inline-flex h-12 items-center justify-center rounded-[14px] bg-primary px-5 font-bold text-primary-foreground">
                 Ir a la app
               </Link>
             }
@@ -58,7 +58,7 @@ export default function DriverHistory() {
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="tenue">Total ganado</p>
-                <p className="grande tabular-nums">{formatQ(data.totalQ)}</p>
+                <p className="grande tabular-nums text-[32px]">{formatQ(data.totalQ)}</p>
               </div>
               <p className="tenue chico text-right">
                 {data.jobs.filter((j) => j.status === "COMPLETED").length} completados

@@ -37,7 +37,7 @@ type Props = {
 };
 
 /** En escritorio la rejilla ocupa lo que queda bajo la barra, las pestañas y las métricas; en teléfono fluye. */
-const GRID_H = "lg:h-[calc(100dvh-268px)] lg:min-h-[480px]";
+const GRID_H = "lg:h-[calc(100dvh-296px)] lg:min-h-[480px]";
 
 export default function Dashboard({ overview, unseen, onOpen, onAck }: Props) {
   const now = useNow(1000);

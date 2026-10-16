@@ -3,13 +3,13 @@
 import { type ChangeEvent, useEffect, useState } from "react";
 import MapView from "@/components/map/Map";
 import type { MapMarker } from "@/components/map/types";
-import { Button, cn, Input, Notice, Row, Sheet, StatusCard } from "@/components/ui";
+import { BottomPanel, Button, cn, Input, Notice, Sheet } from "@/components/ui";
 import { api, ApiClientError, errorMessage } from "@/lib/api";
 import { formatKm, formatMinutes, formatQ, KIND_LABELS, statusLabelFor, VEHICLE_LABELS } from "@/lib/format";
 import type { LatLng } from "@/lib/geo";
-import type { RequestView } from "@/lib/types";
-import { Avatar, LinkButton } from "./bits";
-import type { DriverPosition } from "./useLocationReporter";
+import type { ProviderSelf, RequestView } from "@/lib/types";
+import { GpsPill, LinkButton, MapOverlay, MapScreen, providerGlyph, SheetRow } from "./bits";
+import type { DriverPosition, LocationReporter } from "./useLocationReporter";
 import { googleMapsUrl, initialOf, placeLabel, telHref, wazeUrl } from "./util";
 
 type Transition = "ARRIVED" | "IN_PROGRESS" | "COMPLETED";
@@ -18,19 +18,24 @@ const CANCEL_REASONS = ["El cliente no aparece", "Problema con mi vehículo", "D
 
 /**
  * Servicio activo: EN_ROUTE → ARRIVED → (PIN) IN_PROGRESS → COMPLETED.
- * Tarjeta de estado con borde azul, una sola acción principal por estado;
- * "Cancelar servicio" como secundaria.
+ * Mapa con el cliente (punto), el destino (cuadrado) y tu grúa; hoja con el
+ * estado, el cobro, el cliente (llamar / WhatsApp), Waze / Google Maps, el PIN
+ * y una sola acción principal negra; "Cancelar servicio" en rojo.
  */
 export default function ActiveJobScreen({
+  self,
   job,
   position,
+  loc,
   onUpdated,
   onCompleted,
   onCancelled,
   onRefresh,
 }: {
+  self: ProviderSelf;
   job: RequestView;
   position: DriverPosition | null;
+  loc: LocationReporter;
   onUpdated: (view: RequestView) => void;
   onCompleted: (view: RequestView) => void;
   onCancelled: (requestStatus: string) => void;
@@ -56,15 +61,39 @@ export default function ActiveJobScreen({
   const targetName = inProgress && job.dropoff ? "destino" : "cliente";
 
   const markers: MapMarker[] = [
-    ...(position ? [{ id: "me", lat: position.lat, lng: position.lng, kind: "me" as const, label: "Tú" }] : []),
-    { id: "pickup", lat: job.pickup.lat, lng: job.pickup.lng, kind: "pickup", label: "Cliente" },
-    ...(job.dropoff ? [{ id: "dropoff", lat: job.dropoff.lat, lng: job.dropoff.lng, kind: "dropoff" as const, label: "Destino" }] : []),
+    ...(position
+      ? [
+          {
+            id: "me",
+            lat: position.lat,
+            lng: position.lng,
+            kind: "provider" as const,
+            heading: position.heading,
+            glyph: providerGlyph(self.kind),
+            label: "Tú",
+          },
+        ]
+      : []),
+    {
+      id: "pickup",
+      lat: job.pickup.lat,
+      lng: job.pickup.lng,
+      kind: "pickup",
+      label: "Cliente",
+    },
+    ...(job.dropoff
+      ? [
+          {
+            id: "dropoff",
+            lat: job.dropoff.lat,
+            lng: job.dropoff.lng,
+            kind: "dropoff" as const,
+            label: "Destino",
+          },
+        ]
+      : []),
   ];
-  const polyline: LatLng[] = [
-    ...(position ? [position] : []),
-    ...(!inProgress ? [job.pickup] : []),
-    ...(job.dropoff ? [job.dropoff] : []),
-  ];
+  const polyline: LatLng[] = [...(position ? [position] : []), ...(!inProgress ? [job.pickup] : []), ...(job.dropoff ? [job.dropoff] : [])];
 
   const transition = async (to: Transition, pinValue?: string) => {
     setBusy(to);
@@ -125,83 +154,89 @@ export default function ActiveJobScreen({
   const vehicle = [VEHICLE_LABELS[job.vehicleKind], job.vehicleLabel, job.plate].filter(Boolean).join(" · ");
   const what = job.kind === "TOW" ? vehicle : `${KIND_LABELS[job.kind]} · ${vehicle}`;
 
-  return (
+  const footer = (
     <>
-      <StatusCard status={job.status} title={statusLabelFor(job.status, job.kind)}>
-        <p className="tenue -mt-1">{sub}</p>
+      {job.status === "EN_ROUTE" && (
+        <Button size="lg" fullWidth loading={busy === "ARRIVED"} disabled={busy !== null} onClick={() => void transition("ARRIVED")}>
+          Llegué
+        </Button>
+      )}
+      {job.status === "ARRIVED" && (
+        <Button type="submit" form="pin-form" size="lg" fullWidth loading={busy === "IN_PROGRESS"} disabled={pin.length !== 4 || busy !== null}>
+          {job.kind === "TOW" ? "Vehículo cargado, en ruta" : "Iniciar servicio"}
+        </Button>
+      )}
+      {job.status === "IN_PROGRESS" && (
+        <Button size="lg" fullWidth loading={busy === "COMPLETED"} disabled={busy !== null} onClick={() => void transition("COMPLETED")}>
+          {job.kind === "TOW" ? `Entregado y cobré ${formatQ(job.priceTotal)}` : `Terminé y cobré ${formatQ(job.priceTotal)}`}
+        </Button>
+      )}
+      {(job.status === "EN_ROUTE" || job.status === "ARRIVED") && (
+        <Button variant="danger" fullWidth disabled={busy !== null} onClick={() => setCancelOpen(true)} className="!border-transparent">
+          Cancelar servicio
+        </Button>
+      )}
+    </>
+  );
+
+  return (
+    <MapScreen
+      map={<MapView className="h-full w-full" markers={markers} polyline={polyline} fitToMarkers={fit} center={target} zoom={14} />}
+      overlay={
+        <MapOverlay>
+          <div className="flex w-full items-center justify-between gap-2">
+            <GpsPill loc={loc} reporting />
+            <button type="button" onClick={() => setFit(true)} aria-label="Centrar mapa" className="pildora !px-3 text-lg leading-none">
+              ⌖
+            </button>
+          </div>
+        </MapOverlay>
+      }
+    >
+      <BottomPanel footer={footer} height={job.status === "ARRIVED" ? "alta" : "normal"}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="titulo-hoja">{statusLabelFor(job.status, job.kind)}</h2>
+            <p className="tenue mt-1 text-[15px]">{sub}</p>
+          </div>
+          <span className="estado-punto en-linea mt-3 !bg-azul" aria-hidden />
+        </div>
+
         <p className="font-semibold">
           Cobrar {formatQ(job.priceTotal)} en efectivo · <span className="font-normal text-muted">{what}</span>
         </p>
         {job.notes && <p className="tenue chico italic">“{job.notes}”</p>}
 
-        <div className="grid grid-cols-2 gap-2">
-          <LinkButton href={wazeUrl(target)} external className="whitespace-nowrap">
-            Waze
-          </LinkButton>
-          <LinkButton href={googleMapsUrl(target)} external className="whitespace-nowrap">
-            Google Maps
-          </LinkButton>
-        </div>
-
         {job.client && (
-          <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-surface p-2.5">
-            <div className="flex min-w-0 flex-1 basis-36 items-center gap-3">
-              <Avatar initial={initialOf(job.client.name)} />
-              <div className="min-w-0">
-                <p className="truncate font-bold">{job.client.name}</p>
-                <p className="tenue chico">Cliente</p>
-              </div>
+          <div className="persona">
+            <div className="avatar text-[20px]" aria-hidden>
+              {initialOf(job.client.name)}
             </div>
-            <div className="flex shrink-0 gap-2">
-              <LinkButton href={telHref(job.client.phone)} size="sm" className="whitespace-nowrap">
-                📞 Llamar
-              </LinkButton>
-              <LinkButton href={job.client.whatsapp} size="sm" external variant="success" className="whitespace-nowrap">
-                WhatsApp
-              </LinkButton>
+            <div className="persona-texto">
+              <strong className="truncate text-[17px]">{job.client.name}</strong>
+              <span className="tenue">Cliente</span>
             </div>
+            <LinkButton href={telHref(job.client.phone)} size="icon" ariaLabel={`Llamar a ${job.client.name}`}>
+              📞
+            </LinkButton>
+            <LinkButton href={job.client.whatsapp} size="icon" external variant="success" ariaLabel={`WhatsApp a ${job.client.name}`}>
+              💬
+            </LinkButton>
           </div>
         )}
 
-        <ul className="flex flex-col gap-1.5">
-          <li className={cn("flex gap-2", inProgress && "opacity-60")}>
-            <span aria-hidden className="mt-0.5 leading-none">
-              🚗
-            </span>
-            <p className="chico leading-snug">
-              <span className="text-muted">Recogida: </span>
-              {placeLabel(job.pickup)}
-            </p>
-          </li>
-          {job.dropoff && (
-            <li className="flex gap-2">
-              <span aria-hidden className="mt-0.5 leading-none">
-                🏁
-              </span>
-              <p className="chico leading-snug">
-                <span className="text-muted">Destino: </span>
-                {placeLabel(job.dropoff)}
-                {job.kind === "TOW" ? ` (${formatKm(job.distanceKm)})` : ""}
-              </p>
-            </li>
-          )}
-        </ul>
-
-        <div className="rounded-[10px] bg-surface px-3 py-0.5">
-          <Row label="Ganas" value={formatQ(job.quote.providerPayoutQ)} strong />
-          <Row label="Cobras al cliente (efectivo)" value={formatQ(job.priceTotal)} />
+        <div className="grid grid-cols-2 gap-2">
+          <LinkButton href={wazeUrl(target)} external className="whitespace-nowrap">
+            🧭 Waze
+          </LinkButton>
+          <LinkButton href={googleMapsUrl(target)} external className="whitespace-nowrap">
+            🗺️ Google Maps
+          </LinkButton>
         </div>
-
-        {error && <Notice tone="danger">{error}</Notice>}
-
-        {job.status === "EN_ROUTE" && (
-          <Button size="lg" fullWidth loading={busy === "ARRIVED"} disabled={busy !== null} onClick={() => void transition("ARRIVED")}>
-            Llegué
-          </Button>
-        )}
 
         {job.status === "ARRIVED" && (
           <form
+            id="pin-form"
             className="flex flex-col gap-2"
             onSubmit={(e) => {
               e.preventDefault();
@@ -220,69 +255,68 @@ export default function ActiveJobScreen({
                 placeholder="••••"
                 aria-invalid={!!pinError}
                 aria-label="PIN de 4 dígitos"
-                className={cn("h-16 text-center text-3xl font-black tracking-[0.6em]", pinError && "border-rojo ring-2 ring-rojo")}
+                className={cn("h-16 text-center text-3xl font-black tracking-[0.6em]", pinError && "!border-rojo")}
                 disabled={busy !== null}
               />
-              {pinError ? <span className="mt-1 block text-sm font-semibold text-rojo">{pinError}</span> : <span className="mt-1 block text-xs text-muted">El cliente lo ve en su app. Se envía solo al escribir los 4 dígitos.</span>}
+              {pinError ? (
+                <span className="mt-1 block text-sm font-semibold text-rojo">{pinError}</span>
+              ) : (
+                <span className="mt-1 block text-xs text-muted">El cliente lo ve en su app. Se envía solo al escribir los 4 dígitos.</span>
+              )}
             </label>
-            <Button type="submit" size="lg" fullWidth loading={busy === "IN_PROGRESS"} disabled={pin.length !== 4 || busy !== null}>
-              {job.kind === "TOW" ? "Vehículo cargado, en ruta" : "Iniciar servicio"}
-            </Button>
           </form>
         )}
 
-        {job.status === "IN_PROGRESS" && (
-          <Button size="lg" fullWidth loading={busy === "COMPLETED"} disabled={busy !== null} onClick={() => void transition("COMPLETED")}>
-            {job.kind === "TOW" ? `Entregado y cobré ${formatQ(job.priceTotal)}` : `Terminé y cobré ${formatQ(job.priceTotal)}`}
-          </Button>
-        )}
-
-        {(job.status === "EN_ROUTE" || job.status === "ARRIVED") && (
-          <Button variant="danger" fullWidth disabled={busy !== null} onClick={() => setCancelOpen(true)}>
-            Cancelar servicio
-          </Button>
-        )}
-      </StatusCard>
-
-      <section className="tarjeta" aria-label="Mapa">
-        <div className="mapa-marco">
-          <MapView className="h-full w-full" markers={markers} polyline={polyline} fitToMarkers={fit} center={target} zoom={14} />
-          <button
-            type="button"
-            onClick={() => setFit(true)}
-            aria-label="Centrar mapa"
-            className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-lg shadow-md"
-          >
-            ⌖
-          </button>
-        </div>
-      </section>
-
-      <Sheet open={cancelOpen} onClose={() => busy === null && setCancelOpen(false)} title="¿Cancelar este servicio?">
-        <p className="tenue mb-3">La solicitud se ofrecerá a otra grúa o la atenderá la central. Cancelar seguido afecta tu calificación.</p>
-        <div className="mb-3 flex flex-wrap gap-2">
-          {CANCEL_REASONS.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setCancelReason(r)}
-              aria-pressed={cancelReason === r}
-              className={cn("h-10 rounded-full border px-3 text-sm font-semibold", cancelReason === r ? "border-foreground bg-foreground text-background" : "border-border bg-background")}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-        {cancelReason === "Otro" && <Input value={cancelOther} onChange={(e) => setCancelOther(e.target.value)} placeholder="Cuéntanos el motivo" maxLength={200} className="mb-3" />}
         <div className="flex flex-col gap-2">
-          <Button variant="danger" size="lg" fullWidth loading={busy === "CANCEL"} onClick={() => void cancel()}>
-            Sí, cancelar servicio
-          </Button>
-          <Button variant="secondary" fullWidth disabled={busy !== null} onClick={() => setCancelOpen(false)}>
-            Volver
-          </Button>
+          <div className="flex items-start gap-3">
+            <span className="marca-origen mt-1.5" aria-hidden />
+            <p className={cn("text-[15px] leading-snug", inProgress && "text-muted line-through")}>
+              <span className="text-muted">Recogida: </span>
+              {placeLabel(job.pickup)}
+            </p>
+          </div>
+          {job.dropoff && (
+            <div className="flex items-start gap-3">
+              <span className="marca-destino mt-1.5" aria-hidden />
+              <p className="text-[15px] leading-snug">
+                <span className="text-muted">Destino: </span>
+                {placeLabel(job.dropoff)}
+                {job.kind === "TOW" ? ` (${formatKm(job.distanceKm)})` : ""}
+              </p>
+            </div>
+          )}
         </div>
-      </Sheet>
-    </>
+
+        <div className="rounded-[12px] bg-surface-2 px-3 py-2">
+          <SheetRow label="Ganas" value={formatQ(job.quote.providerPayoutQ)} className="py-1" />
+          <SheetRow label="Cobras al cliente (efectivo)" value={formatQ(job.priceTotal)} className="py-1 text-[15px]" />
+        </div>
+
+        {error && <Notice tone="danger">{error}</Notice>}
+      </BottomPanel>
+
+      {/* La hoja modal va por encima de la hoja fija (z 1000) y de la barra. */}
+      <div className="relative z-[1200]">
+        <Sheet open={cancelOpen} onClose={() => busy === null && setCancelOpen(false)} title="¿Cancelar este servicio?">
+          <p className="tenue mb-3">La solicitud se ofrecerá a otra grúa o la atenderá la central. Cancelar seguido afecta tu calificación.</p>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {CANCEL_REASONS.map((r) => (
+              <button key={r} type="button" onClick={() => setCancelReason(r)} aria-pressed={cancelReason === r} className={cn("chip", cancelReason === r && "chip-activo")}>
+                {r}
+              </button>
+            ))}
+          </div>
+          {cancelReason === "Otro" && <Input value={cancelOther} onChange={(e) => setCancelOther(e.target.value)} placeholder="Cuéntanos el motivo" maxLength={200} className="mb-3" />}
+          <div className="flex flex-col gap-2">
+            <Button variant="primary" size="lg" fullWidth loading={busy === "CANCEL"} onClick={() => void cancel()}>
+              Sí, cancelar servicio
+            </Button>
+            <Button variant="secondary" fullWidth disabled={busy !== null} onClick={() => setCancelOpen(false)}>
+              Volver
+            </Button>
+          </div>
+        </Sheet>
+      </div>
+    </MapScreen>
   );
 }

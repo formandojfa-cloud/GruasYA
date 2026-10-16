@@ -1,37 +1,40 @@
 "use client";
 
 /**
- * App del cliente: sesión → inicio → (recogida → destino → cotización) →
- * solicitud activa. Un pequeño paso-a-paso tipo Uber; el borrador se guarda en
+ * App del cliente: sesión → hoja "Pedir" (recogida, destino, qué pasó, servicio
+ * y precio en una sola hoja sobre el mapa) → solicitud activa. Recogida y destino
+ * se afinan con el pin central en pasos aparte. El borrador se guarda en
  * sessionStorage y la solicitud en curso se retoma desde /api/me al recargar.
  */
 import { useEffect, useMemo, useState } from "react";
-import { KIND_ICONS, KIND_LABELS } from "@/lib/format";
 import { useGeolocationWatch } from "@/lib/hooks";
 import type { ClientSelf, Place, RequestView, ServiceKind } from "@/lib/types";
 import { ActiveRequest } from "./ActiveRequest";
-import { GUATEMALA_CITY, isLightKind, placeLabel, STORAGE_DRAFT } from "./constants";
+import { GUATEMALA_CITY, isLightKind, STORAGE_DRAFT } from "./constants";
 import { HomeScreen } from "./HomeScreen";
 import { LocationStep } from "./LocationStep";
-import { QuoteStep } from "./QuoteStep";
 import { SessionGate, SessionProvider, useSession } from "./session";
 import { useVehicle } from "./useVehicle";
 
+/** Lo que el usuario lleva elegido en la hoja "Pedir". */
+export type Draft = { kind: ServiceKind; pickup: Place | null; dropoff: Place | null };
+
 type Step =
-  | { step: "home" }
-  | { step: "pickup"; kind: ServiceKind; pickup?: Place; dropoff?: Place }
-  | { step: "dropoff"; kind: ServiceKind; pickup: Place; dropoff?: Place }
-  | { step: "quote"; kind: ServiceKind; pickup: Place; dropoff: Place | null }
+  | ({ step: "home" } & Draft)
+  | ({ step: "pickup" } & Draft)
+  | ({ step: "dropoff" } & Draft & { pickup: Place })
   | { step: "active"; request: RequestView };
 
-const DRAFT_STEPS = new Set<Step["step"]>(["pickup", "dropoff", "quote"]);
+const DRAFT_STEPS = new Set<Step["step"]>(["home", "pickup", "dropoff"]);
+const EMPTY: Draft = { kind: "TOW", pickup: null, dropoff: null };
 
 function loadDraft(): Step | null {
   try {
     const raw = window.sessionStorage.getItem(STORAGE_DRAFT);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Step;
-    return DRAFT_STEPS.has(parsed.step) ? parsed : null;
+    const parsed = JSON.parse(raw) as Partial<Step> & Partial<Draft>;
+    if (!parsed.step || !DRAFT_STEPS.has(parsed.step) || !parsed.kind) return null;
+    return parsed as Step;
   } catch {
     return null;
   }
@@ -54,7 +57,7 @@ function ClientFlow({ me }: { me: ClientSelf }) {
   const gps = useMemo(() => (lat != null && lng != null ? { lat, lng } : null), [lat, lng]);
   const [vehicle, setVehicle] = useVehicle(me);
   const [step, setStep] = useState<Step>(() =>
-    me.activeRequest ? { step: "active", request: me.activeRequest } : (loadDraft() ?? { step: "home" }),
+    me.activeRequest ? { step: "active", request: me.activeRequest } : (loadDraft() ?? { step: "home", ...EMPTY }),
   );
 
   useEffect(() => {
@@ -66,10 +69,10 @@ function ClientFlow({ me }: { me: ClientSelf }) {
     }
   }, [step]);
 
-  /** Vuelve a /api/me: si hay servicio en curso lo retoma; si no, al inicio. */
+  /** Vuelve a /api/me: si hay servicio en curso lo retoma; si no, a la hoja "Pedir" limpia. */
   async function resume() {
     const fresh = await refresh();
-    setStep(fresh?.activeRequest ? { step: "active", request: fresh.activeRequest } : { step: "home" });
+    setStep(fresh?.activeRequest ? { step: "active", request: fresh.activeRequest } : { step: "home", ...EMPTY });
   }
 
   switch (step.step) {
@@ -79,9 +82,14 @@ function ClientFlow({ me }: { me: ClientSelf }) {
           me={me}
           gps={gps}
           gpsError={geo.error}
+          draft={step}
+          onDraftChange={(d) => setStep({ step: "home", ...d })}
           vehicle={vehicle}
           onVehicleChange={setVehicle}
-          onPick={(kind) => setStep({ step: "pickup", kind })}
+          onEditPickup={() => setStep({ ...step, step: "pickup" })}
+          onEditDropoff={() => setStep({ ...step, step: "dropoff", pickup: step.pickup ?? gps ?? GUATEMALA_CITY })}
+          onCreated={(request) => setStep({ step: "active", request })}
+          onActiveExists={() => void resume()}
         />
       );
     case "pickup": {
@@ -90,16 +98,14 @@ function ClientFlow({ me }: { me: ClientSelf }) {
         <LocationStep
           key="pickup"
           kind="pickup"
-          title={`${KIND_ICONS[step.kind]} ${KIND_LABELS[step.kind]}`}
           initial={step.pickup ?? gps ?? GUATEMALA_CITY}
           gps={gps}
           gpsError={geo.error}
           cta={light ? "Confirmar mi ubicación" : "Confirmar dónde estás"}
           hasDropoff={!light}
-          onBack={() => setStep({ step: "home" })}
-          onConfirm={(pickup) =>
-            setStep(light ? { step: "quote", kind: step.kind, pickup, dropoff: null } : { step: "dropoff", kind: step.kind, pickup, dropoff: step.dropoff })
-          }
+          onBack={() => setStep({ ...step, step: "home" })}
+          onConfirm={(pickup) => setStep({ ...step, step: "home", pickup })}
+          onNext={(pickup) => setStep({ ...step, step: "dropoff", pickup })}
         />
       );
     }
@@ -108,36 +114,14 @@ function ClientFlow({ me }: { me: ClientSelf }) {
         <LocationStep
           key="dropoff"
           kind="dropoff"
-          title={`${KIND_ICONS[step.kind]} ${KIND_LABELS[step.kind]}`}
-          subtitle={`Tu vehículo: ${placeLabel(step.pickup)}`}
           initial={step.dropoff ?? step.pickup}
           gps={gps}
           cta="Confirmar destino"
           hasDropoff
-          markers={[{ id: "pickup", lat: step.pickup.lat, lng: step.pickup.lng, kind: "pickup", label: "Tu vehículo" }]}
-          onBack={() => setStep({ step: "pickup", kind: step.kind, pickup: step.pickup, dropoff: step.dropoff })}
-          onConfirm={(dropoff) => setStep({ step: "quote", kind: step.kind, pickup: step.pickup, dropoff })}
-        />
-      );
-    case "quote":
-      return (
-        <QuoteStep
-          kind={step.kind}
-          pickup={step.pickup}
-          dropoff={step.dropoff}
-          vehicle={vehicle}
-          me={me}
-          onBack={() =>
-            setStep(
-              step.dropoff
-                ? { step: "dropoff", kind: step.kind, pickup: step.pickup, dropoff: step.dropoff }
-                : { step: "pickup", kind: step.kind, pickup: step.pickup },
-            )
-          }
-          onEditPickup={() => setStep({ step: "pickup", kind: step.kind, pickup: step.pickup, dropoff: step.dropoff ?? undefined })}
-          onEditDropoff={() => setStep({ step: "dropoff", kind: step.kind, pickup: step.pickup, dropoff: step.dropoff ?? undefined })}
-          onCreated={(request) => setStep({ step: "active", request })}
-          onActiveExists={() => void resume()}
+          markers={[{ id: "pickup", lat: step.pickup.lat, lng: step.pickup.lng, kind: "pickup", label: "Recogida" }]}
+          onBack={() => setStep({ ...step, step: "home" })}
+          onConfirm={(dropoff) => setStep({ ...step, step: "home", dropoff })}
+          onPrev={() => setStep({ ...step, step: "pickup" })}
         />
       );
     case "active":

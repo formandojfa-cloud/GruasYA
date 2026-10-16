@@ -1,114 +1,326 @@
 "use client";
 
-/** Inicio "Hola, {nombre}": mapa con tu ubicación, qué necesitas (grúa o asistencia ligera) y tu vehículo. */
-import { useState } from "react";
+/**
+ * Hoja "Pedir" del prototipo sobre el mapa completo: bloque recogida/destino,
+ * chips "Qué pasó" (van al campo `notes`), opciones GrúaYa Moto/Carro/Camioneta/Pickup
+ * y las asistencias ligeras de la membresía, línea plegable con el desglose del
+ * precio (/api/quote) y pie con "💵 Pago en efectivo al piloto" + botón negro.
+ */
+import { useEffect, useState } from "react";
 import MapView, { type MapMarker } from "@/components/map/Map";
-import { Aviso, Button, Field, Input, Select, Sheet, cn } from "@/components/ui";
-import { formatQ, KIND_ICONS, KIND_LABELS, VEHICLE_LABELS } from "@/lib/format";
+import { Aviso, Button, Chip, Field, Input, Notice, OptionRow, RouteFields, Select, Sheet, cn } from "@/components/ui";
+import { api, ApiClientError } from "@/lib/api";
+import { formatKm, formatMinutes, formatQ, KIND_ICONS, KIND_LABELS, VEHICLE_LABELS } from "@/lib/format";
 import type { LatLng } from "@/lib/geo";
-import type { ClientSelf, ServiceKind, VehicleKind } from "@/lib/types";
-import { ClientShell } from "./ClientShell";
-import { GUATEMALA_CITY, KIND_HINTS, LIGHT_NON_MEMBER_Q, SERVICE_ORDER, TOW_BASE_Q, VEHICLE_ICONS } from "./constants";
+import type { ClientSelf, CreateRequestInput, Place, Quote, RequestView, ServiceKind, VehicleKind } from "@/lib/types";
+import type { Draft } from "./ClientApp";
+import { ClientScreen } from "./ClientShell";
+import {
+  apiErrorMessage,
+  GUATEMALA_CITY,
+  isLightKind,
+  KIND_HINTS,
+  LIGHT_NON_MEMBER_Q,
+  NON_MEMBER_TOW_FEE_Q,
+  PROBLEM_CHIPS,
+  SERVICE_ORDER,
+  shortAddress,
+  TOW_BASE_Q,
+  VEHICLE_ICONS,
+  VEHICLE_OPTIONS,
+  VEHICLE_SHORT,
+  type ProblemChip,
+} from "./constants";
+import { useReverseGeocode } from "./geocode";
 import type { VehicleDraft } from "./useVehicle";
+
+type QuoteResponse = { quote: Quote; distanceKm: number; towMinutes: number; isMember: boolean };
 
 type Props = {
   me: ClientSelf;
   gps: LatLng | null;
   gpsError: string | null;
+  draft: Draft;
+  onDraftChange: (d: Draft) => void;
   vehicle: VehicleDraft;
   onVehicleChange: (v: VehicleDraft) => void;
-  onPick: (kind: ServiceKind) => void;
+  onEditPickup: () => void;
+  onEditDropoff: () => void;
+  onCreated: (req: RequestView) => void;
+  /** La API respondió ACTIVE_REQUEST_EXISTS: hay que retomar el servicio en curso. */
+  onActiveExists: () => void;
 };
 
-export function HomeScreen({ me, gps, gpsError, vehicle, onVehicleChange, onPick }: Props) {
+export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, onVehicleChange, onEditPickup, onEditDropoff, onCreated, onActiveExists }: Props) {
+  const { kind, dropoff } = draft;
+  const light = isLightKind(kind);
+  // Sin recogida elegida, la recogida es tu ubicación actual (como el prototipo).
+  const usingGps = draft.pickup == null;
+  const pickup: Place | null = draft.pickup ?? gps;
+  const pickupAddress = useReverseGeocode(pickup && !pickup.address ? pickup : null);
+  const pickupLabel = pickup?.address ? shortAddress(pickup.address) : pickupAddress.label ? shortAddress(pickupAddress.label) : null;
+
+  const [problem, setProblem] = useState<ProblemChip | null>(null);
+  const [notes, setNotes] = useState("");
   const [vehicleOpen, setVehicleOpen] = useState(false);
-  const center = gps ?? GUATEMALA_CITY;
-  const markers: MapMarker[] = gps ? [{ id: "me", lat: gps.lat, lng: gps.lng, kind: "me" }] : [];
-  const firstName = me.name.split(" ")[0];
-  const light = SERVICE_ORDER.filter((k) => k !== "TOW");
+  const [quote, setQuote] = useState<QuoteResponse | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+
+  // Cotización: grúa necesita recogida y destino; asistencia ligera solo recogida.
+  const pLat = pickup?.lat;
+  const pLng = pickup?.lng;
+  const dLat = dropoff?.lat;
+  const dLng = dropoff?.lng;
+  const canQuote = pLat != null && pLng != null && (light || (dLat != null && dLng != null));
+  useEffect(() => {
+    setQuote(null);
+    setQuoteError(null);
+    if (!canQuote) return;
+    let cancelled = false;
+    const body = { kind, pickup: { lat: pLat, lng: pLng }, ...(!light && dLat != null && dLng != null ? { dropoff: { lat: dLat, lng: dLng } } : {}) };
+    api.post<QuoteResponse>("/api/quote", body).then(
+      (res) => {
+        if (!cancelled) setQuote(res);
+      },
+      (e: unknown) => {
+        if (!cancelled) setQuoteError(apiErrorMessage(e));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, light, canQuote, pLat, pLng, dLat, dLng, attempt]);
+
+  const isMember = quote?.isMember ?? me.isMember;
+  const ready = !!quote;
+  const total = quote?.quote.totalQ ?? 0;
+  const included = light && isMember;
+
+  function setKind(next: ServiceKind, vehicleKind?: VehicleKind) {
+    if (vehicleKind && vehicleKind !== vehicle.vehicleKind) onVehicleChange({ ...vehicle, vehicleKind });
+    if (next !== kind) onDraftChange({ ...draft, kind: next });
+  }
+
+  async function create() {
+    if (!pickup) return onEditPickup();
+    if (!light && !dropoff) return onEditDropoff();
+    setRequesting(true);
+    setRequestError(null);
+    const note = [problem && problem !== "Otro" ? problem : null, notes.trim() || null].filter(Boolean).join(": ");
+    const body: CreateRequestInput = {
+      kind,
+      vehicleKind: vehicle.vehicleKind,
+      vehicleLabel: vehicle.vehicleLabel || undefined,
+      plate: vehicle.plate || undefined,
+      notes: note || undefined,
+      pickup: { lat: pickup.lat, lng: pickup.lng, address: (pickup.address ?? pickupAddress.label ?? undefined)?.slice(0, 200) },
+      dropoff: !light && dropoff ? dropoff : undefined,
+    };
+    try {
+      const created = await api.post<RequestView>("/api/requests", body);
+      onCreated(created);
+    } catch (e) {
+      if (e instanceof ApiClientError && e.code === "ACTIVE_REQUEST_EXISTS") {
+        onActiveExists();
+        return;
+      }
+      setRequestError(apiErrorMessage(e));
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  // Mapa: recogida (punto), destino (cuadrado) y tu posición.
+  const markers: MapMarker[] = [];
+  if (pickup) markers.push({ id: "pickup", lat: pickup.lat, lng: pickup.lng, kind: "pickup", label: "Recogida" });
+  if (!light && dropoff) markers.push({ id: "dropoff", lat: dropoff.lat, lng: dropoff.lng, kind: "dropoff", label: dropoff.address ? shortAddress(dropoff.address, 1) : "Destino" });
+  if (gps && !usingGps) markers.push({ id: "me", lat: gps.lat, lng: gps.lng, kind: "me" });
+  const polyline = pickup && !light && dropoff ? [pickup, dropoff] : undefined;
+
+  const ctaLabel = !pickup
+    ? "Marcar dónde estás"
+    : !light && !dropoff
+      ? "Elegir destino"
+      : light
+        ? `Pedir ${KIND_LABELS[kind]}`
+        : `Pedir GrúaYa ${VEHICLE_SHORT[vehicle.vehicleKind]}`;
+  const needsQuote = !!pickup && (light || !!dropoff);
+
+  const footer = (
+    <>
+      {requestError && <Notice tone="danger">{requestError}</Notice>}
+      <p className="chico flex items-center gap-2 text-muted">
+        {included ? "✅ Incluido en tu membresía" : "💵 Pago en efectivo al piloto"}
+        {ready && !included && <span>· {formatQ(total)}</span>}
+      </p>
+      <Button size="lg" fullWidth loading={requesting} disabled={needsQuote && !ready && !quoteError} onClick={create}>
+        {needsQuote && !ready && !quoteError ? "Calculando precio…" : ctaLabel}
+      </Button>
+    </>
+  );
 
   return (
-    <ClientShell section="pedir">
-      <section className="tarjeta">
-        <h2>Hola, {firstName}</h2>
-        <p className="tenue">{me.isMember ? "Tus asistencias ligeras están incluidas en tu membresía." : "Pides, ves el precio fijo y pagas en efectivo al gruero."}</p>
-        {gpsError && <Aviso>{gpsError}. Mostramos Ciudad de Guatemala; en el siguiente paso puedes mover el mapa.</Aviso>}
-      </section>
+    <ClientScreen
+      section="pedir"
+      hasActive={!!me.activeRequest}
+      footer={footer}
+      height="alta"
+      map={
+        <MapView
+          center={pickup ?? GUATEMALA_CITY}
+          zoom={15}
+          markers={markers}
+          polyline={polyline}
+          fitToMarkers={markers.length > 1}
+          followCenter={markers.length <= 1}
+          onPick={(p) => onDraftChange({ ...draft, pickup: p })}
+          className="h-full w-full"
+        />
+      }
+      extra={
+        <Sheet open={vehicleOpen} onClose={() => setVehicleOpen(false)} title="Tu vehículo">
+          <VehicleForm
+            me={me}
+            value={vehicle}
+            onSave={(v) => {
+              onVehicleChange(v);
+              setVehicleOpen(false);
+            }}
+          />
+        </Sheet>
+      }
+    >
+      <RouteFields
+        origin={{
+          label: "Recogida · toca el mapa",
+          value: pickup ? (usingGps ? "Tu ubicación actual" : (pickupLabel ?? "Punto marcado en el mapa")) : "Toca el mapa o busca la dirección",
+          onClick: onEditPickup,
+          action: (
+            <button
+              type="button"
+              className="pildora !min-h-[36px] !px-3 !text-[13px]"
+              disabled={!gps}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDraftChange({ ...draft, pickup: null });
+              }}
+            >
+              📍 Mi ubicación
+            </button>
+          ),
+        }}
+        destination={{
+          label: "Destino",
+          value: light ? "Asistencia en el lugar, sin destino" : dropoff ? shortAddress(dropoff.address ?? "Punto marcado en el mapa") : "¿A dónde llevamos tu vehículo?",
+          onClick: light ? undefined : onEditDropoff,
+          action: light ? undefined : (
+            <span className="px-2 text-xl text-muted" aria-hidden>
+              ⌄
+            </span>
+          ),
+        }}
+      />
+      {gpsError && usingGps && <p className="tenue">{gpsError}. Toca el mapa o busca la dirección para marcar dónde estás.</p>}
 
-      <div className="mapa-marco">
-        <MapView center={center} zoom={15} followCenter markers={markers} className="h-full w-full" />
+      <div className="chips" role="group" aria-label="Qué pasó">
+        {PROBLEM_CHIPS.map((c) => (
+          <Chip key={c} active={problem === c} onClick={() => setProblem(problem === c ? null : c)}>
+            {c}
+          </Chip>
+        ))}
+      </div>
+      {problem === "Otro" && (
+        <Input placeholder="Cuéntanos qué pasó (opcional)" aria-label="Qué pasó" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
+      )}
+
+      <div className="opciones" role="radiogroup" aria-label="Servicio">
+        {VEHICLE_OPTIONS.map((o) => {
+          const active = kind === "TOW" && vehicle.vehicleKind === o.kind;
+          return (
+            <OptionRow
+              key={o.kind}
+              icon={VEHICLE_ICONS[o.kind]}
+              title={`GrúaYa ${o.name}`}
+              subtitle={kind === "TOW" && needsQuote ? (ready ? `Precio fijo · ${o.detail}` : quoteError ? o.detail : "Calculando precio…") : o.detail}
+              price={kind === "TOW" && ready ? formatQ(total) : `desde ${formatQ(TOW_BASE_Q)}`}
+              active={active}
+              onClick={() => setKind("TOW", o.kind)}
+            />
+          );
+        })}
       </div>
 
-      <section className="tarjeta">
-        <h3>¿Qué necesitas?</h3>
-        <ServiceTile kind="TOW" isMember={me.isMember} onClick={() => onPick("TOW")} />
-        <p className="tenue">Asistencia ligera · {me.isMember ? "incluida en tu membresía" : `${formatQ(LIGHT_NON_MEMBER_Q)} por servicio`}</p>
-        <div className="grid grid-cols-2 gap-2">
-          {light.map((kind) => (
-            <ServiceTile key={kind} kind={kind} isMember={me.isMember} onClick={() => onPick(kind)} />
-          ))}
-        </div>
-      </section>
+      <p className="tenue">Asistencia ligera · {me.isMember ? "incluida en tu membresía" : `${formatQ(LIGHT_NON_MEMBER_Q)} por servicio`}</p>
+      <div className="opciones -mt-2" role="radiogroup" aria-label="Asistencia ligera">
+        {SERVICE_ORDER.filter((k) => k !== "TOW").map((k) => (
+          <OptionRow
+            key={k}
+            className="!min-h-[56px]"
+            icon={<span className="text-2xl">{KIND_ICONS[k]}</span>}
+            title={KIND_LABELS[k]}
+            subtitle={KIND_HINTS[k]}
+            price={me.isMember ? "Incluido" : formatQ(LIGHT_NON_MEMBER_Q)}
+            active={kind === k}
+            onClick={() => setKind(k)}
+          />
+        ))}
+      </div>
 
-      <section className="tarjeta">
-        <h3>Tu vehículo</h3>
-        <button
-          type="button"
-          onClick={() => setVehicleOpen(true)}
-          className="flex w-full items-center gap-3 rounded-[10px] bg-surface px-3 py-3 text-left hover:bg-surface-2"
-          aria-label="Cambiar vehículo"
-        >
-          <span className="text-2xl leading-none" aria-hidden>
-            {VEHICLE_ICONS[vehicle.vehicleKind]}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-semibold">
-              {VEHICLE_LABELS[vehicle.vehicleKind]}
-              {vehicle.vehicleLabel && ` · ${vehicle.vehicleLabel}`}
-            </span>
-            <span className="block text-sm text-muted">{vehicle.plate ? `Placa ${vehicle.plate}` : "Agrega la placa (opcional)"}</span>
-          </span>
-          <span className="text-sm font-bold">Cambiar</span>
-        </button>
-      </section>
+      <button type="button" onClick={() => setVehicleOpen(true)} className="flex min-h-11 items-center gap-2 text-left text-sm">
+        <span aria-hidden>{VEHICLE_ICONS[vehicle.vehicleKind]}</span>
+        <span className="min-w-0 flex-1 truncate text-muted">
+          Tu vehículo: {[VEHICLE_LABELS[vehicle.vehicleKind], vehicle.vehicleLabel, vehicle.plate].filter(Boolean).join(" · ")}
+        </span>
+        <span className="font-bold">Cambiar</span>
+      </button>
 
-      <Sheet open={vehicleOpen} onClose={() => setVehicleOpen(false)} title="Tu vehículo">
-        <VehicleForm
-          me={me}
-          value={vehicle}
-          onSave={(v) => {
-            onVehicleChange(v);
-            setVehicleOpen(false);
-          }}
-        />
-      </Sheet>
-    </ClientShell>
-  );
-}
-
-function ServiceTile({ kind, isMember, onClick }: { kind: ServiceKind; isMember: boolean; onClick: () => void }) {
-  const tow = kind === "TOW";
-  const price = tow ? `desde ${formatQ(TOW_BASE_Q)}` : isMember ? "Incluido" : formatQ(LIGHT_NON_MEMBER_Q);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-xl border text-left transition active:scale-[0.98]",
-        tow
-          ? "flex min-h-[72px] items-center gap-3 border-amarillo bg-amarillo p-3 text-primary-foreground hover:brightness-95"
-          : "flex min-h-[88px] flex-col justify-between gap-2 border-border bg-surface p-3 hover:bg-surface-2",
+      {quoteError && (
+        <Notice tone="danger" className="flex items-center justify-between gap-3">
+          <span>{quoteError}</span>
+          <button
+            type="button"
+            className="font-semibold underline"
+            onClick={() => {
+              setQuoteError(null);
+              setAttempt((a) => a + 1);
+            }}
+          >
+            Reintentar
+          </button>
+        </Notice>
       )}
-    >
-      <span className={cn("leading-none", tow ? "text-4xl" : "text-2xl")} aria-hidden>
-        {KIND_ICONS[kind]}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className={cn("block font-bold leading-tight", tow ? "text-[17px]" : "text-[15px]")}>{tow ? "Pedir grúa" : KIND_LABELS[kind]}</span>
-        <span className={cn("block text-xs", tow ? "opacity-80" : "text-muted")}>{tow ? KIND_HINTS[kind] : price}</span>
-      </span>
-      {tow && <span className="whitespace-nowrap text-sm font-bold">{price}</span>}
-    </button>
+
+      {quote && (
+        <details className="chico text-muted">
+          <summary className="cursor-pointer select-none">
+            Precio fijo
+            {kind === "TOW" && ` · ${formatKm(quote.distanceKm)} y ${quote.towMinutes < 1 ? "menos de 1 min" : `unos ${formatMinutes(quote.towMinutes)}`}`}
+            {light && ` · ${quote.quote.summary}`}
+          </summary>
+          <div className="mt-1.5 flex flex-col gap-0.5">
+            {quote.quote.lines.map((l) => (
+              <span key={l.label} className="flex justify-between gap-3">
+                <span>{l.label}</span>
+                <span className="tabular-nums">{formatQ(l.amountQ)}</span>
+              </span>
+            ))}
+            <span className="flex justify-between gap-3 font-bold text-foreground">
+              <span>Total</span>
+              <span className="tabular-nums">{included ? "Incluido" : formatQ(total)}</span>
+            </span>
+          </div>
+        </details>
+      )}
+      {quote && kind === "TOW" && quote.distanceKm < 0.05 && (
+        <Aviso>El destino está en el mismo punto que la recogida. Si quieres que llevemos tu vehículo a otro lugar, toca Destino.</Aviso>
+      )}
+      {quote && !isMember && (
+        <Aviso>Hazte socio: {kind === "TOW" ? `ahorras ${formatQ(NON_MEMBER_TOW_FEE_Q)} en cada grúa` : "esta asistencia iría incluida"} y las asistencias ligeras van sin costo.</Aviso>
+      )}
+    </ClientScreen>
   );
 }
 
@@ -121,14 +333,9 @@ function VehicleForm({ me, value, onSave }: { me: ClientSelf; value: VehicleDraf
           {me.vehicles.map((v) => {
             const selected = draft.plate === v.plate && draft.vehicleKind === v.kind;
             return (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setDraft({ vehicleKind: v.kind, vehicleLabel: v.label, plate: v.plate })}
-                className={cn("rounded-xl border px-3 py-2 text-sm font-semibold", selected ? "border-tinta bg-tinta text-tarjeta" : "border-border bg-background")}
-              >
+              <Chip key={v.id} active={selected} onClick={() => setDraft({ vehicleKind: v.kind, vehicleLabel: v.label, plate: v.plate })}>
                 {VEHICLE_ICONS[v.kind]} {v.label} · {v.plate}
-              </button>
+              </Chip>
             );
           })}
         </div>
@@ -142,11 +349,11 @@ function VehicleForm({ me, value, onSave }: { me: ClientSelf; value: VehicleDraf
           ))}
         </Select>
       </Field>
-      <Field label="Marca y color" hint="Ayuda al gruero a reconocerte">
+      <Field label="Marca y color" hint="Ayuda al piloto a reconocerte">
         <Input value={draft.vehicleLabel} onChange={(e) => setDraft({ ...draft, vehicleLabel: e.target.value })} placeholder="Toyota Corolla gris" maxLength={80} />
       </Field>
       <Field label="Placa de tu vehículo (opcional)">
-        <Input value={draft.plate} onChange={(e) => setDraft({ ...draft, plate: e.target.value.toUpperCase() })} placeholder="P-123ABC" maxLength={12} className="uppercase" />
+        <Input value={draft.plate} onChange={(e) => setDraft({ ...draft, plate: e.target.value.toUpperCase() })} placeholder="P-123ABC" maxLength={12} className={cn("uppercase")} />
       </Field>
       <Button size="lg" fullWidth onClick={() => onSave({ ...draft, vehicleLabel: draft.vehicleLabel.trim(), plate: draft.plate.trim() })}>
         Guardar

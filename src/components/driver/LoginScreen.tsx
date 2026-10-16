@@ -38,8 +38,8 @@ export default function LoginScreen({ initialError, onLoggedIn }: { initialError
   return (
     <DriverShell footer="¿No tienes enlace o ya no funciona? Escribe a la central y te mandan uno nuevo.">
       <section className="tarjeta">
-        <h2 className="text-[22px]">Entra con tu enlace</h2>
-        <p className="tenue">La central de GruaYa te manda por WhatsApp un enlace personal. Ábrelo en este teléfono, o pega aquí el enlace o el token.</p>
+        <h2 className="titulo-hoja">Entra con tu enlace</h2>
+        <p className="tenue text-[15px]">La central de GrúaYa te manda por WhatsApp un enlace personal. Ábrelo en este teléfono, o pega aquí el enlace o el token.</p>
         <form onSubmit={submit} className="flex flex-col gap-3" noValidate>
           <Field label="Enlace o token" hint="Ejemplo: https://…/driver?token=abc123">
             <Input

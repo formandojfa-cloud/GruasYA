@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Árbol de la app del piloto. Todo lo dirige `ProviderSelf` (GET /api/provider/me
+ * Árbol de la app del piloto (mapa completo + hoja inferior, aspecto GrúaYa). Todo lo dirige `ProviderSelf` (GET /api/provider/me
  * cada 2.5 s): oferta pendiente → tarjeta de oferta; servicio activo →
  * tarjeta de servicio; si no, la principal. Al recargar, el estado vuelve del
  * servidor; el resumen de un servicio recién terminado se recuerda en
@@ -14,7 +14,7 @@ import { api, ApiClientError, errorMessage } from "@/lib/api";
 import { useLocalStorage, usePolling } from "@/lib/hooks";
 import type { ProviderSelf, RequestView } from "@/lib/types";
 import ActiveJobScreen from "./ActiveJobScreen";
-import { ConnectionBanner, DriverShell, FullScreen, FullScreenSpinner, NumbersCard, ProfileCard } from "./bits";
+import { ConnectionBanner, FullScreen, FullScreenSpinner } from "./bits";
 import CompletedScreen from "./CompletedScreen";
 import HomeScreen from "./HomeScreen";
 import LoginScreen from "./LoginScreen";
@@ -33,7 +33,10 @@ export default function DriverApp() {
   const [session, setSession] = useState<Session>("checking");
   const [bootError, setBootError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [completed, setCompleted] = useState<{ job: RequestView; clientName: string | null } | null>(null);
+  const [completed, setCompleted] = useState<{
+    job: RequestView;
+    clientName: string | null;
+  } | null>(null);
   const [completedId, setCompletedId] = useLocalStorage<string | null>(LS_COMPLETED, null);
 
   const fetchSelf = useCallback(async () => {
@@ -53,7 +56,9 @@ export default function DriverApp() {
     (async () => {
       try {
         if (token) {
-          const me = await api.post<ProviderSelf>("/api/provider/auth", { token });
+          const me = await api.post<ProviderSelf>("/api/provider/auth", {
+            token,
+          });
           if (cancelled) return;
           setData(me);
           setBootError(null);
@@ -109,12 +114,22 @@ export default function DriverApp() {
 
   const reporting = !!self && session === "authed" && (self.status !== "OFFLINE" || self.activeJob != null);
   const loc = useLocationReporter(reporting);
-  const shownPosition = loc.position ?? (self?.location ? { lat: self.location.lat, lng: self.location.lng, heading: self.location.heading } : null);
+  const shownPosition =
+    loc.position ??
+    (self?.location
+      ? {
+          lat: self.location.lat,
+          lng: self.location.lng,
+          heading: self.location.heading,
+        }
+      : null);
 
   // ---------- acciones ----------
 
   const toggleStatus = async (to: "ONLINE" | "OFFLINE") => {
-    const me = await api.post<ProviderSelf>("/api/provider/status", { status: to });
+    const me = await api.post<ProviderSelf>("/api/provider/status", {
+      status: to,
+    });
     setData(me);
   };
 
@@ -223,41 +238,53 @@ export default function DriverApp() {
   if (self.pendingOffer) {
     const offer = self.pendingOffer;
     return (
-      <DriverShell section="servicios">
+      <>
         {banner}
-        <ProfileCard self={self} />
-        <OfferScreen key={offer.id} offer={offer} position={shownPosition} onAccept={() => acceptOffer(offer.id)} onReject={() => rejectOffer(offer.id)} onExpire={() => void refresh()} />
-        <NumbersCard today={self.today} />
-      </DriverShell>
+        <OfferScreen
+          key={offer.id}
+          self={self}
+          offer={offer}
+          position={shownPosition}
+          loc={loc}
+          onAccept={() => acceptOffer(offer.id)}
+          onReject={() => rejectOffer(offer.id)}
+          onExpire={() => void refresh()}
+        />
+      </>
     );
   }
 
   if (self.activeJob) {
     return (
-      <DriverShell section="servicios">
+      <>
         {banner}
-        <ProfileCard self={self} />
-        <ActiveJobScreen job={self.activeJob} position={shownPosition} onUpdated={onJobUpdated} onCompleted={onJobCompleted} onCancelled={onJobCancelled} onRefresh={() => void refresh()} />
-        <NumbersCard today={self.today} />
-      </DriverShell>
+        <ActiveJobScreen
+          self={self}
+          job={self.activeJob}
+          position={shownPosition}
+          loc={loc}
+          onUpdated={onJobUpdated}
+          onCompleted={onJobCompleted}
+          onCancelled={onJobCancelled}
+          onRefresh={() => void refresh()}
+        />
+      </>
     );
   }
 
   if (completed) {
     return (
-      <DriverShell section="servicios">
+      <>
         {banner}
-        <ProfileCard self={self} />
-        <CompletedScreen job={completed.job} clientName={completed.clientName} onDone={finishSummary} />
-        <NumbersCard today={self.today} />
-      </DriverShell>
+        <CompletedScreen self={self} job={completed.job} clientName={completed.clientName} position={shownPosition} onDone={finishSummary} />
+      </>
     );
   }
 
   return (
-    <DriverShell section="servicios">
+    <>
       {banner}
       <HomeScreen self={self} loc={loc} notice={notice} onToggle={toggleStatus} onLogout={logout} />
-    </DriverShell>
+    </>
   );
 }

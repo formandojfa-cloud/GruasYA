@@ -1,23 +1,20 @@
 "use client";
 
 /**
- * Paso "🚗 Dónde estás" / "🏁 A dónde vas": pin fijo al centro, el usuario
- * mueve (o toca) el mapa; la dirección se resuelve con /api/geocode.
+ * Paso "Dónde estás" / "A dónde vas" sobre el mapa completo: pin fijo al centro,
+ * el usuario mueve (o toca) el mapa; la dirección se resuelve con /api/geocode.
  */
 import { useEffect, useState } from "react";
 import MapView, { type MapMarker } from "@/components/map/Map";
-import { Aviso, Button, Input, Segments, Spinner } from "@/components/ui";
+import { Button, Input, Segments, Spinner } from "@/components/ui";
 import type { LatLng } from "@/lib/geo";
 import type { Place } from "@/lib/types";
-import { BackButton } from "./bits";
 import { CenterPin } from "./CenterPin";
-import { ClientShell } from "./ClientShell";
+import { ClientScreen } from "./ClientShell";
 import { formatCoords } from "./constants";
 import { searchPlaces, useReverseGeocode, type GeoResult } from "./geocode";
 
 type Props = {
-  title: string;
-  subtitle?: string;
   kind: "pickup" | "dropoff";
   /** Punto inicial del pin. */
   initial: LatLng;
@@ -31,12 +28,16 @@ type Props = {
   markers?: MapMarker[];
   onBack: () => void;
   onConfirm: (place: Place) => void;
+  /** Recogida → "A dónde vas" confirma el punto y sigue con el destino. */
+  onNext?: (place: Place) => void;
+  /** Destino → "Dónde estás" vuelve a la recogida. */
+  onPrev?: () => void;
 };
 
 type View = LatLng & { nonce: number };
 type Found = { q: string; results: GeoResult[]; unavailable: boolean };
 
-export function LocationStep({ title, subtitle, kind, initial, gps, gpsError, cta, hasDropoff, markers = [], onBack, onConfirm }: Props) {
+export function LocationStep({ kind, initial, gps, gpsError, cta, hasDropoff, markers = [], onBack, onConfirm, onNext, onPrev }: Props) {
   const [pin, setPin] = useState<LatLng>(initial);
   const [view, setView] = useState<View>({ lat: initial.lat, lng: initial.lng, nonce: 0 });
   const [query, setQuery] = useState("");
@@ -80,73 +81,30 @@ export function LocationStep({ title, subtitle, kind, initial, gps, gpsError, ct
     setFocused(false);
   }
 
-  function confirm() {
+  function place(): Place {
     const label = address.label?.slice(0, 200);
-    onConfirm({ lat: pin.lat, lng: pin.lng, address: label || undefined });
+    return { lat: pin.lat, lng: pin.lng, address: label || undefined };
   }
 
   // Desplazamiento de ≈1 m para que el mapa se recentre aunque el punto sea el mismo.
   const center: LatLng = { lat: view.lat + (view.nonce % 2) * 0.00001, lng: view.lng };
-  const icon = kind === "pickup" ? "🚗" : "🏁";
+  const isPickup = kind === "pickup";
+
+  const footer = (
+    <Button type="button" size="lg" fullWidth onClick={() => onConfirm(place())}>
+      {cta}
+    </Button>
+  );
 
   return (
-    <ClientShell section="pedir">
-      <section className="tarjeta">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h2>{title}</h2>
-            {subtitle && <p className="tenue truncate">{subtitle}</p>}
-          </div>
-          <BackButton onClick={onBack} />
-        </div>
-        <Segments
-          label="Paso"
-          items={[
-            { key: "pickup", label: "🚗 Dónde estás" },
-            { key: "dropoff", label: "🏁 A dónde vas", disabled: !hasDropoff },
-          ]}
-          value={kind}
-          onChange={(k) => {
-            // Desde la recogida, "A dónde vas" confirma el punto y pasa al destino; desde el destino, "Dónde estás" vuelve.
-            if (k === kind) return;
-            if (k === "dropoff") confirm();
-            else onBack();
-          }}
-        />
-        <p className="tenue">{kind === "pickup" ? "Toca el mapa para marcar tu vehículo." : "Toca el mapa para marcar el destino."}</p>
-        <Input
-          type="search"
-          inputMode="search"
-          placeholder="Buscar dirección o lugar"
-          aria-label="Buscar dirección"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setFocused(true)}
-        />
-        {showResults && (
-          <ul className="-mt-1 max-h-60 divide-y divide-border overflow-y-auto rounded-[10px] border border-border">
-            {searching && (
-              <li className="flex items-center gap-2 px-3 py-3 text-sm text-muted">
-                <Spinner size="sm" /> Buscando…
-              </li>
-            )}
-            {!searching && results.length === 0 && (
-              <li className="px-3 py-3 text-sm text-muted">
-                {found.unavailable ? "La búsqueda no está disponible. Mueve el mapa para fijar el punto." : "Sin resultados en Guatemala"}
-              </li>
-            )}
-            {results.map((r) => (
-              <li key={`${r.lat},${r.lng},${r.label}`}>
-                <button type="button" onClick={() => pickResult(r)} className="w-full px-3 py-3 text-left text-sm leading-snug hover:bg-surface">
-                  <span aria-hidden>{icon}</span> {r.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <div className="mapa-marco">
+    <ClientScreen
+      section="pedir"
+      showSegments={false}
+      onBack={onBack}
+      suffix={isPickup ? "dónde estás" : "a dónde vas"}
+      footer={footer}
+      height={showResults ? "alta" : "corta"}
+      map={
         <MapView
           center={center}
           zoom={16}
@@ -159,38 +117,79 @@ export function LocationStep({ title, subtitle, kind, initial, gps, gpsError, ct
           }}
           className="h-full w-full"
         />
-        <CenterPin kind={kind} />
-      </div>
+      }
+      overlay={<CenterPin kind={kind} />}
+    >
+      <Segments
+        label="Paso"
+        className="self-start"
+        items={[
+          { key: "pickup", label: "🚗 Dónde estás" },
+          { key: "dropoff", label: "🏁 A dónde vas", disabled: !hasDropoff },
+        ]}
+        value={kind}
+        onChange={(k) => {
+          if (k === kind) return;
+          if (k === "dropoff") onNext?.(place());
+          else onPrev?.();
+        }}
+      />
 
-      <section className="tarjeta">
-        <p className="tenue">{kind === "pickup" ? "Tu vehículo" : "Destino"}</p>
-        <div className="flex min-h-11 items-start gap-2">
-          <span className="text-xl leading-none" aria-hidden>
-            {icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            {address.loading ? (
-              <p className="flex items-center gap-2 text-sm text-muted">
-                <Spinner size="sm" /> Buscando dirección…
-              </p>
-            ) : address.label ? (
-              <p className="line-clamp-2 font-medium leading-snug">{address.label}</p>
-            ) : (
-              <>
-                <p className="font-medium tabular-nums">{formatCoords(pin)}</p>
-                <p className="text-sm text-muted">{address.unavailable ? "Sin dirección disponible; el pin marca el punto exacto." : "Mueve el mapa para ajustar el pin."}</p>
-              </>
-            )}
-          </div>
+      <div className="flex items-start gap-3">
+        <span className={isPickup ? "marca-origen mt-2" : "marca-destino mt-2"} aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="tenue chico">{isPickup ? "Recogida · mueve el mapa para ajustar" : "Destino · mueve el mapa para ajustar"}</p>
+          {address.loading ? (
+            <p className="flex items-center gap-2 text-sm text-muted">
+              <Spinner size="sm" /> Buscando dirección…
+            </p>
+          ) : address.label ? (
+            <p className="line-clamp-2 text-[17px] font-medium leading-snug">{address.label}</p>
+          ) : (
+            <>
+              <p className="text-[17px] font-medium tabular-nums">{formatCoords(pin)}</p>
+              <p className="text-sm text-muted">{address.unavailable ? "Sin dirección disponible; el pin marca el punto exacto." : "Mueve el mapa para ajustar el pin."}</p>
+            </>
+          )}
         </div>
-        {gpsError && kind === "pickup" && <Aviso>{gpsError}. Mueve el mapa hasta donde estás.</Aviso>}
-        <Button type="button" variant="secondary" fullWidth onClick={() => gps && goTo(gps)} disabled={!gps}>
-          📍 Usar mi ubicación
-        </Button>
-        <Button type="button" size="lg" fullWidth onClick={confirm}>
-          {cta}
-        </Button>
-      </section>
-    </ClientShell>
+        {isPickup && (
+          <button type="button" className="pildora !min-h-[36px] !px-3 !text-[13px] disabled:opacity-40" disabled={!gps} onClick={() => gps && goTo(gps)}>
+            📍 Mi ubicación
+          </button>
+        )}
+      </div>
+      {gpsError && isPickup && <p className="tenue">{gpsError}. Mueve el mapa hasta donde estás.</p>}
+
+      <Input
+        type="search"
+        inputMode="search"
+        placeholder="Buscar dirección o lugar"
+        aria-label="Buscar dirección"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setFocused(true)}
+      />
+      {showResults && (
+        <ul className="-mt-2 max-h-60 divide-y divide-border overflow-y-auto rounded-[12px] bg-surface-2">
+          {searching && (
+            <li className="flex items-center gap-2 px-3 py-3 text-sm text-muted">
+              <Spinner size="sm" /> Buscando…
+            </li>
+          )}
+          {!searching && results.length === 0 && (
+            <li className="px-3 py-3 text-sm text-muted">
+              {found.unavailable ? "La búsqueda no está disponible. Mueve el mapa para fijar el punto." : "Sin resultados en Guatemala"}
+            </li>
+          )}
+          {results.map((r) => (
+            <li key={`${r.lat},${r.lng},${r.label}`}>
+              <button type="button" onClick={() => pickResult(r)} className="w-full px-3 py-3 text-left text-sm leading-snug hover:bg-surface">
+                <span aria-hidden>{isPickup ? "🚗" : "🏁"}</span> {r.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </ClientScreen>
   );
 }

@@ -1,6 +1,6 @@
-/** Pin fijo al centro del mapa: el usuario arrastra el mapa, no el pin (🚗 tu vehículo, 🏁 destino). */
+/** Pin fijo al centro del mapa (negro, como los pines del prototipo): el usuario arrastra el mapa, no el pin (🚗 tu vehículo, 🏁 destino). */
 export function CenterPin({ kind }: { kind: "pickup" | "dropoff" }) {
-  const fill = kind === "pickup" ? "#1d1d1f" : "#1f8a4c";
+  const fill = "#1d1d1f";
   const glyph = kind === "pickup" ? "🚗" : "🏁";
   return (
     <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full drop-shadow-md" aria-hidden>

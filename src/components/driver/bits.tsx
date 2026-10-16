@@ -74,7 +74,10 @@ export function MapScreen({ map, overlay, children }: { map: ReactNode; overlay?
 /** Capa bajo la barra para píldoras y avisos flotantes (la barra mide ~52 px + zona segura). */
 export function MapOverlay({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("pointer-events-none absolute left-4 right-4 z-[900] flex flex-col items-start gap-2 [&>*]:pointer-events-auto", className)} style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}>
+    <div
+      className={cn("pointer-events-none absolute left-4 right-4 z-[900] flex flex-col items-start gap-2 [&>*]:pointer-events-auto", className)}
+      style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
+    >
       {children}
     </div>
   );

@@ -31,7 +31,11 @@ function useOfferTimer({ until, onExpire }: { until: string; onExpire?: () => vo
     ),
     bar: (
       <div className="barra-tiempo" aria-hidden>
-        <div style={{ width: `${Math.max(0, Math.min(100, (left / TOTAL_SECONDS) * 100))}%` }} />
+        <div
+          style={{
+            width: `${Math.max(0, Math.min(100, (left / TOTAL_SECONDS) * 100))}%`,
+          }}
+        />
       </div>
     ),
   };
@@ -133,9 +137,37 @@ export default function OfferScreen({
   }, [offer.id]);
 
   const markers: MapMarker[] = [
-    ...(position ? [{ id: "me", lat: position.lat, lng: position.lng, kind: "provider" as const, heading: position.heading, glyph: providerGlyph(self.kind), label: "Tú" }] : []),
-    { id: "pickup", lat: offer.pickup.lat, lng: offer.pickup.lng, kind: "pickup", label: "Cliente" },
-    ...(offer.dropoff ? [{ id: "dropoff", lat: offer.dropoff.lat, lng: offer.dropoff.lng, kind: "dropoff" as const, label: "Destino" }] : []),
+    ...(position
+      ? [
+          {
+            id: "me",
+            lat: position.lat,
+            lng: position.lng,
+            kind: "provider" as const,
+            heading: position.heading,
+            glyph: providerGlyph(self.kind),
+            label: "Tú",
+          },
+        ]
+      : []),
+    {
+      id: "pickup",
+      lat: offer.pickup.lat,
+      lng: offer.pickup.lng,
+      kind: "pickup",
+      label: "Cliente",
+    },
+    ...(offer.dropoff
+      ? [
+          {
+            id: "dropoff",
+            lat: offer.dropoff.lat,
+            lng: offer.dropoff.lng,
+            kind: "dropoff" as const,
+            label: "Destino",
+          },
+        ]
+      : []),
   ];
   const polyline: LatLng[] = [...(position ? [position] : []), offer.pickup, ...(offer.dropoff ? [offer.dropoff] : [])];
 

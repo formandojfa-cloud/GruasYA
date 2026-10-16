@@ -36,9 +36,29 @@ export default function HomeScreen({
 
   const online = self.status === "ONLINE";
   const reporting = self.status !== "OFFLINE";
-  const shown = loc.position ?? (self.location ? { lat: self.location.lat, lng: self.location.lng, heading: self.location.heading } : null);
+  const shown =
+    loc.position ??
+    (self.location
+      ? {
+          lat: self.location.lat,
+          lng: self.location.lng,
+          heading: self.location.heading,
+        }
+      : null);
   const center = shown ?? DEFAULT_CENTER;
-  const markers: MapMarker[] = shown ? [{ id: "me", lat: shown.lat, lng: shown.lng, kind: "provider", heading: shown.heading, glyph: providerGlyph(self.kind), label: "Tú" }] : [];
+  const markers: MapMarker[] = shown
+    ? [
+        {
+          id: "me",
+          lat: shown.lat,
+          lng: shown.lng,
+          kind: "provider",
+          heading: shown.heading,
+          glyph: providerGlyph(self.kind),
+          label: "Tú",
+        },
+      ]
+    : [];
 
   const toggle = async () => {
     setBusy(true);
@@ -91,15 +111,7 @@ export default function HomeScreen({
 
   const footer = (
     <>
-      <Button
-        variant={online ? "secondary" : "primary"}
-        size="lg"
-        fullWidth
-        loading={busy}
-        onClick={toggle}
-        disabled={self.status === "BUSY"}
-        aria-pressed={online}
-      >
+      <Button variant={online ? "secondary" : "primary"} size="lg" fullWidth loading={busy} onClick={toggle} disabled={self.status === "BUSY"} aria-pressed={online}>
         {online ? "Desconectarme" : self.status === "BUSY" ? "En servicio" : "Conectarme"}
       </Button>
       {!online && self.status !== "BUSY" && (
@@ -116,9 +128,7 @@ export default function HomeScreen({
         <div className="flex items-start justify-between gap-3" aria-live="polite">
           <div className="min-w-0">
             <h2 className="titulo-hoja">{online ? "Estás en línea" : self.status === "BUSY" ? "En servicio" : "Estás desconectado"}</h2>
-            <p className="tenue mt-1 text-[16px]">
-              {online ? "Buscando solicitudes cerca de ti" : self.status === "BUSY" ? "Tienes un servicio en curso." : "Conéctate para recibir solicitudes"}
-            </p>
+            <p className="tenue mt-1 text-[16px]">{online ? "Buscando solicitudes cerca de ti" : self.status === "BUSY" ? "Tienes un servicio en curso." : "Conéctate para recibir solicitudes"}</p>
           </div>
           <span className={`estado-punto mt-3 ${online ? "en-linea" : ""}`} aria-hidden />
         </div>

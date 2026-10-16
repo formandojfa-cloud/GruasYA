@@ -1,11 +1,16 @@
 "use client";
 
-/** Piezas de la tarjeta de una solicitud (activa, terminada o compartida), con el aspecto GruaYa. */
+/**
+ * Piezas de la hoja de un servicio (activo, terminado o compartido) con el
+ * aspecto GrúaYa final: título grande con etiqueta de ETA, tarjeta del piloto
+ * (avatar · ★ · placa en ficha), PIN sobre amarillo suave, bloque de detalle
+ * (● recogida / ■ destino / 💵 efectivo) y línea de tiempo plegable.
+ */
 import type { ReactNode } from "react";
-import { Row, cn, statusClass } from "@/components/ui";
-import { EVENT_LABELS, formatKm, formatMinutes, formatQ, formatTime, KIND_LABELS } from "@/lib/format";
+import { Row, cn } from "@/components/ui";
+import { EVENT_LABELS, formatKm, formatMinutes, formatQ, formatTime, KIND_LABELS, PROVIDER_KIND_LABELS, VEHICLE_LABELS } from "@/lib/format";
 import type { ProviderCard, Quote, RequestEventView, RequestStatus, RequestView } from "@/lib/types";
-import { placeLabel, providerGlyph, providerNoun, serviceNoun, telHref } from "./constants";
+import { initials, placeLabel, providerNoun, serviceNoun, shortAddress, telHref } from "./constants";
 
 /** "Q476 en efectivo · 6.6 km" (grúa) o "Q150 en efectivo · Cambio de llanta" / "Incluido en tu membresía · …". */
 export function priceHeader(req: RequestView): string {
@@ -13,54 +18,102 @@ export function priceHeader(req: RequestView): string {
   return `${req.priceTotal > 0 ? `${formatQ(req.priceTotal)} en efectivo` : "Incluido en tu membresía"} · ${tail}`;
 }
 
-/** Tarjeta de estado del prototipo: precio arriba en gris, título grande y borde izquierdo de color. */
-export function StateCard({ req, title, subtitle, children, className }: { req: RequestView; title: ReactNode; subtitle?: ReactNode; children?: ReactNode; className?: string }) {
+/** Cabecera de la hoja: título grande, subtítulo gris y, si hay, etiqueta negra con los minutos. */
+export function ServiceHeader({ title, subtitle, eta, children }: { title: ReactNode; subtitle?: ReactNode; eta?: number | null; children?: ReactNode }) {
   return (
-    <section className={cn("tarjeta", statusClass(req.status), className)}>
-      <p className="tenue">{priceHeader(req)}</p>
-      <h2 className="text-[22px] leading-tight">{title}</h2>
-      {subtitle && <p className="tenue">{subtitle}</p>}
-      {children}
-    </section>
-  );
-}
-
-/** "{nombre} · Placa {placa} · ★ {calif}" con llamar / WhatsApp mientras el servicio está activo. */
-export function ProviderRow({ provider }: { provider: ProviderCard }) {
-  const rating = provider.rating != null ? `★ ${provider.rating.toFixed(1)}` : "Sin calificaciones aún";
-  const line = [provider.plate && `Placa ${provider.plate}`, rating, provider.vehicleLabel].filter(Boolean).join(" · ");
-  return (
-    <div className="flex items-center gap-3 rounded-[10px] bg-surface p-2.5">
-      <span className="text-2xl leading-none" aria-hidden>
-        {providerGlyph(provider.kind)}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[17px] font-bold">{provider.name}</p>
-        <p className="text-sm text-muted">{line}</p>
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <h2 className="titulo-hoja">{title}</h2>
+        {subtitle && <p className="tenue">{subtitle}</p>}
+        {children}
       </div>
-      {provider.phone && (
-        <div className="flex gap-2">
-          <a
-            href={telHref(provider.phone)}
-            aria-label={`Llamar a ${provider.name}`}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-background text-xl hover:bg-surface"
-          >
-            📞
-          </a>
-          {provider.whatsapp && (
-            <a
-              href={provider.whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`WhatsApp a ${provider.name}`}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-background text-xl hover:bg-surface"
-            >
-              💬
-            </a>
-          )}
+      {eta != null && (
+        <div className="etiqueta-eta">
+          {Math.max(1, Math.round(eta))}
+          <small>min</small>
         </div>
       )}
     </div>
+  );
+}
+
+/** Tarjeta del piloto: avatar con iniciales, "★ 4.9 · Grúa plataforma", placa en ficha gris. */
+export function ProviderPerson({ provider }: { provider: ProviderCard }) {
+  const rating = provider.rating != null ? `★ ${provider.rating.toFixed(1)}` : "Sin calificaciones aún";
+  const vehicle = provider.vehicleLabel ?? PROVIDER_KIND_LABELS[provider.kind];
+  return (
+    <div className="persona">
+      <div className="avatar" aria-hidden>
+        {provider.photoUrl ? <img src={provider.photoUrl} alt="" className="h-full w-full object-cover" /> : initials(provider.name) || "🚛"}
+      </div>
+      <div className="persona-texto">
+        <strong className="truncate text-[17px]">{provider.name}</strong>
+        <span className="tenue truncate">
+          {rating} · {vehicle}
+        </span>
+      </div>
+      {provider.plate && (
+        <div className="ficha">
+          {provider.plate}
+          <small>Placa</small>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ICON_BTN = "inline-flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-[12px] bg-surface-2 px-2 text-[13px] font-medium text-foreground disabled:opacity-40";
+
+/** Botón de acción de la fila (ícono arriba, texto abajo), como `.acciones` del prototipo. */
+export function ActionButton({
+  icon,
+  label,
+  onClick,
+  href,
+  danger,
+  disabled,
+  ariaLabel,
+}: {
+  icon: string;
+  label: string;
+  onClick?: () => void;
+  href?: string;
+  danger?: boolean;
+  disabled?: boolean;
+  ariaLabel?: string;
+}) {
+  const cls = cn(ICON_BTN, danger && "text-rojo");
+  const body = (
+    <>
+      <span className="text-xl leading-none" aria-hidden>
+        {icon}
+      </span>
+      {label}
+    </>
+  );
+  if (href) {
+    const external = href.startsWith("http");
+    return (
+      <a href={href} className={cls} aria-label={ariaLabel} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
+        {body}
+      </a>
+    );
+  }
+  return (
+    <button type="button" className={cls} onClick={onClick} disabled={disabled} aria-label={ariaLabel}>
+      {body}
+    </button>
+  );
+}
+
+/** Llamar / WhatsApp al piloto (solo cuando la API expone el teléfono). */
+export function ContactActions({ provider }: { provider: ProviderCard }) {
+  if (!provider.phone) return null;
+  return (
+    <>
+      <ActionButton icon="📞" label="Llamar" href={telHref(provider.phone)} ariaLabel={`Llamar a ${provider.name}`} />
+      {provider.whatsapp && <ActionButton icon="💬" label="WhatsApp" href={provider.whatsapp} ariaLabel={`WhatsApp a ${provider.name}`} />}
+    </>
   );
 }
 
@@ -79,8 +132,8 @@ export function EtaLine({ req }: { req: RequestView }) {
     );
   }
   return (
-    <p>
-      <span className="font-bold">Llega en {formatMinutes(live.etaMinutes)}</span> <span className="text-muted">· {formatKm(live.distanceKm)}</span>
+    <p className="tenue">
+      Llega en <b className="text-foreground">{formatMinutes(live.etaMinutes)}</b> · {formatKm(live.distanceKm)}
     </p>
   );
 }
@@ -98,16 +151,16 @@ export function ProgressSteps({ status }: { status: RequestStatus }) {
         const current = i === idx;
         return (
           <li key={label} className="relative flex flex-1 flex-col items-center text-center">
-            {i > 0 && <span className={cn("absolute left-0 right-1/2 top-2.5 h-0.5 -translate-y-1/2", i <= idx ? "bg-azul" : "bg-border")} />}
-            {i < STEPS.length - 1 && <span className={cn("absolute left-1/2 right-0 top-2.5 h-0.5 -translate-y-1/2", i < idx ? "bg-azul" : "bg-border")} />}
+            {i > 0 && <span className={cn("absolute left-0 right-1/2 top-2.5 h-0.5 -translate-y-1/2", i <= idx ? "bg-tinta" : "bg-border")} />}
+            {i < STEPS.length - 1 && <span className={cn("absolute left-1/2 right-0 top-2.5 h-0.5 -translate-y-1/2", i < idx ? "bg-tinta" : "bg-border")} />}
             <span
               aria-current={current ? "step" : undefined}
               className={cn(
                 "relative z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 text-[10px] font-bold",
-                done ? "border-azul bg-azul text-white" : current ? "border-azul bg-background" : "border-border bg-background",
+                done ? "border-tinta bg-tinta text-sobre-tinta" : current ? "border-tinta bg-background" : "border-border bg-background",
               )}
             >
-              {done ? "✓" : current ? <span className="h-2 w-2 rounded-full bg-azul" /> : null}
+              {done ? "✓" : current ? <span className="h-2 w-2 rounded-full bg-tinta" /> : null}
             </span>
             <span className={cn("mt-1 text-[11px] leading-tight", current ? "font-bold" : "text-muted")}>{label}</span>
           </li>
@@ -117,44 +170,47 @@ export function ProgressSteps({ status }: { status: RequestStatus }) {
   );
 }
 
+/** PIN en tinta sobre amarillo suave. */
 export function PinBlock({ pin, providerKind }: { pin: string; providerKind: ProviderCard["kind"] | null }) {
-  const who = providerKind ? providerNoun(providerKind) : "gruero";
+  const who = providerKind ? providerNoun(providerKind) : "piloto";
   return (
-    <div className="rounded-[10px] bg-amarillo px-4 py-3 text-center text-primary-foreground">
-      <p className="text-sm font-semibold">Dale este PIN al {who} cuando llegue</p>
-      <p className="mt-1 font-mono text-4xl font-bold tracking-[0.4em]" aria-label={`PIN ${pin.split("").join(" ")}`}>
+    <div className="aviso flex items-center justify-between gap-3 !py-3">
+      <div className="min-w-0">
+        <p className="font-semibold">Dale este PIN al {who} cuando llegue</p>
+        <p className="chico text-muted">Solo cuando confirmes que es tu servicio.</p>
+      </div>
+      <p className="font-mono text-[32px] font-bold tracking-[0.3em] tabular-nums" aria-label={`PIN ${pin.split("").join(" ")}`}>
         {pin}
       </p>
-      <p className="mt-1 text-xs opacity-80">Solo cuando confirmes que es tu servicio.</p>
     </div>
   );
 }
 
-export function PlacesSummary({ req }: { req: RequestView }) {
+/** Bloque de detalle: ● Recogida · qué pasó / ■ Destino / 💵 Efectivo  Q377 / "Carro · 6.6 km · precio fijo". */
+export function ServiceDetail({ req }: { req: RequestView }) {
+  const tail = [VEHICLE_LABELS[req.vehicleKind], req.kind === "TOW" ? formatKm(req.distanceKm) : KIND_LABELS[req.kind], "precio fijo"].join(" · ");
   return (
-    <div className="grid gap-1.5 text-[15px]">
-      <p className="flex gap-2">
-        <span aria-hidden>🚗</span>
-        <span className="min-w-0 flex-1 truncate">{placeLabel(req.pickup)}</span>
-      </p>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-start gap-3">
+        <span className="marca-origen mt-1.5" aria-hidden />
+        <span className="min-w-0 flex-1 text-[17px] leading-snug">
+          {req.pickup.address ? shortAddress(req.pickup.address) : "Recogida"}
+          {req.notes && <span className="text-muted"> · {req.notes}</span>}
+        </span>
+      </div>
       {req.dropoff && (
-        <p className="flex gap-2">
-          <span aria-hidden>🏁</span>
-          <span className="min-w-0 flex-1 truncate">{placeLabel(req.dropoff)}</span>
-        </p>
+        <div className="flex items-start gap-3">
+          <span className="marca-destino mt-1.5" aria-hidden />
+          <span className="min-w-0 flex-1 text-[17px] leading-snug">{req.dropoff.address ? shortAddress(req.dropoff.address) : placeLabel(req.dropoff)}</span>
+        </div>
       )}
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[17px] font-semibold">{req.priceTotal > 0 ? "💵 Efectivo" : "✅ Membresía"}</span>
+        <strong className="text-[17px] tabular-nums">{req.priceTotal > 0 ? formatQ(req.priceTotal) : "Incluido"}</strong>
+      </div>
+      <span className="tenue chico">{tail}</span>
     </div>
   );
-}
-
-/** Desglose en una línea, como el prototipo: "Banderazo Q300 + 2 km × Q15 · cargo no socio Q50". */
-export function quoteOneLine(quote: Quote): string {
-  if (quote.kind !== "TOW") return quote.lines.map((l) => l.label).join(" · ");
-  const parts = [`Banderazo ${formatQ(quote.baseQ)}${quote.includedKm > 0 ? ` (incluye ${quote.includedKm} km)` : ""}`];
-  if (quote.billableKm > 0) parts.push(`${quote.billableKm} km × ${formatQ(quote.perKmQ)}`);
-  if (quote.nightSurchargeQ > 0) parts.push(`nocturno ${formatQ(quote.nightSurchargeQ)}`);
-  const extra = quote.nonMemberFeeQ > 0 ? ` · cargo no socio ${formatQ(quote.nonMemberFeeQ)}` : "";
-  return parts.join(" + ") + extra;
 }
 
 export function QuoteLines({ quote, total }: { quote: Quote; total: number }) {
@@ -175,11 +231,11 @@ export function Timeline({ events }: { events: RequestEventView[] }) {
   if (events.length === 0) return null;
   const sorted = [...events].sort((a, b) => a.at.localeCompare(b.at));
   return (
-    <details className="tarjeta gap-0 p-0">
-      <summary className="cursor-pointer select-none px-3.5 py-3 text-sm font-semibold">Línea de tiempo ({sorted.length})</summary>
-      <ol className="border-t border-border px-3.5 py-2">
+    <details className="chico text-muted">
+      <summary className="cursor-pointer select-none font-semibold">Línea de tiempo ({sorted.length})</summary>
+      <ol className="mt-1">
         {sorted.map((e, i) => (
-          <li key={`${e.type}-${e.at}-${i}`} className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
+          <li key={`${e.type}-${e.at}-${i}`} className="flex items-baseline justify-between gap-3 py-1 text-foreground">
             <span>{EVENT_LABELS[e.type] ?? e.type}</span>
             <span className="shrink-0 text-xs tabular-nums text-muted">{formatTime(e.at)}</span>
           </li>
