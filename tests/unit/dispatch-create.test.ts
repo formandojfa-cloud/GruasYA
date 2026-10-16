@@ -192,15 +192,17 @@ describe("dispatch.findCandidates", () => {
 
   it("excluye motoristas para una grúa (y grúas para una asistencia ligera)", async () => {
     const req = await escalatedTow();
-    await createProvider({ kind: "MOTO" });
+    const moto = await createProvider({ kind: "MOTO" });
     expect(await findCandidates(req, T0)).toHaveLength(0);
 
     const tow = await createProvider({ kind: "TOW" });
     expect((await findCandidates(req, T0)).map((c) => c.provider.id)).toEqual([tow.id]);
 
+    // Para una asistencia ligera la única candidata es la moto; la grúa no sirve.
     const light = await createRequest(await createUser(), lightInput("TIRE"), T0);
-    expect(light.status).toBe("ESCALATED");
-    expect(await findCandidates(light, T0)).toHaveLength(0); // la grúa no sirve
+    expect(light.status).toBe("SEARCHING");
+    expect(mustPending(light).providerId).toBe(moto.id);
+    expect(await findCandidates(light, T0)).toHaveLength(0); // la moto ya fue contactada; la grúa queda fuera
   });
 
   it("excluye OFFLINE y BUSY", async () => {
