@@ -23,16 +23,16 @@ export function BackButton({ onClick, href, label = "Volver", className }: { onC
   );
 }
 
-/** Clases para que un <Link> se vea como el botón principal (amarillo) / secundario (blanco con borde). */
+/** Clases para que un <Link> se vea como el botón principal (negro) / secundario (blanco con borde). */
 export const LINK_PRIMARY =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amarillo bg-amarillo px-5 font-bold text-primary-foreground hover:brightness-95 active:brightness-90";
+  "inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-primary px-5 text-[17px] font-bold text-primary-foreground hover:opacity-90 active:opacity-80";
 export const LINK_SECONDARY =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-background px-5 font-bold text-foreground hover:bg-surface";
+  "inline-flex h-12 items-center justify-center gap-2 rounded-[14px] border border-border bg-background px-5 font-bold text-foreground hover:bg-surface-2";
 
 export function Toast({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <div role="status" className="safe-top pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center p-4">
+    <div role="status" className="safe-top pointer-events-none fixed inset-x-0 top-0 z-[1200] flex justify-center p-4">
       <span className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background shadow-lg">{message}</span>
     </div>
   );

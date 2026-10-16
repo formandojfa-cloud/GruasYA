@@ -100,22 +100,22 @@ export function MemberBadge({ isMember }: { isMember: boolean }) {
   return <Pill tone="success">Socio</Pill>;
 }
 
-/** Tarjeta "Crea tu cuenta / Entrar" del prototipo (sin código SMS en el MVP). */
+/** Página gris con la marca arriba y una tarjeta blanca "Crea tu cuenta o entra" (sin código SMS en el MVP). */
 function LoginScreen({ error, onRetry }: { error: string | null; onRetry: () => Promise<unknown> }) {
   return (
-    <div className="pagina">
+    <div className="pagina flex flex-col">
       <header className="barra">
-        <div className="columna">
+        <div className="columna !flex-row !items-center">
           <h1 className="leading-none">
             <Wordmark suffix="conductor" />
           </h1>
         </div>
       </header>
-      <main className="columna">
-        <section className="tarjeta">
+      <main className="columna flex-1 justify-center !gap-4">
+        <section className="tarjeta !p-5">
           {error ? (
             <>
-              <h2>No pudimos conectar</h2>
+              <h2 className="titulo-hoja">No pudimos conectar</h2>
               <Notice tone="danger">{error}</Notice>
               <Button size="lg" fullWidth onClick={() => void onRetry()}>
                 Reintentar
@@ -125,9 +125,9 @@ function LoginScreen({ error, onRetry }: { error: string | null; onRetry: () => 
             <LoginForm />
           )}
         </section>
-        <Aviso>Grúa en minutos con precio fijo; pagas en efectivo al gruero al terminar.</Aviso>
+        <Aviso className="text-center">Grúa en minutos con precio fijo; pagas en efectivo al piloto al terminar.</Aviso>
       </main>
-      <p className="pie">GruaYa · Grúa por demanda en Guatemala</p>
+      <p className="pie">GrúaYa · Grúa por demanda en Guatemala</p>
     </div>
   );
 }
@@ -163,7 +163,7 @@ function LoginForm() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3" noValidate>
-      <h2>Crea tu cuenta o entra</h2>
+      <h2 className="titulo-hoja">Crea tu cuenta o entra</h2>
       <p className="tenue">Regístrate antes de una emergencia: así pedir la grúa toma segundos.</p>
       <Field label="Celular" hint="8 dígitos, sin código de país">
         <Input

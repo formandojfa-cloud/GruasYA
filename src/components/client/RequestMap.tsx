@@ -50,8 +50,8 @@ export function RequestMap({ req, className }: { req: RequestView; className?: s
       />
       {searching && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center" aria-hidden>
-          <span className="pulse-ring absolute h-28 w-28 rounded-full border-[3px] border-info bg-info/10" />
-          <span className="pulse-ring absolute h-28 w-28 rounded-full border-[3px] border-info bg-info/10" style={{ animationDelay: "0.8s" }} />
+          <span className="pulse-ring absolute h-28 w-28 rounded-full border-[3px] border-amarillo bg-amarillo/10" />
+          <span className="pulse-ring absolute h-28 w-28 rounded-full border-[3px] border-amarillo bg-amarillo/10" style={{ animationDelay: "0.8s" }} />
         </div>
       )}
     </div>

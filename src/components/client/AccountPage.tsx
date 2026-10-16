@@ -45,11 +45,11 @@ function Account({ me }: { me: ClientSelf }) {
     <ClientShell section="cuenta" hasActive={!!me.activeRequest}>
       <section className="tarjeta">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-amarillo text-xl font-bold text-primary-foreground" aria-hidden>
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-tinta text-xl font-bold text-sobre-tinta" aria-hidden>
             {initials}
           </div>
           <div className="min-w-0">
-            <h2 className="truncate">{me.name}</h2>
+            <h2 className="titulo-hoja truncate">{me.name}</h2>
             <p className="tenue">{formatPhone(me.phone)}</p>
           </div>
         </div>
@@ -93,12 +93,10 @@ function Account({ me }: { me: ClientSelf }) {
         )}
       </section>
 
-      <section className="tarjeta">
-        {err && <Notice tone="danger">{err}</Notice>}
-        <Button variant="danger" fullWidth loading={busy} onClick={signOut}>
-          Cerrar sesión
-        </Button>
-      </section>
+      {err && <Notice tone="danger">{err}</Notice>}
+      <Button variant="danger" size="lg" fullWidth loading={busy} onClick={signOut}>
+        Cerrar sesión
+      </Button>
     </ClientShell>
   );
 }

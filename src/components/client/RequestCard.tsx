@@ -44,7 +44,7 @@ export function ProviderPerson({ provider }: { provider: ProviderCard }) {
   return (
     <div className="persona">
       <div className="avatar" aria-hidden>
-        {provider.photoUrl ? <img src={provider.photoUrl} alt="" className="h-full w-full object-cover" /> : initials(provider.name) || "🚛"}
+        {provider.photoUrl ? <span className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url(${provider.photoUrl})` }} /> : initials(provider.name) || "🚛"}
       </div>
       <div className="persona-texto">
         <strong className="truncate text-[17px]">{provider.name}</strong>

@@ -26,10 +26,10 @@ function HistoryList({ me }: { me: ClientSelf }) {
 
   return (
     <ClientShell section="historial" hasActive={!!me.activeRequest}>
-      <section className="tarjeta">
-        <h2>Historial</h2>
+      <div className="px-1">
+        <h2 className="titulo-hoja">Historial</h2>
         <p className="tenue">Tus servicios recientes, con su estado y precio.</p>
-      </section>
+      </div>
       {loading && !data && (
         <div className="flex justify-center py-10">
           <Spinner size="lg" />
@@ -68,7 +68,7 @@ function HistoryItem({ req }: { req: RequestView }) {
   const fee = req.cancellation?.feeQ ?? 0;
   const amount = req.status === "CANCELLED" ? fee : req.priceTotal;
   return (
-    <Link href={`/r/${req.id}`} className="tarjeta transition hover:bg-surface active:bg-surface">
+    <Link href={`/r/${req.id}`} className="tarjeta transition hover:bg-surface-2 active:bg-surface-2">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-[17px] font-bold">
           <span aria-hidden>{KIND_ICONS[req.kind]}</span> {KIND_LABELS[req.kind]}
@@ -79,11 +79,11 @@ function HistoryItem({ req }: { req: RequestView }) {
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1 text-sm">
           <p className="truncate">
-            <span aria-hidden>🚗</span> {placeLabel(req.pickup)}
+            <span className="marca-origen mr-2 inline-block" aria-hidden /> {placeLabel(req.pickup)}
           </p>
           {req.dropoff && (
             <p className="truncate">
-              <span aria-hidden>🏁</span> {placeLabel(req.dropoff)}
+              <span className="marca-destino mr-2 inline-block" aria-hidden /> {placeLabel(req.dropoff)}
             </p>
           )}
         </div>

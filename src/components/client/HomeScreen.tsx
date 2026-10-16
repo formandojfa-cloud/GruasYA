@@ -63,8 +63,8 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
   const [problem, setProblem] = useState<ProblemChip | null>(null);
   const [notes, setNotes] = useState("");
   const [vehicleOpen, setVehicleOpen] = useState(false);
-  const [quote, setQuote] = useState<QuoteResponse | null>(null);
-  const [quoteError, setQuoteError] = useState<string | null>(null);
+  // La cotización se guarda con la clave de sus entradas: si cambian, se vuelve a calcular.
+  const [quoted, setQuoted] = useState<{ key: string; quote: QuoteResponse | null; error: string | null }>({ key: "", quote: null, error: null });
   const [attempt, setAttempt] = useState(0);
   const [requesting, setRequesting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -75,24 +75,25 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
   const dLat = dropoff?.lat;
   const dLng = dropoff?.lng;
   const canQuote = pLat != null && pLng != null && (light || (dLat != null && dLng != null));
+  const quoteKey = canQuote ? [kind, pLat, pLng, light ? "" : dLat, light ? "" : dLng, attempt].join("|") : "";
   useEffect(() => {
-    setQuote(null);
-    setQuoteError(null);
-    if (!canQuote) return;
+    if (!quoteKey || pLat == null || pLng == null) return;
     let cancelled = false;
     const body = { kind, pickup: { lat: pLat, lng: pLng }, ...(!light && dLat != null && dLng != null ? { dropoff: { lat: dLat, lng: dLng } } : {}) };
     api.post<QuoteResponse>("/api/quote", body).then(
       (res) => {
-        if (!cancelled) setQuote(res);
+        if (!cancelled) setQuoted({ key: quoteKey, quote: res, error: null });
       },
       (e: unknown) => {
-        if (!cancelled) setQuoteError(apiErrorMessage(e));
+        if (!cancelled) setQuoted({ key: quoteKey, quote: null, error: apiErrorMessage(e) });
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [kind, light, canQuote, pLat, pLng, dLat, dLng, attempt]);
+  }, [quoteKey, kind, light, pLat, pLng, dLat, dLng]);
+  const quote = quoteKey && quoted.key === quoteKey ? quoted.quote : null;
+  const quoteError = quoteKey && quoted.key === quoteKey ? quoted.error : null;
 
   const isMember = quote?.isMember ?? me.isMember;
   const ready = !!quote;
@@ -283,10 +284,7 @@ export function HomeScreen({ me, gps, gpsError, draft, onDraftChange, vehicle, o
           <button
             type="button"
             className="font-semibold underline"
-            onClick={() => {
-              setQuoteError(null);
-              setAttempt((a) => a + 1);
-            }}
+            onClick={() => setAttempt((a) => a + 1)}
           >
             Reintentar
           </button>

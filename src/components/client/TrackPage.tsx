@@ -1,20 +1,21 @@
 "use client";
 
 /**
- * /r/[id]: seguimiento. Si la sesión es del dueño usa GET /api/requests/:id;
- * si no (enlace compartido), GET /api/track/:id sin PIN ni teléfonos.
+ * /r/[id]: seguimiento sobre el mapa completo. Si la sesión es del dueño usa
+ * GET /api/requests/:id; si no (enlace compartido), GET /api/track/:id sin PIN ni teléfonos.
  */
 import Link from "next/link";
 import { useCallback, useState } from "react";
-import { EmptyState, Notice, Spinner } from "@/components/ui";
+import MapView from "@/components/map/Map";
+import { EmptyState, Notice, ProgressBar, Spinner } from "@/components/ui";
 import { api, ApiClientError } from "@/lib/api";
 import { escalationReasonLabel, formatQ, statusLabelFor } from "@/lib/format";
 import { usePolling } from "@/lib/hooks";
 import type { RequestView } from "@/lib/types";
 import { LINK_PRIMARY } from "./bits";
-import { ClientShell } from "./ClientShell";
-import { isActiveStatus, POLL_MS, serviceNoun } from "./constants";
-import { EtaLine, PinBlock, PlacesSummary, ProgressSteps, ProviderRow, QuoteLines, StateCard, Timeline } from "./RequestCard";
+import { ClientScreen } from "./ClientShell";
+import { GUATEMALA_CITY, isActiveStatus, POLL_MS, serviceNoun } from "./constants";
+import { EtaLine, PinBlock, ProgressSteps, ProviderPerson, QuoteLines, ServiceDetail, ServiceHeader, Timeline } from "./RequestCard";
 import { RequestMap } from "./RequestMap";
 
 type Mode = "owner" | "share";
@@ -50,26 +51,24 @@ export function TrackPage({ id }: { id: string }) {
 
   if (!data) {
     return (
-      <ClientShell section={null} showSegments={false} suffix="seguimiento">
+      <ClientScreen section={null} showSegments={false} suffix="seguimiento" height="corta" map={<MapView center={GUATEMALA_CITY} zoom={13} interactive={false} className="h-full w-full" />}>
         {loading ? (
-          <div className="flex justify-center py-16">
+          <div className="flex justify-center py-10">
             <Spinner size="lg" />
           </div>
         ) : (
-          <section className="tarjeta">
-            <EmptyState
-              icon="🔎"
-              title="No encontramos este servicio"
-              body={error?.message ?? "Revisa el enlace e inténtalo de nuevo."}
-              action={
-                <Link href="/" className={LINK_PRIMARY}>
-                  Ir al inicio
-                </Link>
-              }
-            />
-          </section>
+          <EmptyState
+            icon="🔎"
+            title="No encontramos este servicio"
+            body={error?.message ?? "Revisa el enlace e inténtalo de nuevo."}
+            action={
+              <Link href="/" className={LINK_PRIMARY}>
+                Ir al inicio
+              </Link>
+            }
+          />
         )}
-      </ClientShell>
+      </ClientScreen>
     );
   }
 
@@ -78,6 +77,7 @@ export function TrackPage({ id }: { id: string }) {
   const active = isActiveStatus(req.status);
   const live = req.status === "EN_ROUTE" || req.status === "ARRIVED" || req.status === "IN_PROGRESS";
   const noun = serviceNoun(req.kind);
+  const etaToMe = req.status === "EN_ROUTE" && req.providerLive?.target === "PICKUP" ? req.providerLive.etaMinutes : null;
   const subtitle =
     req.status === "SEARCHING"
       ? req.search.offersSent > 0
@@ -90,31 +90,34 @@ export function TrackPage({ id }: { id: string }) {
         : undefined;
 
   return (
-    <ClientShell section={owner && active ? "servicio" : null} hasActive={owner && active} showSegments={owner} suffix={owner ? undefined : "seguimiento"}>
-      {error && <Notice tone="warning">Sin conexión con el servidor: {error.message}</Notice>}
-      <StateCard req={req} title={req.status === "COMPLETED" ? "Servicio completado" : statusLabelFor(req.status, req.kind)} subtitle={subtitle}>
-        {live && <EtaLine req={req} />}
-        {req.provider && (live || req.status === "COMPLETED") && <ProviderRow provider={req.provider} />}
-        {owner && req.pin && (req.status === "EN_ROUTE" || req.status === "ARRIVED") && <PinBlock pin={req.pin} providerKind={req.provider?.kind ?? null} />}
-        {(live || req.status === "COMPLETED") && <ProgressSteps status={req.status} />}
-      </StateCard>
-
-      <div className="mapa-marco">
-        <RequestMap req={req} className="h-full w-full" />
-      </div>
-
-      <section className="tarjeta">
-        <PlacesSummary req={req} />
-        {req.status === "COMPLETED" && <QuoteLines quote={req.quote} total={req.priceTotal} />}
-        {req.status === "CANCELLED" && req.cancellation && req.cancellation.feeQ > 0 && <Notice tone="warning">Cargo por cancelación: {formatQ(req.cancellation.feeQ)}</Notice>}
-        {!owner && <p className="tenue chico">Vista compartida: se actualiza sola mientras el servicio está activo.</p>}
-        {owner && active && (
+    <ClientScreen
+      section={owner && active ? "servicio" : null}
+      hasActive={owner && active}
+      showSegments={owner}
+      suffix={owner ? undefined : "seguimiento"}
+      map={<RequestMap req={req} className="h-full w-full" />}
+      footer={
+        owner && active ? (
           <Link href="/" className={`${LINK_PRIMARY} w-full`}>
             Ir a mi servicio
           </Link>
-        )}
-      </section>
+        ) : undefined
+      }
+    >
+      {error && <Notice tone="warning">Sin conexión con el servidor: {error.message}</Notice>}
+      <ServiceHeader title={req.status === "COMPLETED" ? "Completado" : statusLabelFor(req.status, req.kind)} subtitle={subtitle} eta={etaToMe}>
+        {live && <EtaLine req={req} />}
+      </ServiceHeader>
+      {req.status === "SEARCHING" && <ProgressBar label={`Buscando ${noun}`} />}
+      {req.provider && (live || req.status === "COMPLETED") && <ProviderPerson provider={req.provider} />}
+      {owner && req.pin && (req.status === "EN_ROUTE" || req.status === "ARRIVED") && <PinBlock pin={req.pin} providerKind={req.provider?.kind ?? null} />}
+      {(live || req.status === "COMPLETED") && <ProgressSteps status={req.status} />}
+      {req.status === "CANCELLED" && req.cancellation && req.cancellation.feeQ > 0 && <Notice tone="warning">Cargo por cancelación: {formatQ(req.cancellation.feeQ)}</Notice>}
+      <div className="separador" />
+      <ServiceDetail req={req} />
+      {req.status === "COMPLETED" && <QuoteLines quote={req.quote} total={req.priceTotal} />}
+      {!owner && <p className="tenue chico">Vista compartida: se actualiza sola mientras el servicio está activo.</p>}
       <Timeline events={req.events} />
-    </ClientShell>
+    </ClientScreen>
   );
 }
