@@ -15,17 +15,20 @@
 
 Roles en la interfaz (versión final del prototipo): **Conductor · Piloto · Admin** ("piloto" = gruero). Referencias visuales adicionales: `docs/demo-reference/*.png`; textos literales: `docs/demo-reference/textos-demo.txt` (úsalos tal cual, junto con los del código fuente).
 
-## 1. Identidad visual
+## 1. Identidad visual (versión final del prototipo, 9 de octubre)
 
-| Elemento | Prototipo GruaYa (obligatorio) |
+**La referencia es el prototipo compilado**, no las capturas viejas: `cd /home/user/prototipo-mvp && npx vite build && (cd dist && python3 -m http.server 8078)` → `http://localhost:8078/` (modo local, sin Supabase). Capturas de esa versión: `docs/demo-reference/final-*.png`. Los estilos exactos están en `/home/user/prototipo-mvp/src/ui/estilos.css` y la estructura en `src/ui/App.tsx`, `Conductor.tsx`, `Gruero.tsx`, `Admin.tsx`, `Mapa.tsx`.
+
+| Elemento | Prototipo final (obligatorio) |
 |---|---|
-| Nombre | **GruaYa** en todas partes (título, manifest, cabeceras). Wordmark: `Grua` en tinta + `Ya` en amarillo, con un sufijo pequeño en gris solo cuando aplique (p. ej. "piloto"). "Asistencia Vial" desaparece. |
-| Colores | `--amarillo #f5b301`, `--amarillo-suave #fff4cc`, `--tinta #1d1d1f`, `--tenue #6b6b70`, `--fondo #f4f4f1`, `--tarjeta #ffffff`, `--borde #e2e2dc`, `--verde #1f8a4c`, `--rojo #c4372c`, `--azul #2f6fd1`. Modo oscuro: fondo `#141414`, tarjeta `#1f1f1f`, borde `#333`, tinta `#f2f2ee`, tenue `#a3a3a8`, amarillo-suave `#3a3010`. |
-| Tipografía | `system-ui` 16px/1.4. Títulos 20–22px negrita. |
-| Layout | **Una columna centrada, `max-width: 560px`, padding 12px**, tarjetas apiladas con `gap: 12px`. Cabecera pegajosa con el wordmark y los **segmentos** de navegación (botones en fila; el activo es negro con texto claro). El mapa va **dentro de una tarjeta de 300px de alto** con bordes redondeados, no a pantalla completa. Pie con nota pequeña en gris. |
-| Componentes | Tarjeta: fondo tarjeta, borde 1px, radio 14px, padding 14px. Botón: 44px mínimo, radio 12px, borde 1px; `principal` = fondo amarillo, texto tinta; `peligro` = texto rojo. Inputs/selects: fondo `--fondo`, radio 10px, 44px. Aviso: fondo amarillo-suave, radio 10px. Tarjeta de estado con borde izquierdo de 5px: amarillo (buscando, entregado), azul (asignado, en sitio, en ruta), verde (pagado), rojo (sin grúa, cancelado). Tarjeta de precio y de oferta con borde amarillo de 2px. Contador en rojo negrita 22px. Pines del mapa: círculo blanco 34px con emoji (🚗 vehículo, 🏁 destino, 🚚 grúa con borde amarillo). |
-
-Los tokens de `src/app/globals.css` se reemplazan por estos (manteniendo nombres Tailwind `bg-surface`, `text-muted`… mapeados a los nuevos valores, y añadiendo `bg-amarillo`, `bg-amarillo-suave`, `text-verde`, `text-rojo`, `text-azul`). Las primitivas de `src/components/ui/index.tsx` adoptan estas formas (botón `primary` → amarillo con texto tinta; `secondary` → blanco con borde; segmentos nuevos `Segments`).
+| Nombre | **GrúaYa** (con tilde): `Grúa` en tinta + `Ya` en amarillo `#f5b301`, dentro de una **píldora blanca** flotante arriba a la izquierda con sombra suave. |
+| Colores | Fondo de página gris claro `#f2f2f2`; superficies blancas `#ffffff`; tinta `#1d1d1f`; gris `#6b6b70`; campos gris claro `#f3f3f1`; **acción principal negra** (botón negro con texto blanco, radio 14–16px, 52px de alto); el amarillo es acento (marca, anillo del pin de la grúa, celda H3 resaltada), no el color de los botones. Verde `#1f8a4c` para "GPS en vivo"/en línea, azul `#2f6fd1` para hexágonos H3. |
+| Tipografía | `system-ui`, 16px; títulos 26–28px negrita ("Estás en línea"). |
+| Layout Conductor y Piloto | **Mapa a pantalla completa** de fondo (sin tarjeta). Arriba: píldora de marca a la izquierda y **selector de rol en píldora blanca** a la derecha (`Conductor · Piloto · Admin`, el activo es una píldora negra). Abajo: **hoja inferior blanca** con asa, bordes superiores redondeados (24px) y sombra, que contiene el contenido. Avisos del mapa como tarjetas blancas flotantes. Pines: punto negro (recogida) y cuadrado negro (destino) con etiqueta negra de texto blanco; línea de ruta **negra** gruesa; grúa en círculo blanco con anillo amarillo. |
+| Hoja del Conductor | Bloque origen/destino con conector vertical (● línea ■): "Recogida · toca el mapa / Tu ubicación actual" + botón píldora "📍 Mi ubicación"; "Destino" como selector con flecha. Chips redondeados para **Qué pasó** (activo negro). Lista de opciones **GrúaYa Moto / GrúaYa Carro / GrúaYa Pickup** con ícono, "8 min · llegas 6:10 a. m." y precio a la derecha; la seleccionada lleva borde negro. Línea plegable "▶ Precio fijo · 5.9 km y unos 18 min". Pie: "💵 Pago en efectivo al piloto · 4 grúas libres cerca" y botón negro **"Pedir GrúaYa Carro"**. |
+| Hoja del Piloto | Píldora "● GPS en vivo" sobre el mapa; hoja: "**Estás en línea**" + punto verde, "Buscando solicitudes cerca de ti", barra de progreso fina, texto gris explicativo; tarjeta con avatar de grúa, nombre, "★ 5.0 · Grúa plataforma" y la **placa en una ficha gris** a la derecha; filas "Servicios pagados / Ganancia / Comisión registrada"; botón blanco "Desconectarme" (o negro "Conectarme"). La oferta nueva es una tarjeta destacada dentro de la hoja con contador y botones Rechazar / Aceptar (Aceptar negro). |
+| Admin | Fondo gris claro, mismas píldoras arriba; **pestañas en píldoras** (Servicios · Pilotos · Conductores · Ajustes; la activa blanca con sombra); tarjetas blancas redondeadas con filas "etiqueta … valor". |
+| Modo oscuro | Fondo `#141414`, superficies `#1f1f1f`, texto `#f2f2ee`, botón principal blanco con texto negro. |
 
 ## 2. Navegación
 
