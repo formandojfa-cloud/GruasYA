@@ -28,11 +28,13 @@ export default defineConfig({
     permissions: ["geolocation"],
   },
   projects: [{ name: "mobile-chrome", use: { ...devices["Pixel 7"], launchOptions: { executablePath } } }],
+  // Next 16 solo permite un `next dev` por proyecto, así que las e2e usan la
+  // compilación de producción en otro puerto (y de paso prueban el build).
   webServer: {
-    command: `npx prisma migrate deploy && npx tsx prisma/seed.ts && npx next dev -p ${PORT}`,
+    command: `rm -f prisma/e2e.db prisma/e2e.db-journal && npx prisma migrate deploy && npx tsx prisma/seed.ts && npx next build && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: false,
-    timeout: 180_000,
+    timeout: 300_000,
     env: {
       DATABASE_URL: "file:./prisma/e2e.db",
       AUTH_SECRET: "e2e-secret",

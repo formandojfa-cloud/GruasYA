@@ -12,6 +12,7 @@ App de asistencia vial en Guatemala: membresía + grúa por demanda tipo Uber co
 - **UI**: primitivas en `src/components/ui/index.tsx`; tokens en `src/app/globals.css` (`bg-surface`, `text-muted`, `bg-primary`, `text-danger`…). Pantalla de teléfono primero, botones de 48 px, zonas seguras (`safe-top`/`safe-bottom`).
 - **Datos en tiempo real**: `usePolling` de `src/lib/hooks.ts`. Nada de websockets.
 - **Verificación**: `npm run typecheck` siempre; `npm test` para `src/lib`; `npm run e2e` para flujos. No ejecutes `next build` mientras otro proceso corre `next dev` sobre el mismo `.next`.
+- **Ver una pantalla sin abrir el navegador**: `node scripts/screenshot.mjs http://localhost:3000/ruta salida.png --as client|provider:<token>|pbx [--desktop]` (inicia sesión por API, captura en Chromium móvil e imprime errores de consola).
 
 ## Estructura
 
