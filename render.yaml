@@ -1,0 +1,21 @@
+# Despliegue de demo en Render (plan gratuito). Pasos en README.md → "Probarlo en línea".
+services:
+  - type: web
+    name: asistencia-vial
+    runtime: node
+    plan: free
+    branch: claude/roadside-assistance-app-ch0lrd
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        value: file:./prisma/prod.db
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: PBX_PASSWORD
+        value: pbx123
+      - key: NOMINATIM_USER_AGENT
+        value: asistencia-vial-demo/0.1

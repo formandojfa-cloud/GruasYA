@@ -17,7 +17,8 @@
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "db:clear-activity": "tsx scripts/clear-activity.ts"
+    "db:clear-activity": "tsx scripts/clear-activity.ts",
+    "start:prod": "prisma migrate deploy && tsx prisma/seed.ts && next start -p ${PORT:-3000}"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.1",
@@ -27,9 +28,11 @@
     "h3-js": "^4.5.0",
     "leaflet": "1.9",
     "next": "16.4.2",
+    "prisma": "^7.10.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-leaflet": "^5.0.0",
+    "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -42,10 +45,11 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
-    "prisma": "^7.10.1",
     "tailwindcss": "^4",
-    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }

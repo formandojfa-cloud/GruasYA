@@ -6,6 +6,15 @@ Prototipo funcional de una plataforma de asistencia vial para Guatemala:
 - **Gruero / motorista**: entra con un enlace de WhatsApp, se conecta, recibe ofertas con cuenta regresiva de 40 s, acepta, navega, marca llegada y cobra.
 - **PBX**: si la app no encuentra grúa (nadie conectado, nadie aceptó, se agotó el tiempo o el cliente pidió hablar con alguien) salta una alerta; el operador asigna una grúa de la red o coordina una externa por teléfono y le manda su enlace para que comparta ubicación. El cliente no nota la diferencia.
 
+## Probarlo en línea sin instalar nada (Render, gratis)
+
+1. Crea una cuenta en [render.com](https://render.com) (con tu cuenta de GitHub).
+2. En el panel: **New → Blueprint**, conecta el repositorio `formandojfa-cloud/777` y elige la rama `claude/roadside-assistance-app-ch0lrd`. Render lee `render.yaml` y crea el servicio solo.
+3. Espera a que el estado sea **Live** (5–8 minutos la primera vez). La URL queda como `https://asistencia-vial-XXXX.onrender.com`.
+4. Abre en el celular: `/` (cliente), `/driver?token=tow-zona10` (gruero), `/pbx` (operador, contraseña `pbx123`).
+
+El plan gratuito se duerme tras 15 minutos sin uso (la primera carga tarda ~1 min) y la base se reinicia con cada despliegue; es suficiente para probar. Para repetir desde cero, en Render usa **Manual Deploy → Restart**.
+
 ## Arrancar
 
 ```bash

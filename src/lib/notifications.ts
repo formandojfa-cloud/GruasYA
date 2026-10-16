@@ -6,7 +6,7 @@
  */
 
 export function appUrl(): string {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  return (process.env.APP_URL ?? process.env.RENDER_EXTERNAL_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }
 
 /** Normaliza un número de Guatemala a formato internacional sin "+". */
