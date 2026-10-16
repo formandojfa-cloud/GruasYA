@@ -23,11 +23,11 @@ import {
   openAlerts,
   T0,
   towInput,
-  useDispatchFixture,
+  setupDispatchFixture,
   ZONA_10,
 } from "./helpers";
 
-useDispatchFixture();
+setupDispatchFixture();
 
 describe("dispatch.createRequest — validación", () => {
   it("la grúa necesita destino (DROPOFF_REQUIRED, 400)", async () => {

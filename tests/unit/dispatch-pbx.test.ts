@@ -36,10 +36,10 @@ import {
   providerStatus,
   T0,
   towInput,
-  useDispatchFixture,
+  setupDispatchFixture,
 } from "./helpers";
 
-useDispatchFixture();
+setupDispatchFixture();
 
 describe("dispatch.assignProvider (PBX)", () => {
   it("desde ESCALATED → EN_ROUTE asignado por PBX; gruero BUSY; alerta resuelta y reconocida por el operador", async () => {

@@ -33,10 +33,10 @@ import {
   providerStatus,
   T0,
   towInput,
-  useDispatchFixture,
+  setupDispatchFixture,
 } from "./helpers";
 
-useDispatchFixture();
+setupDispatchFixture();
 
 describe("dispatch.rejectOffer", () => {
   it("al rechazar se ofrece de inmediato al siguiente más cercano (ronda 2, vence 40 s después)", async () => {

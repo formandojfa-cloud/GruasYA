@@ -35,11 +35,11 @@ import {
   providerStatus,
   T0,
   towInput,
-  useDispatchFixture,
+  setupDispatchFixture,
   ZONA_10,
 } from "./helpers";
 
-useDispatchFixture();
+setupDispatchFixture();
 
 describe("dispatch.setProviderStatus", () => {
   it("OFFLINE → ONLINE actualiza lastSeenAt; ONLINE → OFFLINE lo conserva", async () => {

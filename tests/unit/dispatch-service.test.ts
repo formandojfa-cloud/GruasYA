@@ -34,10 +34,10 @@ import {
   providerStatus,
   T0,
   towInput,
-  useDispatchFixture,
+  setupDispatchFixture,
 } from "./helpers";
 
-useDispatchFixture();
+setupDispatchFixture();
 
 /** Cliente + grúa a 1 km + solicitud aceptada (EN_ROUTE en T0+5 s). */
 async function enRoute(extraKms: number[] = []) {
@@ -327,18 +327,24 @@ describe("dispatch.providerBailout", () => {
     expect(retried.offers.filter((o) => o.epoch === 3)).toHaveLength(0);
   });
 
-  it("también desde ARRIVED (la llegada se borra); desde IN_PROGRESS → INVALID_STATE", async () => {
+  it("también desde ARRIVED (la llegada se borra)", async () => {
     const { provider: a, req } = await enRoute();
     await providerTransition(req.id, a.id, "ARRIVED", undefined, at(60));
+    expect((await loadRequest(req.id))!.arrivedAt).toEqual(at(60));
     const back = await providerBailout(req.id, a.id, undefined, at(61));
     expect(back.arrivedAt).toBeNull();
-    expect(["SEARCHING", "ESCALATED"]).toContain(back.status);
+    expect(back.status).toBe("ESCALATED"); // nadie más conectado
+    expect(back.searchEpoch).toBe(2);
+    expect(await providerStatus(a.id)).toBe("ONLINE");
+  });
 
-    const second = await enRoute();
-    await providerTransition(second.req.id, second.provider.id, "ARRIVED", undefined, at(60));
-    await providerTransition(second.req.id, second.provider.id, "IN_PROGRESS", second.req.pin, at(70));
-    await expectDispatchError(providerBailout(second.req.id, second.provider.id, undefined, at(80)), "INVALID_STATE", 409);
-    expect(await providerStatus(second.provider.id)).toBe("BUSY");
+  it("con el servicio ya en curso (PIN verificado) no se puede bajar → INVALID_STATE (409)", async () => {
+    const { provider: a, req } = await enRoute();
+    await providerTransition(req.id, a.id, "ARRIVED", undefined, at(60));
+    await providerTransition(req.id, a.id, "IN_PROGRESS", req.pin, at(70));
+    await expectDispatchError(providerBailout(req.id, a.id, undefined, at(80)), "INVALID_STATE", 409);
+    expect((await loadRequest(req.id))!.status).toBe("IN_PROGRESS");
+    expect(await providerStatus(a.id)).toBe("BUSY");
   });
 
   it("otro proveedor → NOT_YOUR_JOB (403), también si la solicitud no tiene gruero", async () => {

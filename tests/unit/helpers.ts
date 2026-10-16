@@ -145,7 +145,7 @@ export async function cleanDb(): Promise<void> {
  * Registra los hooks estándar de un archivo de pruebas de despacho: BD limpia
  * antes de cada prueba y sin ruido del log de alertas al PBX (`console.warn`).
  */
-export function useDispatchFixture(): void {
+export function setupDispatchFixture(): void {
   beforeAll(() => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });

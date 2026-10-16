@@ -49,8 +49,11 @@ describe("pricing.quoteFor — grúa", () => {
 
   it("sin distancia solo cobra el banderazo y no muestra línea de km", () => {
     const q = quoteFor({ kind: "TOW", distanceKm: 0, isMember: true });
-    expect(q.billableKm).toBe(0);
-    expect(q.extraKmQ).toBe(0);
+    // Nota: `Math.ceil(0 - 1e-9)` da -0; es inocuo (JSON lo serializa como 0 y
+    // `-0 > 0` es falso), por eso se compara con `===` y no con Object.is.
+    expect(q.billableKm === 0).toBe(true);
+    expect(q.extraKmQ === 0).toBe(true);
+    expect(JSON.parse(JSON.stringify(q)).billableKm).toBe(0);
     expect(q.totalQ).toBe(275);
     expect(q.lines).toEqual([{ label: "Banderazo", amountQ: 275 }]);
   });

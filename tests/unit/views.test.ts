@@ -34,12 +34,12 @@ import {
   northOf,
   T0,
   towInput,
-  useDispatchFixture,
+  setupDispatchFixture,
   ZONA_10,
   ZONA_11,
 } from "./helpers";
 
-useDispatchFixture();
+setupDispatchFixture();
 
 const ROLES: ViewerRole[] = ["CLIENT", "PROVIDER", "PBX", "SHARE"];
 
@@ -147,8 +147,12 @@ describe("views.toRequestView — PIN y teléfonos por rol", () => {
     expect(JSON.stringify(v)).not.toContain(provider.phone);
     expect(JSON.stringify(v)).not.toContain(req.pin);
 
+    // Otra grúa libre para que la segunda solicitud tenga oferta en curso.
+    await createProvidersAtKm([2]);
     const searching = await createRequest(await createUser(), towInput(), at(100));
     const s = toRequestView(searching, "SHARE");
+    expect(s.status).toBe("SEARCHING");
+    expect(s.search.currentOffer).not.toBeNull();
     expect(s.search.currentOffer).not.toHaveProperty("providerId");
   });
 
