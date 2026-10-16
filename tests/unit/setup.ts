@@ -12,6 +12,11 @@ process.env.DATABASE_URL = `file:${dbPath}`;
 process.env.AUTH_SECRET = "test-secret";
 process.env.PBX_PASSWORD = "test-pbx";
 process.env.DISPATCH_TICKER = "off";
+// Las pruebas fijan la tarifa con la que fueron escritas (banderazo Q275, Q20/km, sin km incluidos);
+// la tarifa real por defecto vive en src/lib/config.ts y es editable por variables de entorno.
+process.env.PRICE_TOW_BASE_Q = "275";
+process.env.PRICE_TOW_INCLUDED_KM = "0";
+process.env.PRICE_TOW_PER_KM_Q = "20";
 
 for (const f of [dbPath, `${dbPath}-journal`, `${dbPath}-wal`, `${dbPath}-shm`]) {
   if (fs.existsSync(f)) fs.rmSync(f);

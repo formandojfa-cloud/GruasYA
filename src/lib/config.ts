@@ -19,11 +19,11 @@ function bool(name: string, fallback: boolean): boolean {
 export const PRICING = {
   tow: {
     /** Banderazo del gruero (Q). */
-    baseQ: num("PRICE_TOW_BASE_Q", 275),
+    baseQ: num("PRICE_TOW_BASE_Q", 300),
     /** Km incluidos en el banderazo. Pendiente de confirmar con el gruero. */
-    includedKm: num("PRICE_TOW_INCLUDED_KM", 0),
+    includedKm: num("PRICE_TOW_INCLUDED_KM", 10),
     /** Precio por km adicional (Q). */
-    perKmQ: num("PRICE_TOW_PER_KM_Q", 20),
+    perKmQ: num("PRICE_TOW_PER_KM_Q", 15),
   },
   /** Cargo por servicio para quien NO es socio (Q). Los socios pagan tarifa directa. */
   nonMemberTowFeeQ: num("PRICE_NON_MEMBER_TOW_FEE_Q", 50),
