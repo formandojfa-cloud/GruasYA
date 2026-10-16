@@ -1,6 +1,17 @@
 # GruaYa: cara, flujos y modo demo del producto
 
-**Decisión (2026-10-16):** la app debe verse y sentirse como la demo **GruaYa** del 7 de octubre (artifact `claude.ai/artifact/Csf6AyKkjJ2dgqUA57uyKL`, publicada en `formandojfa-cloud.github.io/GruasYA`), conservando por debajo el motor real ya construido (base de datos, cascada de ofertas, central/PBX, PIN, seguimiento, pruebas). Esta página es la **fuente de verdad** de esa transformación. Referencias visuales: `docs/demo-reference/*.png`; textos literales de la demo: `docs/demo-reference/textos-demo.txt` (úsalos tal cual).
+**Decisión (2026-10-16):** la app debe verse y sentirse como el prototipo **GruaYa** (rama `claude/prototipo-mvp` de este repositorio; demo publicada en `formandojfa-cloud.github.io/GruasYA`), conservando por debajo el motor real ya construido (base de datos, cascada de ofertas, central/PBX, PIN, seguimiento, pruebas). Esta página es la **fuente de verdad** de esa transformación.
+
+**Referencia principal: el código del prototipo.** Está extraído en `/home/user/prototipo-mvp` (y en git: `git archive origin/claude/prototipo-mvp`). Es React + TypeScript + Leaflet, igual que esta app, así que las pantallas se **portan**, no se reinventan:
+
+- `src/ui/Conductor.tsx` (654 líneas), `src/ui/Gruero.tsx` (482), `src/ui/Admin.tsx` (245), `src/ui/Chat.tsx`, `src/ui/BotonConfirmar.tsx`, `src/ui/Mapa.tsx`, `src/ui/App.tsx` (barra con wordmark y segmentos), `src/ui/estilos.css` (los estilos exactos), `src/ui/formato.ts`, `src/ui/cotizacion.ts`, `src/ui/alerta.ts` (sonido/vibración), `src/ui/push.ts` (PWA push).
+- `src/domain/tarifa.ts` + `tarifa.test.ts`: la tarifa real decidida por el usuario (2026-10-09): **banderazo Q300 con 10 km incluidos + Q15 por km adicional, 15 min incluidos + Q3 por minuto, factor por vehículo (moto 0.8, carro 1, pickup 1.2), nocturno ×1.2 (22–6), lluvia ×1.15 / lluvia fuerte ×1.3, comisión 10 %, cancelación tras aceptar = 50 % de la tarifa**. Estos son los valores por defecto de `Settings`; el Q275 + Q20/km mencionado en la conversación es la tarifa que cobra el gruero amigo y queda como nota, no como default.
+- `src/domain/despacho.ts` + test: parámetros de despacho del prototipo (radio, tiempo de oferta, candidatos por cercanía y ETA por calle); adoptar sus valores por defecto como `Settings` del despacho (el tiempo de oferta del prototipo manda sobre los 40 s actuales).
+- `src/domain/tipos.ts`: estados `buscando · asignado · en_sitio · en_ruta · entregado · pagado · sin_grua · cancelado` → equivalen a `SEARCHING · EN_ROUTE · ARRIVED · IN_PROGRESS · DELIVERED · COMPLETED(pagado) · ESCALATED · CANCELLED`.
+- `src/data/rutas.ts`, `eta.ts`: rutas por calles (Mapbox con token, si no OSRM público) y clima (Open-Meteo) → portar a `src/lib/geo.ts` como proveedor de rutas con caída a línea recta.
+- `README.md` del prototipo: qué incluye y qué estaba simulado (código SMS siempre `123456`, identidad pensada para Didit, pilotos automáticos).
+
+Roles en la interfaz (versión final del prototipo): **Conductor · Piloto · Admin** ("piloto" = gruero). Referencias visuales adicionales: `docs/demo-reference/*.png`; textos literales: `docs/demo-reference/textos-demo.txt` (úsalos tal cual, junto con los del código fuente).
 
 ## 1. Identidad visual
 
