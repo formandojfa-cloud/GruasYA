@@ -1,0 +1,261 @@
+// Esquema de datos de la plataforma de asistencia vial.
+// SQLite en desarrollo; el mismo esquema funciona en PostgreSQL cambiando el
+// provider y el adaptador (ver docs/ARCHITECTURE.md).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ---------- Enums (SQLite no los valida a nivel de BD; Prisma sí) ----------
+
+enum ServiceKind {
+  TOW // grúa
+  TIRE // cambio de llanta
+  BATTERY // paso de corriente
+  FUEL // combustible
+  LOCKSMITH // cerrajería
+}
+
+enum VehicleKind {
+  SEDAN
+  SUV
+  PICKUP
+  MOTO
+}
+
+enum ProviderKind {
+  TOW // gruero
+  MOTO // motorista de asistencia ligera
+}
+
+enum ProviderStatus {
+  OFFLINE
+  ONLINE
+  BUSY
+}
+
+enum RequestStatus {
+  SEARCHING // buscando proveedor (cascada automática)
+  ESCALATED // sin proveedor: alerta al PBX
+  EN_ROUTE // proveedor asignado y en camino
+  ARRIVED // proveedor en el punto
+  IN_PROGRESS // servicio en curso (PIN verificado)
+  COMPLETED
+  CANCELLED
+}
+
+enum OfferResponse {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  WITHDRAWN // retirada por el sistema (asignación manual, cancelación)
+}
+
+enum AssignedBy {
+  AUTO
+  PBX
+}
+
+enum CancelledBy {
+  CLIENT
+  PROVIDER
+  PBX
+}
+
+enum RaterRole {
+  CLIENT
+  PROVIDER
+}
+
+// ---------- Modelos ----------
+
+model User {
+  id                  String    @id @default(cuid())
+  phone               String    @unique
+  name                String
+  isMember            Boolean   @default(false)
+  membershipExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
+
+  requests ServiceRequest[]
+  vehicles Vehicle[]
+}
+
+model Vehicle {
+  id     String      @id @default(cuid())
+  userId String
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plate  String
+  label  String // "Toyota Corolla gris"
+  kind   VehicleKind
+
+  @@index([userId])
+}
+
+model Provider {
+  id           String         @id @default(cuid())
+  name         String
+  phone        String
+  kind         ProviderKind
+  plate        String?
+  vehicleLabel String? // "Grúa de plataforma Hino"
+  photoUrl     String?
+  status       ProviderStatus @default(OFFLINE)
+  lat          Float?
+  lng          Float?
+  heading      Float?
+  h3Cell       String?
+  lastSeenAt   DateTime?
+  isExternal   Boolean        @default(false) // coordinado por el PBX, fuera de la red
+  accessToken  String         @unique // enlace mágico para la app del proveedor
+  ratingSum    Int            @default(0)
+  ratingCount  Int            @default(0)
+  createdAt    DateTime       @default(now())
+
+  offers   DispatchOffer[]
+  requests ServiceRequest[]
+  pings    LocationPing[]
+
+  @@index([kind, status])
+  @@index([h3Cell])
+}
+
+model Operator {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  acknowledgedAlerts EscalationAlert[]
+}
+
+model ServiceRequest {
+  id     String      @id @default(cuid())
+  userId String
+  user   User        @relation(fields: [userId], references: [id])
+  kind   ServiceKind
+  status RequestStatus
+
+  vehicleKind  VehicleKind
+  vehicleLabel String?
+  plate        String?
+  notes        String?
+
+  pickupLat     Float
+  pickupLng     Float
+  pickupAddress String?
+
+  dropoffLat     Float?
+  dropoffLng     Float?
+  dropoffAddress String?
+
+  distanceKm        Float // distancia estimada de remolque (recogida → destino)
+  isMemberAtRequest Boolean
+  quoteJson         String // desglose de precio (ver lib/pricing.ts)
+  priceTotal        Int // quetzales
+
+  pin String // 4 dígitos; el cliente lo da al proveedor al iniciar el servicio
+
+  providerId String?
+  provider   Provider?   @relation(fields: [providerId], references: [id])
+  assignedBy AssignedBy?
+
+  searchEpoch      Int      @default(1) // sube con cada reintento de búsqueda
+  searchStartedAt  DateTime
+  searchDeadlineAt DateTime
+
+  escalatedAt      DateTime?
+  escalationReason String?
+  assignedAt       DateTime?
+  arrivedAt        DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  cancelledAt      DateTime?
+  cancelledBy      CancelledBy?
+  cancelReason     String?
+  cancellationFee  Int          @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  offers  DispatchOffer[]
+  alerts  EscalationAlert[]
+  events  RequestEvent[]
+  ratings Rating[]
+
+  @@index([status])
+  @@index([userId, createdAt])
+  @@index([providerId, status])
+}
+
+model DispatchOffer {
+  id          String         @id @default(cuid())
+  requestId   String
+  request     ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  providerId  String
+  provider    Provider       @relation(fields: [providerId], references: [id])
+  epoch       Int
+  round       Int // 1 = proveedor más cercano, 2 = siguiente, ...
+  distanceKm  Float // proveedor → punto de recogida al momento de ofrecer
+  offeredAt   DateTime       @default(now())
+  expiresAt   DateTime
+  response    OfferResponse  @default(PENDING)
+  respondedAt DateTime?
+
+  @@index([requestId, response])
+  @@index([providerId, response])
+}
+
+model EscalationAlert {
+  id               String         @id @default(cuid())
+  requestId        String
+  request          ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  reason           String
+  createdAt        DateTime       @default(now())
+  acknowledgedAt   DateTime?
+  acknowledgedById String?
+  acknowledgedBy   Operator?      @relation(fields: [acknowledgedById], references: [id])
+  resolvedAt       DateTime?
+
+  @@index([resolvedAt, createdAt])
+}
+
+model LocationPing {
+  id         String   @id @default(cuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  lat        Float
+  lng        Float
+  heading    Float?
+  at         DateTime @default(now())
+
+  @@index([providerId, at])
+}
+
+model RequestEvent {
+  id        String         @id @default(cuid())
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  type      String // CREATED, OFFER_SENT, OFFER_REJECTED, OFFER_EXPIRED, ESCALATED, ASSIGNED, ...
+  data      String? // JSON
+  at        DateTime       @default(now())
+
+  @@index([requestId, at])
+}
+
+model Rating {
+  id        String         @id @default(cuid())
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  byRole    RaterRole
+  stars     Int
+  comment   String?
+  createdAt DateTime       @default(now())
+
+  @@unique([requestId, byRole])
+}

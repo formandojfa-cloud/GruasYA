@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de diseño. Estética tipo Uber: blanco y negro de alto contraste,
+ * acentos solo para estado (verde = bien, ámbar = atención, rojo = problema).
+ */
+:root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --surface: #f6f6f6;
+  --surface-2: #ececec;
+  --border: #e2e2e2;
+  --muted: #5e5e5e;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --success: #06c167;
+  --success-soft: #e6f8ee;
+  --warning: #f6b100;
+  --warning-soft: #fff5d6;
+  --danger: #e11900;
+  --danger-soft: #ffe9e6;
+  --info: #276ef1;
+  --info-soft: #e8f0fe;
+  --ring: #276ef1;
+  --radius: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #000000;
+    --foreground: #f3f3f3;
+    --surface: #141414;
+    --surface-2: #1f1f1f;
+    --border: #2a2a2a;
+    --muted: #a6a6a6;
+    --primary: #ffffff;
+    --primary-foreground: #000000;
+    --success-soft: #0f2a1c;
+    --warning-soft: #2b2208;
+    --danger-soft: #2d0f0b;
+    --info-soft: #0f1b33;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --radius-card: var(--radius);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none;
+}
+
+/* Zonas seguras en teléfonos con notch (viewport-fit=cover). */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Leaflet: que el mapa quede por debajo de las hojas y barras de la app. */
+.leaflet-container {
+  z-index: 0;
+  font-family: var(--font-sans);
+  background: var(--surface);
+}
+.leaflet-container .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgb(255 255 255 / 0.7);
+}
+.leaflet-div-icon {
+  background: transparent;
+  border: 0;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.pulse-ring {
+  animation: pulse-ring 1.6s ease-out infinite;
+}
