@@ -396,6 +396,17 @@ export async function acceptOffer(offerId: string, providerId: string, now: Date
     throw new DispatchError("OFFER_NOT_FOUND", "Oferta no encontrada", 404);
   }
   return withRequestLock(offer.requestId, async () => {
+    // Un proveedor con servicio activo (p. ej. asignado a mano por el PBX hace
+    // un instante) no puede tomar otro: la oferta se retira y la cascada sigue.
+    const provider = await prisma.provider.findUnique({ where: { id: providerId }, select: { status: true } });
+    if (provider?.status === "BUSY") {
+      await prisma.dispatchOffer.updateMany({
+        where: { id: offerId, response: "PENDING" },
+        data: { response: "WITHDRAWN", respondedAt: now },
+      });
+      await runSearchStep(offer.requestId, now);
+      throw new DispatchError("OFFER_UNAVAILABLE", "Ya tienes un servicio activo; la oferta se liberó", 409);
+    }
     await prisma.$transaction(async (tx) => {
       const o = await tx.dispatchOffer.updateMany({
         where: { id: offerId, providerId, response: "PENDING", expiresAt: { gt: now } },
@@ -460,7 +471,7 @@ export async function assignProvider(
     if (provider.status === "BUSY") {
       throw new DispatchError("PROVIDER_BUSY", "El proveedor ya tiene un servicio activo", 409);
     }
-    await prisma.$transaction(async (tx) => {
+    const displaced = await prisma.$transaction(async (tx) => {
       const r = await tx.serviceRequest.updateMany({
         where: { id: req.id, status: { in: ["SEARCHING", "ESCALATED"] } },
         data: { status: "EN_ROUTE", providerId, assignedBy: "PBX", assignedAt: now },
@@ -470,13 +481,32 @@ export async function assignProvider(
         where: { requestId: req.id, response: "PENDING" },
         data: { response: "WITHDRAWN", respondedAt: now },
       });
+      // Si el proveedor tenía una oferta pendiente en OTRA solicitud, se retira
+      // para que no pueda quedar con dos servicios; esa búsqueda sigue con el siguiente.
+      const others = await tx.dispatchOffer.findMany({
+        where: { providerId, response: "PENDING", requestId: { not: req.id } },
+        select: { id: true, requestId: true },
+      });
+      if (others.length) {
+        await tx.dispatchOffer.updateMany({
+          where: { id: { in: others.map((o) => o.id) } },
+          data: { response: "WITHDRAWN", respondedAt: now },
+        });
+      }
       await tx.provider.update({ where: { id: providerId }, data: { status: "BUSY" } });
       await tx.escalationAlert.updateMany({
         where: { requestId: req.id, resolvedAt: null },
         data: { resolvedAt: now, acknowledgedAt: now, acknowledgedById: operatorId },
       });
       await event(tx, req.id, "ASSIGNED", { providerId, by: "PBX", operatorId, external: provider.isExternal }, now);
+      return [...new Set(others.map((o) => o.requestId))];
     });
+    for (const otherId of displaced) {
+      // Otra solicitud, otro candado: no hay bloqueo cruzado.
+      await withRequestLock(otherId, () => runSearchStep(otherId, now)).catch((err) =>
+        console.error("runSearchStep after manual assignment failed", otherId, err),
+      );
+    }
     return mustLoad(req.id);
   });
 }

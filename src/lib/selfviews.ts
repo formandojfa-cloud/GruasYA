@@ -39,7 +39,8 @@ export async function getProviderSelf(provider: Provider, now: Date = new Date()
     orderBy: { offeredAt: "desc" },
   });
   if (pending) {
-    if (pending.expiresAt <= now) {
+    if (pending.expiresAt <= now || provider.status === "BUSY") {
+      // Expirada, o el proveedor ya está en otro servicio: la cascada sigue sin él.
       await advanceRequest(pending.requestId, now);
     } else {
       const req = await loadRequest(pending.requestId);

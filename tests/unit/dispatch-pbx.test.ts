@@ -137,14 +137,10 @@ describe("dispatch.assignProvider (PBX)", () => {
     expect(eventData(assigned, "ASSIGNED")).toMatchObject({ by: "PBX", external: true });
   });
 
-  // TODO(backbone): assignProvider no retira las ofertas PENDING que el gruero
-  // asignado tenga en OTRAS solicitudes, y acceptOffer no comprueba que el
-  // gruero no esté BUSY. Resultado: el PBX asigna a A (BUSY) y A todavía puede
-  // aceptar su oferta pendiente de otra solicitud → dos servicios activos con
-  // el mismo gruero. Esperado: al asignarlo, sus ofertas pendientes en otras
-  // solicitudes deberían rechazarse (y esas cascadas seguir), o acceptOffer
-  // debería fallar para un gruero BUSY. Ver informe.
-  test.fails("un gruero asignado a mano por el PBX no puede aceptar una oferta pendiente de otra solicitud", async () => {
+  // Regresión: al asignar a mano, las ofertas pendientes del gruero en OTRAS
+  // solicitudes se retiran (y esas cascadas siguen), y un gruero BUSY no puede
+  // aceptar nada → nunca dos servicios activos con el mismo gruero.
+  test("un gruero asignado a mano por el PBX no puede aceptar una oferta pendiente de otra solicitud", async () => {
     const operator = await createOperator();
     const [a] = await createProvidersAtKm([1]);
     const r1 = await createRequest(await createUser(), towInput(), T0);

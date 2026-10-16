@@ -84,7 +84,7 @@ export function quoteFor(input: QuoteInput): Quote {
 
   // Grúa: banderazo + km adicionales + cargo de no socio + nocturno.
   const { baseQ, includedKm, perKmQ } = PRICING.tow;
-  const billableKm = Math.ceil(Math.max(0, distanceKm - includedKm) - 1e-9);
+  const billableKm = Math.max(0, Math.ceil(distanceKm - includedKm - 1e-9));
   const extraKmQ = billableKm * perKmQ;
   const nonMemberFeeQ = input.isMember ? 0 : PRICING.nonMemberTowFeeQ;
   const nightSurchargeQ = isNightTime(at) ? PRICING.night.surchargeQ : 0;
