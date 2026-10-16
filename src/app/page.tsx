@@ -1,19 +1,6 @@
-import Link from "next/link";
+import ClientApp from "@/components/client/ClientApp";
 
-// Página temporal. La app del cliente reemplaza este archivo.
+/** App del cliente (PWA): pedir, cotizar, buscar, seguir, PIN, calificar. */
 export default function Home() {
-  return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-      <h1 className="text-3xl font-bold">Asistencia Vial</h1>
-      <p className="text-muted">Prototipo en construcción.</p>
-      <nav className="flex flex-col gap-2">
-        <Link className="underline" href="/driver">
-          App del proveedor
-        </Link>
-        <Link className="underline" href="/pbx">
-          Panel del PBX
-        </Link>
-      </nav>
-    </main>
-  );
+  return <ClientApp />;
 }
