@@ -11,5 +11,5 @@ export const POST = handle<Ctx>(async (_req, ctx) => {
   if (!operator) return unauthorized();
   const { id } = await ctx.params;
   const updated = await retrySearch(id, operator.id);
-  return ok(toRequestView(updated, "PBX"));
+  return ok(await toRequestView(updated, "PBX"));
 });

@@ -6,7 +6,8 @@
 import type { DispatchOffer, Provider } from "@/generated/prisma/client";
 import { DISPATCH } from "./config";
 import { parseQuote, type RequestWithRelations } from "./dispatch";
-import { etaMinutes, roadDistanceKm } from "./geo";
+import { etaMinutes } from "./geo";
+import { getRoute, parseGeometry } from "./routes";
 import { providerAccessLink, providerInviteText, whatsappLink } from "./notifications";
 import type {
   LiveLocation,
@@ -45,22 +46,29 @@ export function toProviderCard(p: Provider, opts: { withContact: boolean }): Pro
   return card;
 }
 
-export function liveLocationFor(req: RequestWithRelations): LiveLocation | null {
+/**
+ * Posición en vivo del proveedor con distancia y ETA hasta su objetivo. En
+ * EN_ROUTE/IN_PROGRESS la ruta sale del motor de rutas (con caché; estimación si
+ * no hay red); en ARRIVED ya está en la recogida y no hace falta consultar.
+ */
+export async function liveLocationFor(req: RequestWithRelations, now: Date = new Date()): Promise<LiveLocation | null> {
   const p = req.provider;
   if (!p || p.lat == null || p.lng == null || !p.lastSeenAt) return null;
   if (!CONTACT_VISIBLE.has(req.status)) return null;
   const here = { lat: p.lat, lng: p.lng };
   const towing = req.status === "IN_PROGRESS" && req.dropoffLat != null && req.dropoffLng != null;
   const target = towing ? { lat: req.dropoffLat!, lng: req.dropoffLng! } : { lat: req.pickupLat, lng: req.pickupLng };
-  const km = roadDistanceKm(here, target);
+  const route = await getRoute(here, target, now);
   return {
     lat: p.lat,
     lng: p.lng,
     heading: p.heading,
     updatedAt: p.lastSeenAt.toISOString(),
     target: towing ? "DROPOFF" : "PICKUP",
-    distanceKm: km,
-    etaMinutes: etaMinutes(km),
+    distanceKm: route.distanceKm,
+    etaMinutes: route.minutes,
+    routeSource: route.source,
+    routeGeometry: route.geometry,
   };
 }
 
@@ -94,7 +102,7 @@ function toEvents(req: RequestWithRelations, role: ViewerRole): RequestEventView
     });
 }
 
-export function toRequestView(req: RequestWithRelations, role: ViewerRole): RequestView {
+export async function toRequestView(req: RequestWithRelations, role: ViewerRole, now: Date = new Date()): Promise<RequestView> {
   const quote = parseQuote(req);
   const pending = req.offers.find((o) => o.response === "PENDING") ?? null;
   const offersThisEpoch = req.offers.filter((o) => o.epoch === req.searchEpoch && o.round > 0).length;
@@ -117,11 +125,14 @@ export function toRequestView(req: RequestWithRelations, role: ViewerRole): Requ
         ? { lat: req.dropoffLat, lng: req.dropoffLng, address: req.dropoffAddress ?? undefined }
         : null,
     distanceKm: req.distanceKm,
+    estimatedMinutes: req.estimatedMinutes,
+    routeSource: req.routeSource as RequestView["routeSource"],
+    routeGeometry: parseGeometry(req.routeGeometry),
     isMember: req.isMemberAtRequest,
     quote,
     priceTotal: req.priceTotal,
     provider: req.provider ? toProviderCard(req.provider, { withContact: contactVisible }) : null,
-    providerLive: liveLocationFor(req),
+    providerLive: await liveLocationFor(req, now),
     assignedBy: req.assignedBy,
     search: {
       epoch: req.searchEpoch,
@@ -175,16 +186,19 @@ export function toRequestView(req: RequestWithRelations, role: ViewerRole): Requ
   return view;
 }
 
-export function toOfferView(
+export async function toOfferView(
   offer: DispatchOffer,
   req: RequestWithRelations,
   provider: Pick<Provider, "lat" | "lng">,
-): OfferView {
+  now: Date = new Date(),
+): Promise<OfferView> {
   const quote = parseQuote(req);
+  const pickup = { lat: req.pickupLat, lng: req.pickupLng };
+  // Con la ubicación del gruero, ruta real hasta la recogida; sin ella, lo guardado en la oferta.
   const toPickup =
     provider.lat != null && provider.lng != null
-      ? roadDistanceKm({ lat: provider.lat, lng: provider.lng }, { lat: req.pickupLat, lng: req.pickupLng })
-      : offer.distanceKm;
+      ? await getRoute({ lat: provider.lat, lng: provider.lng }, pickup, now)
+      : null;
   return {
     id: offer.id,
     requestId: req.id,
@@ -193,13 +207,14 @@ export function toOfferView(
     kind: req.kind,
     vehicleKind: req.vehicleKind,
     vehicleLabel: req.vehicleLabel,
-    pickup: { lat: req.pickupLat, lng: req.pickupLng, address: req.pickupAddress ?? undefined },
+    pickup: { ...pickup, address: req.pickupAddress ?? undefined },
     dropoff:
       req.dropoffLat != null && req.dropoffLng != null
         ? { lat: req.dropoffLat, lng: req.dropoffLng, address: req.dropoffAddress ?? undefined }
         : null,
-    distanceToPickupKm: toPickup,
-    etaToPickupMinutes: etaMinutes(toPickup),
+    distanceToPickupKm: toPickup?.distanceKm ?? offer.distanceKm,
+    etaToPickupMinutes: toPickup?.minutes ?? etaMinutes(offer.distanceKm),
+    routeSource: toPickup?.source ?? "estimada",
     towDistanceKm: req.distanceKm,
     payoutQ: quote.providerPayoutQ,
     clientFirstName: req.user.name.split(" ")[0],

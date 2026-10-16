@@ -41,6 +41,8 @@ export default defineConfig({
       PBX_PASSWORD: "e2e-pbx",
       APP_URL: `http://localhost:${PORT}`,
       NEXT_DIST_DIR: ".next-e2e",
+      // Sin red: rutas estimadas en línea recta para que los flujos no dependan de OSRM/Mapbox.
+      ROUTES_PROVIDER: "estimada",
       // Tarifa fija para que las aserciones de precio no dependan de los defaults.
       PRICE_TOW_BASE_Q: "275",
       PRICE_TOW_INCLUDED_KM: "0",

@@ -154,7 +154,10 @@ model ServiceRequest {
   dropoffLng     Float?
   dropoffAddress String?
 
-  distanceKm        Float // distancia estimada de remolque (recogida → destino)
+  distanceKm        Float // distancia de remolque (recogida → destino), por calles cuando hay motor de rutas
+  estimatedMinutes  Int? // minutos de remolque según la ruta
+  routeSource       String? // "mapbox" | "osrm" | "estimada" (ver lib/routes.ts)
+  routeGeometry     String? // JSON [{lat,lng}, …] de la polilínea recogida → destino
   isMemberAtRequest Boolean
   quoteJson         String // desglose de precio (ver lib/pricing.ts)
   priceTotal        Int // quetzales

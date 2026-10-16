@@ -13,5 +13,5 @@ export const POST = handle<Ctx>(async (_req, ctx) => {
   const existing = await loadRequest(id);
   if (!existing || existing.userId !== user.id) return fail("NOT_FOUND", "Solicitud no encontrada", 404);
   const updated = await requestOperatorHelp(id);
-  return ok(toRequestView(updated, "CLIENT"));
+  return ok(await toRequestView(updated, "CLIENT"));
 });

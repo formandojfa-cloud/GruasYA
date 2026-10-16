@@ -14,7 +14,9 @@ export const GET = handle(async () => {
     take: 50,
     include: REQUEST_INCLUDE,
   });
-  const jobs = rows.map((r) => ({ ...toRequestView(r, "PROVIDER"), payoutQ: r.status === "COMPLETED" ? parseQuote(r).providerPayoutQ : 0 }));
+  const jobs = await Promise.all(
+    rows.map(async (r) => ({ ...(await toRequestView(r, "PROVIDER")), payoutQ: r.status === "COMPLETED" ? parseQuote(r).providerPayoutQ : 0 })),
+  );
   const totalQ = jobs.reduce((s, j) => s + j.payoutQ, 0);
   return ok({ jobs, totalQ });
 });

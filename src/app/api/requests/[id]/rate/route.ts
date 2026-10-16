@@ -15,5 +15,5 @@ export const POST = handle<Ctx>(async (req, ctx) => {
   const { stars, comment } = await parseBody(req, RateSchema);
   await rateRequest(id, "CLIENT", stars, comment);
   const fresh = await loadRequest(id);
-  return ok(toRequestView(fresh!, "CLIENT"));
+  return ok(await toRequestView(fresh!, "CLIENT"));
 });

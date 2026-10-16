@@ -62,7 +62,7 @@ async function enRoute() {
 describe("views.toRequestView — PIN y teléfonos por rol", () => {
   it("CLIENT: ve su PIN; el teléfono y WhatsApp de la grúa solo mientras el servicio está activo", async () => {
     const { provider, req } = await enRoute();
-    const live = toRequestView(req, "CLIENT");
+    const live = await toRequestView(req, "CLIENT");
     expect(live.pin).toBe(req.pin);
     expect(live.client).toBeUndefined();
     expect(live.provider?.id).toBe(provider.id);
@@ -72,11 +72,11 @@ describe("views.toRequestView — PIN y teléfonos por rol", () => {
 
     await providerTransition(req.id, provider.id, "ARRIVED", undefined, at(60));
     await providerTransition(req.id, provider.id, "IN_PROGRESS", req.pin, at(70));
-    const inProgress = toRequestView(await reload(req.id), "CLIENT");
+    const inProgress = await toRequestView(await reload(req.id), "CLIENT");
     expect(inProgress.provider?.phone).toBe(provider.phone);
 
     await providerTransition(req.id, provider.id, "COMPLETED", undefined, at(80));
-    const done = toRequestView(await reload(req.id), "CLIENT");
+    const done = await toRequestView(await reload(req.id), "CLIENT");
     expect(done.status).toBe("COMPLETED");
     expect(done.pin).toBe(req.pin);
     expect(done.provider?.name).toBe(provider.name); // la tarjeta queda para el historial…
@@ -89,7 +89,7 @@ describe("views.toRequestView — PIN y teléfonos por rol", () => {
     const user = await createUser();
     const [a] = await createProvidersAtKm([1]);
     const req = await createRequest(user, towInput(), T0);
-    const v = toRequestView(req, "CLIENT");
+    const v = await toRequestView(req, "CLIENT");
     expect(v.status).toBe("SEARCHING");
     expect(v.pin).toMatch(/^\d{4}$/);
     expect(v.provider).toBeNull();
@@ -111,18 +111,18 @@ describe("views.toRequestView — PIN y teléfonos por rol", () => {
 
   it("PROVIDER: nunca ve el PIN; ve el nombre de pila y teléfono del cliente solo mientras el servicio está activo", async () => {
     const { user, provider, req } = await enRoute();
-    const live = toRequestView(req, "PROVIDER");
+    const live = await toRequestView(req, "PROVIDER");
     expect(live.pin).toBeUndefined();
     expect(live).not.toHaveProperty("pin");
     expect(live.client).toEqual({ id: user.id, name: "Ana", phone: user.phone, whatsapp: `https://wa.me/502${user.phone}` });
     expect(live.provider?.phone).toBeUndefined(); // su propia tarjeta tampoco expone contacto
 
     await providerTransition(req.id, provider.id, "ARRIVED", undefined, at(60));
-    expect(toRequestView(await reload(req.id), "PROVIDER").client?.phone).toBe(user.phone);
+    expect((await toRequestView(await reload(req.id), "PROVIDER")).client?.phone).toBe(user.phone);
 
     await providerTransition(req.id, provider.id, "IN_PROGRESS", req.pin, at(70));
     await providerTransition(req.id, provider.id, "COMPLETED", undefined, at(80));
-    const done = toRequestView(await reload(req.id), "PROVIDER");
+    const done = await toRequestView(await reload(req.id), "PROVIDER");
     expect(done.pin).toBeUndefined();
     expect(done.client).toBeUndefined();
   });
@@ -130,14 +130,14 @@ describe("views.toRequestView — PIN y teléfonos por rol", () => {
   it("PROVIDER mientras busca (oferta pendiente) no ve datos del cliente", async () => {
     await createProvidersAtKm([1]);
     const req = await createRequest(await createUser(), towInput(), T0);
-    const v = toRequestView(req, "PROVIDER");
+    const v = await toRequestView(req, "PROVIDER");
     expect(v.client).toBeUndefined();
     expect(v.pin).toBeUndefined();
   });
 
   it("SHARE (enlace público): sin PIN, sin cliente, sin teléfonos, sin ids internos", async () => {
     const { provider, req } = await enRoute();
-    const v = toRequestView(req, "SHARE");
+    const v = await toRequestView(req, "SHARE");
     expect(v.pin).toBeUndefined();
     expect(v.client).toBeUndefined();
     expect(v.provider?.name).toBe(provider.name);
@@ -150,7 +150,7 @@ describe("views.toRequestView — PIN y teléfonos por rol", () => {
     // Otra grúa libre para que la segunda solicitud tenga oferta en curso.
     await createProvidersAtKm([2]);
     const searching = await createRequest(await createUser(), towInput(), at(100));
-    const s = toRequestView(searching, "SHARE");
+    const s = await toRequestView(searching, "SHARE");
     expect(s.status).toBe("SEARCHING");
     expect(s.search.currentOffer).not.toBeNull();
     expect(s.search.currentOffer).not.toHaveProperty("providerId");
@@ -158,21 +158,21 @@ describe("views.toRequestView — PIN y teléfonos por rol", () => {
 
   it("PBX: ve todo — PIN, cliente completo, teléfono de la grúa y providerId de la oferta en curso", async () => {
     const { user, provider, req } = await enRoute();
-    const v = toRequestView(req, "PBX");
+    const v = await toRequestView(req, "PBX");
     expect(v.pin).toBe(req.pin);
     expect(v.client).toEqual({ id: user.id, name: "Ana López", phone: user.phone, whatsapp: `https://wa.me/502${user.phone}` });
     expect(v.provider?.phone).toBe(provider.phone);
 
     const [b] = await createProvidersAtKm([2]);
     const searching = await createRequest(await createUser(), towInput(), at(100));
-    const s = toRequestView(searching, "PBX");
+    const s = await toRequestView(searching, "PBX");
     expect(s.search.currentOffer?.providerId).toBe(b.id);
 
     // Incluso terminado, el PBX conserva los contactos.
     await providerTransition(req.id, provider.id, "ARRIVED", undefined, at(60));
     await providerTransition(req.id, provider.id, "IN_PROGRESS", req.pin, at(70));
     await providerTransition(req.id, provider.id, "COMPLETED", undefined, at(80));
-    const done = toRequestView(await reload(req.id), "PBX");
+    const done = await toRequestView(await reload(req.id), "PBX");
     expect(done.client?.phone).toBe(user.phone);
     expect(done.provider?.phone).toBe(provider.phone);
   });
@@ -188,7 +188,7 @@ describe("views.toRequestView — eventos", () => {
     await acceptOffer(mustPending(s3).id, c.id, at(50));
     const full = await reload(req.id);
 
-    const pbx = toRequestView(full, "PBX");
+    const pbx = await toRequestView(full, "PBX");
     expect(pbx.events.map((e) => e.type)).toEqual([
       "CREATED",
       "OFFER_SENT",
@@ -203,7 +203,7 @@ describe("views.toRequestView — eventos", () => {
     expect(pbxAssigned.data).toHaveProperty("offerId");
 
     for (const role of ["CLIENT", "PROVIDER", "SHARE"] as const) {
-      const v = toRequestView(full, role);
+      const v = await toRequestView(full, role);
       const types = v.events.map((e) => e.type);
       expect(types).toEqual(["CREATED", "OFFER_SENT", "OFFER_SENT", "OFFER_SENT", "ASSIGNED"]);
       for (const e of v.events) {
@@ -223,7 +223,7 @@ describe("views.toRequestView — eventos", () => {
   it("el evento CREATED sin ids internos llega igual a todos los roles", async () => {
     const req = await createRequest(await createUser({ isMember: false }), towInput(), T0);
     for (const role of ROLES) {
-      const created = toRequestView(req, role).events.find((e) => e.type === "CREATED")!;
+      const created = (await toRequestView(req, role)).events.find((e) => e.type === "CREATED")!;
       expect(created.data).toEqual({ kind: "TOW", priceTotal: 485, isMember: false });
       expect(created.at).toBe(T0.toISOString());
     }
@@ -234,7 +234,7 @@ describe("views.toRequestView — escalación, cancelación, calificaciones, bú
   it("escalation refleja la alerta abierta y, tras el reconocimiento, el nombre del operador", async () => {
     const operator = await createOperator("Marta");
     const req = await createRequest(await createUser(), towInput(), T0);
-    const v = toRequestView(req, "CLIENT");
+    const v = await toRequestView(req, "CLIENT");
     expect(v.status).toBe("ESCALATED");
     expect(v.escalation).toEqual({
       at: T0.toISOString(),
@@ -244,14 +244,14 @@ describe("views.toRequestView — escalación, cancelación, calificaciones, bú
       acknowledgedBy: null,
     });
     await acknowledgeAlert(req.alerts[0].id, operator.id, at(30));
-    const acked = toRequestView(await reload(req.id), "PBX");
+    const acked = await toRequestView(await reload(req.id), "PBX");
     expect(acked.escalation?.acknowledgedAt).toBe(at(30).toISOString());
     expect(acked.escalation?.acknowledgedBy).toBe("Marta");
 
     // Tras asignar, la alerta resuelta sigue siendo la referencia histórica.
     const p = await createProvider({ status: "OFFLINE", at: null, lastSeenAt: null });
     await assignProvider(req.id, p.id, operator.id, at(60));
-    const assigned = toRequestView(await reload(req.id), "CLIENT");
+    const assigned = await toRequestView(await reload(req.id), "CLIENT");
     expect(assigned.status).toBe("EN_ROUTE");
     expect(assigned.assignedBy).toBe("PBX");
     expect(assigned.escalation?.reason).toBe("NO_PROVIDERS_AVAILABLE");
@@ -264,7 +264,7 @@ describe("views.toRequestView — escalación, cancelación, calificaciones, bú
   it("cancellation trae quién canceló, el motivo y el cargo", async () => {
     const { user, req } = await enRoute();
     await cancelRequest(req.id, "CLIENT", "Ya no la necesito", at(60), { userId: user.id });
-    const v = toRequestView(await reload(req.id), "CLIENT");
+    const v = await toRequestView(await reload(req.id), "CLIENT");
     expect(v.status).toBe("CANCELLED");
     expect(v.cancellation).toEqual({ by: "CLIENT", reason: "Ya no la necesito", feeQ: 50 });
     expect(v.timestamps.cancelledAt).toBe(at(60).toISOString());
@@ -277,10 +277,10 @@ describe("views.toRequestView — escalación, cancelación, calificaciones, bú
     await providerTransition(req.id, provider.id, "ARRIVED", undefined, at(60));
     await providerTransition(req.id, provider.id, "IN_PROGRESS", req.pin, at(70));
     await providerTransition(req.id, provider.id, "COMPLETED", undefined, at(80));
-    expect(toRequestView(await reload(req.id), "CLIENT").ratings).toEqual({ client: null, provider: null });
+    expect((await toRequestView(await reload(req.id), "CLIENT")).ratings).toEqual({ client: null, provider: null });
     await rateRequest(req.id, "CLIENT", 5, undefined, at(90));
     await rateRequest(req.id, "PROVIDER", 4, undefined, at(91));
-    const v = toRequestView(await reload(req.id), "CLIENT");
+    const v = await toRequestView(await reload(req.id), "CLIENT");
     expect(v.ratings).toEqual({ client: 5, provider: 4 });
     expect(v.timestamps).toEqual({
       createdAt: T0.toISOString(),
@@ -296,7 +296,7 @@ describe("views.toRequestView — escalación, cancelación, calificaciones, bú
     const { provider, req } = await enRoute();
     await createProvidersAtKm([3]);
     await providerBailout(req.id, provider.id, undefined, at(60));
-    const v = toRequestView(await reload(req.id), "CLIENT");
+    const v = await toRequestView(await reload(req.id), "CLIENT");
     expect(v.status).toBe("SEARCHING");
     expect(v.search.epoch).toBe(2);
     expect(v.search.offersSent).toBe(1);
@@ -308,11 +308,14 @@ describe("views.toRequestView — escalación, cancelación, calificaciones, bú
 
   it("la cotización, el precio y los lugares se copian tal cual", async () => {
     const req = await createRequest(await createUser(), towInput({ notes: "Frente a la gasolinera" }), T0);
-    const v = toRequestView(req, "CLIENT");
+    const v = await toRequestView(req, "CLIENT");
     expect(v.quote.totalQ).toBe(435);
     expect(v.priceTotal).toBe(435);
     expect(v.isMember).toBe(true);
     expect(v.distanceKm).toBe(7.35);
+    expect(v.estimatedMinutes).toBe(etaMinutes(7.35));
+    expect(v.routeSource).toBe("estimada");
+    expect(v.routeGeometry).toEqual([ZONA_10, ZONA_11]);
     expect(v.pickup).toEqual({ lat: ZONA_10.lat, lng: ZONA_10.lng, address: "Zona 10" });
     expect(v.dropoff).toEqual({ lat: ZONA_11.lat, lng: ZONA_11.lng, address: "Taller zona 11" });
     expect(v.notes).toBe("Frente a la gasolinera");
@@ -325,7 +328,7 @@ describe("views.toRequestView — escalación, cancelación, calificaciones, bú
 describe("views.liveLocationFor", () => {
   it("apunta a la recogida en camino y al destino durante el remolque; nada sin servicio activo o sin ubicación", async () => {
     const { provider, req } = await enRoute();
-    const live = liveLocationFor(req)!;
+    const live = (await liveLocationFor(req, T0))!;
     const here = northOf(ZONA_10, 1);
     expect(live.target).toBe("PICKUP");
     expect(live.lat).toBeCloseTo(here.lat, 10);
@@ -335,17 +338,20 @@ describe("views.liveLocationFor", () => {
     expect(live.distanceKm).toBe(1.3);
     expect(live.etaMinutes).toBe(etaMinutes(1.3));
     expect(live.etaMinutes).toBe(3);
+    // Sin red (ROUTES_PROVIDER=estimada) la ruta es la línea recta entre los dos puntos.
+    expect(live.routeSource).toBe("estimada");
+    expect(live.routeGeometry).toEqual([here, ZONA_10]);
 
     await providerTransition(req.id, provider.id, "ARRIVED", undefined, at(60));
     await providerTransition(req.id, provider.id, "IN_PROGRESS", req.pin, at(70));
     await recordProviderLocation(provider.id, ZONA_10, at(75));
-    const towing = liveLocationFor(await reload(req.id))!;
+    const towing = (await liveLocationFor(await reload(req.id), T0))!;
     expect(towing.target).toBe("DROPOFF");
     expect(towing.distanceKm).toBe(roadDistanceKm(ZONA_10, ZONA_11));
     expect(towing.distanceKm).toBe(7.35);
 
     await providerTransition(req.id, provider.id, "COMPLETED", undefined, at(80));
-    expect(liveLocationFor(await reload(req.id))).toBeNull();
+    expect(await liveLocationFor(await reload(req.id))).toBeNull();
   });
 
   it("sin ubicación del gruero (externo recién asignado) no hay posición en vivo", async () => {
@@ -353,8 +359,8 @@ describe("views.liveLocationFor", () => {
     const req = await createRequest(await createUser(), towInput(), T0);
     const ext = await createProvider({ isExternal: true, status: "OFFLINE", at: null, lastSeenAt: null });
     await assignProvider(req.id, ext.id, operator.id, at(10));
-    expect(liveLocationFor(await reload(req.id))).toBeNull();
-    expect(toRequestView(await reload(req.id), "CLIENT").providerLive).toBeNull();
+    expect(await liveLocationFor(await reload(req.id))).toBeNull();
+    expect((await toRequestView(await reload(req.id), "CLIENT")).providerLive).toBeNull();
   });
 });
 
@@ -364,7 +370,7 @@ describe("views.toOfferView", () => {
     const [p] = await createProvidersAtKm([1]);
     const req = await createRequest(user, towInput(), T0);
     const offer = mustPending(req);
-    const v = toOfferView(offer, req, p);
+    const v = await toOfferView(offer, req, p, T0);
     expect(v).toEqual({
       id: offer.id,
       requestId: req.id,
@@ -377,12 +383,13 @@ describe("views.toOfferView", () => {
       dropoff: { lat: ZONA_11.lat, lng: ZONA_11.lng, address: "Taller zona 11" },
       distanceToPickupKm: 1.3,
       etaToPickupMinutes: 3,
+      routeSource: "estimada",
       towDistanceKm: 7.35,
       payoutQ: 391,
       clientFirstName: "Carlos",
     });
     // Sin ubicación del gruero se usa la distancia guardada en la oferta.
-    expect(toOfferView(offer, req, { lat: null, lng: null }).distanceToPickupKm).toBe(offer.distanceKm);
+    expect((await toOfferView(offer, req, { lat: null, lng: null })).distanceToPickupKm).toBe(offer.distanceKm);
   });
 });
 

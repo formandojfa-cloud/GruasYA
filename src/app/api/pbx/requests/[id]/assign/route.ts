@@ -45,5 +45,5 @@ export const POST = handle<Ctx>(async (req, ctx) => {
   }
 
   const updated = await assignProvider(id, providerId!, operator.id);
-  return ok({ request: toRequestView(updated, "PBX"), invite });
+  return ok({ request: await toRequestView(updated, "PBX"), invite });
 });

@@ -11,5 +11,5 @@ export const GET = handle<Ctx>(async (_req, ctx) => {
   const { id } = await ctx.params;
   const req = await advanceRequest(id);
   if (!req) return fail("NOT_FOUND", "Solicitud no encontrada", 404);
-  return ok(toRequestView(req, "PBX"));
+  return ok(await toRequestView(req, "PBX"));
 });

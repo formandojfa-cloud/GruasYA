@@ -11,5 +11,5 @@ export const GET = handle<Ctx>(async (_req, ctx) => {
   const { id } = await ctx.params;
   const req = await loadRequest(id);
   if (!req || req.providerId !== provider.id) return fail("NOT_FOUND", "Servicio no encontrado", 404);
-  return ok(toRequestView(req, "PROVIDER"));
+  return ok(await toRequestView(req, "PROVIDER"));
 });

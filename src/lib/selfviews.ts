@@ -20,7 +20,7 @@ export async function getClientSelf(user: User, now: Date = new Date()): Promise
     phone: user.phone,
     isMember: user.isMember && (!user.membershipExpiresAt || user.membershipExpiresAt > now),
     membershipExpiresAt: user.membershipExpiresAt?.toISOString() ?? null,
-    activeRequest: activeReq ? toRequestView(activeReq, "CLIENT") : null,
+    activeRequest: activeReq ? await toRequestView(activeReq, "CLIENT", now) : null,
     vehicles: vehicles.map((v) => ({ id: v.id, plate: v.plate, label: v.label, kind: v.kind })),
   };
 }
@@ -44,7 +44,7 @@ export async function getProviderSelf(provider: Provider, now: Date = new Date()
       await advanceRequest(pending.requestId, now);
     } else {
       const req = await loadRequest(pending.requestId);
-      if (req && req.status === "SEARCHING") pendingOffer = toOfferView(pending, req, provider);
+      if (req && req.status === "SEARCHING") pendingOffer = await toOfferView(pending, req, provider, now);
     }
   }
 
@@ -75,7 +75,7 @@ export async function getProviderSelf(provider: Provider, now: Date = new Date()
         ? { lat: provider.lat, lng: provider.lng, heading: provider.heading, updatedAt: provider.lastSeenAt.toISOString() }
         : null,
     pendingOffer,
-    activeJob: activeJob ? toRequestView(activeJob, "PROVIDER") : null,
+    activeJob: activeJob ? await toRequestView(activeJob, "PROVIDER", now) : null,
     today: { jobs: todays.length, earningsQ },
   };
 }

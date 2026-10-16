@@ -15,7 +15,8 @@ import type { Prisma, Provider, ServiceRequest, User } from "@/generated/prisma/
 import type { CancelledBy, ProviderKind, RequestStatus, ServiceKind } from "@/generated/prisma/enums";
 import { DISPATCH, PRICING } from "./config";
 import { prisma } from "./db";
-import { haversineKm, roadDistanceKm, toH3Cell, type LatLng } from "./geo";
+import { haversineKm, toH3Cell, type LatLng } from "./geo";
+import { getRoute, type Route } from "./routes";
 import { newPin } from "./auth";
 import { notifyPbxAlert } from "./notifications";
 import { quoteFor, type Quote } from "./pricing";
@@ -144,7 +145,9 @@ export async function createRequest(
   if (input.kind === "TOW" && !dropoff) {
     throw new DispatchError("DROPOFF_REQUIRED", "La grúa necesita un destino", 400);
   }
-  const distanceKm = input.kind === "TOW" && dropoff ? roadDistanceKm(pickup, dropoff) : 0;
+  // La grúa se cobra por la distancia por calles (Mapbox/OSRM; estimación si no hay red).
+  const route: Route | null = input.kind === "TOW" && dropoff ? await getRoute(pickup, dropoff, now) : null;
+  const distanceKm = route?.distanceKm ?? 0;
   const isMember = isActiveMember(user, now);
   const quote = quoteFor({ kind: input.kind, distanceKm, isMember, at: now });
 
@@ -165,6 +168,9 @@ export async function createRequest(
         dropoffLng: dropoff?.lng ?? null,
         dropoffAddress: input.dropoff?.address ?? null,
         distanceKm,
+        estimatedMinutes: route?.minutes ?? null,
+        routeSource: route?.source ?? null,
+        routeGeometry: route ? JSON.stringify(route.geometry) : null,
         isMemberAtRequest: isMember,
         quoteJson: JSON.stringify(quote),
         priceTotal: quote.totalQ,
@@ -218,6 +224,27 @@ export async function findCandidates(
     .map((p) => ({ provider: p, distanceKm: haversineKm(pickup, { lat: p.lat!, lng: p.lng! }) }))
     .filter((c) => c.distanceKm <= DISPATCH.searchRadiusKm)
     .sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
+/**
+ * Proveedor ONLINE y con ubicación fresca más cercano (línea recta) a un punto,
+ * para mostrar "grúa más cercana a N min" antes de pedir. `null` si no hay nadie.
+ */
+export async function nearestOnlineProvider(
+  kind: ServiceKind,
+  point: LatLng,
+  now: Date = new Date(),
+): Promise<Candidate | null> {
+  const freshAfter = new Date(now.getTime() - DISPATCH.providerStaleMs);
+  const providers = await prisma.provider.findMany({
+    where: { kind: providerKindFor(kind), status: "ONLINE", lastSeenAt: { gte: freshAfter }, lat: { not: null }, lng: { not: null } },
+  });
+  let best: Candidate | null = null;
+  for (const p of providers) {
+    const distanceKm = haversineKm(point, { lat: p.lat!, lng: p.lng! });
+    if (distanceKm <= DISPATCH.searchRadiusKm && (!best || distanceKm < best.distanceKm)) best = { provider: p, distanceKm };
+  }
+  return best;
 }
 
 /**

@@ -12,6 +12,8 @@ process.env.DATABASE_URL = `file:${dbPath}`;
 process.env.AUTH_SECRET = "test-secret";
 process.env.PBX_PASSWORD = "test-pbx";
 process.env.DISPATCH_TICKER = "off";
+// Sin red en pruebas: el motor de rutas usa siempre la estimación en línea recta (determinista).
+process.env.ROUTES_PROVIDER = "estimada";
 // Las pruebas fijan la tarifa con la que fueron escritas (banderazo Q275, Q20/km, sin km incluidos);
 // la tarifa real por defecto vive en src/lib/config.ts y es editable por variables de entorno.
 process.env.PRICE_TOW_BASE_Q = "275";

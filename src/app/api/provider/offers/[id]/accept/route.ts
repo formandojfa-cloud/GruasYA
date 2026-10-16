@@ -10,5 +10,5 @@ export const POST = handle<Ctx>(async (_req, ctx) => {
   if (!provider) return unauthorized();
   const { id } = await ctx.params;
   const req = await acceptOffer(id, provider.id);
-  return ok(toRequestView(req, "PROVIDER"));
+  return ok(await toRequestView(req, "PROVIDER"));
 });

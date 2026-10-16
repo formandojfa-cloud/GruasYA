@@ -13,5 +13,5 @@ export const POST = handle<Ctx>(async (req, ctx) => {
   const { id } = await ctx.params;
   const { to, pin } = await parseBody(req, ProviderTransitionSchema);
   const updated = await providerTransition(id, provider.id, to, pin);
-  return ok(toRequestView(updated, "PROVIDER"));
+  return ok(await toRequestView(updated, "PROVIDER"));
 });

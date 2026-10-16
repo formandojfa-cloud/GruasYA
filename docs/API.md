@@ -30,8 +30,11 @@ Tiempo real: **polling**. Cliente y proveedor consultan cada 2–3 s; el PBX cad
 ### `GET /api/me` → `ClientSelf`
 Incluye `activeRequest` (la solicitud en curso, ya avanzada) o `null`, `isMember`, `vehicles`.
 
-### `POST /api/quote` → `{ quote: Quote, distanceKm, towMinutes, isMember }`
+### `POST /api/quote` → `QuoteResponse`
 `{ kind: "TOW", pickup: {lat,lng}, dropoff: {lat,lng} }`. Funciona sin sesión (cotiza como no socio). Para asistencias ligeras (`TIRE|BATTERY|FUEL|LOCKSMITH`) no se envía `dropoff`.
+Respuesta: `{ quote: Quote, distanceKm, towMinutes, routeSource, geometry: {lat,lng}[], isMember, nearestProvider: { etaMinutes, distanceKm } | null }`.
+- `distanceKm`/`towMinutes`/`geometry` salen de la ruta por calles recogida → destino (`lib/routes.ts`: Mapbox con tráfico si hay `MAPBOX_TOKEN`, si no OSRM público; si no hay red, `routeSource: "estimada"` = línea recta × 1.3 con factor de hora pico y `geometry` de 2 puntos). La misma distancia es la que usa `POST /api/requests` para el precio.
+- `nearestProvider`: la grúa/moto conectada y fresca más cercana a la recogida, con ruta proveedor → recogida; `null` si no hay nadie. Sirve para mostrar "grúa más cercana a N min" antes de pedir.
 `Quote.lines` es el desglose para mostrar; `Quote.totalQ` el total; `Quote.summary` un texto corto ("Tarifa directa de socio" / "Incluido en tu membresía").
 
 ### `POST /api/requests` → `RequestView` (201)
@@ -46,7 +49,8 @@ La respuesta ya viene en `SEARCHING` con `search.currentOffer` (grúa contactada
 
 ### `GET /api/requests/:id` → `RequestView`
 Sondear cada 2–3 s mientras `status` esté en `SEARCHING|ESCALATED|EN_ROUTE|ARRIVED|IN_PROGRESS`.
-- `providerLive` (solo con proveedor asignado): `{lat,lng,heading,updatedAt,target:"PICKUP"|"DROPOFF",distanceKm,etaMinutes}`.
+- `distanceKm`, `estimatedMinutes`, `routeSource`, `routeGeometry: {lat,lng}[] | null`: la ruta del remolque guardada al crear la solicitud (null/`estimada` en asistencias ligeras o solicitudes anteriores al motor de rutas). Dibujar `routeGeometry` como polilínea recogida → destino.
+- `providerLive` (solo con proveedor asignado): `{lat,lng,heading,updatedAt,target:"PICKUP"|"DROPOFF",distanceKm,etaMinutes,routeSource,routeGeometry}`. En `EN_ROUTE`/`IN_PROGRESS` la distancia, el ETA y la polilínea proveedor → objetivo vienen del motor de rutas (caché de 5 min por coordenadas redondeadas, así el sondeo es barato); sin red, estimación en línea recta.
 - `provider.phone` y `provider.whatsapp` solo mientras el servicio está activo.
 - `search.offersSent` / `search.maxOffers` para mostrar "Contactando grúa 2 de 5".
 - `events` para la línea de tiempo (`EVENT_LABELS` en `lib/format.ts`).
@@ -77,7 +81,7 @@ Entra con el **enlace mágico** `/driver?token=…` (el token lo genera el PBX; 
 ### `GET /api/provider/me` → `ProviderSelf`
 Sondear cada 2–3 s mientras está `ONLINE` o con servicio activo.
 - `status`: `OFFLINE|ONLINE|BUSY`.
-- `pendingOffer: OfferView | null` → mostrar pantalla de oferta con `Countdown` hasta `expiresAt` (40 s), `distanceToPickupKm`, `etaToPickupMinutes`, `towDistanceKm`, `payoutQ`, `pickup.address`, `dropoff.address`, `clientFirstName`.
+- `pendingOffer: OfferView | null` → mostrar pantalla de oferta con `Countdown` hasta `expiresAt` (40 s), `distanceToPickupKm`, `etaToPickupMinutes` (por calles desde la ubicación del gruero; `routeSource` dice de dónde salió), `towDistanceKm`, `payoutQ`, `pickup.address`, `dropoff.address`, `clientFirstName`.
 - `activeJob: RequestView | null` (rol PROVIDER: trae `client.phone`/`client.whatsapp`, nunca `pin`).
 - `today: { jobs, earningsQ }`.
 

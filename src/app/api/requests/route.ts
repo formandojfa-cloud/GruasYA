@@ -11,7 +11,7 @@ export const POST = handle(async (req) => {
   if (!user) return unauthorized();
   const input = await parseBody(req, CreateRequestSchema);
   const created = await createRequest(user, input);
-  return ok(toRequestView(created, "CLIENT"), 201);
+  return ok(await toRequestView(created, "CLIENT"), 201);
 });
 
 /** Historial del cliente (más recientes primero). */
@@ -24,5 +24,5 @@ export const GET = handle(async () => {
     take: 50,
     include: REQUEST_INCLUDE,
   });
-  return ok({ requests: rows.map((r) => toRequestView(r, "CLIENT")) });
+  return ok({ requests: await Promise.all(rows.map((r) => toRequestView(r, "CLIENT"))) });
 });

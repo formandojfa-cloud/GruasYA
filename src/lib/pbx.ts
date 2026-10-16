@@ -42,7 +42,12 @@ export async function buildOverview(operator: Operator, now: Date = new Date()):
     }),
   ]);
 
-  const alertViews: AlertView[] = alerts.map((a) => ({
+  const [alertRequests, activeViews, completedViews] = await Promise.all([
+    Promise.all(alerts.map((a) => toRequestView(a.request, "PBX", now))),
+    Promise.all(active.map((r) => toRequestView(r, "PBX", now))),
+    Promise.all(recentCompleted.map((r) => toRequestView(r, "PBX", now))),
+  ]);
+  const alertViews: AlertView[] = alerts.map((a, i) => ({
     id: a.id,
     requestId: a.requestId,
     reason: a.reason,
@@ -50,7 +55,7 @@ export async function buildOverview(operator: Operator, now: Date = new Date()):
     acknowledgedAt: a.acknowledgedAt?.toISOString() ?? null,
     acknowledgedBy: a.acknowledgedBy?.name ?? null,
     resolvedAt: a.resolvedAt?.toISOString() ?? null,
-    request: toRequestView(a.request, "PBX"),
+    request: alertRequests[i],
   }));
 
   const staleCutoff = now.getTime() - DISPATCH.providerStaleMs;
@@ -59,8 +64,8 @@ export async function buildOverview(operator: Operator, now: Date = new Date()):
   return {
     operator: { id: operator.id, name: operator.name },
     alerts: alertViews,
-    active: active.map((r) => toRequestView(r, "PBX")),
-    recentCompleted: recentCompleted.map((r) => toRequestView(r, "PBX")),
+    active: activeViews,
+    recentCompleted: completedViews,
     providers: providers.map((p) => toProviderAdminView(p, now)),
     stats: {
       online,

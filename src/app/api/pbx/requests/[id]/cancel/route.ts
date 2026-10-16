@@ -12,5 +12,5 @@ export const POST = handle<Ctx>(async (req, ctx) => {
   const { id } = await ctx.params;
   const { reason } = await parseBody(req, CancelSchema);
   const updated = await cancelRequest(id, "PBX", reason, new Date(), { operatorId: operator.id });
-  return ok(toRequestView(updated, "PBX"));
+  return ok(await toRequestView(updated, "PBX"));
 });

@@ -137,7 +137,15 @@ export type LiveLocation = {
   target: "PICKUP" | "DROPOFF";
   distanceKm: number;
   etaMinutes: number;
+  /** De dónde salió la ruta proveedor → objetivo (ver `RouteSource`). */
+  routeSource?: RouteSource;
+  /** Polilínea proveedor → objetivo para dibujar en el mapa (2 puntos si es estimada). */
+  routeGeometry?: LatLngPoint[];
 };
+
+/** `mapbox` (con tráfico), `osrm` (público, sin tráfico) o `estimada` (línea recta × rodeo). */
+export type RouteSource = "mapbox" | "osrm" | "estimada";
+export type LatLngPoint = { lat: number; lng: number };
 
 export type RequestEventView = { type: string; at: string; data: Record<string, unknown> | null };
 
@@ -176,7 +184,13 @@ export type RequestView = {
   notes: string | null;
   pickup: Place;
   dropoff: Place | null;
+  /** Distancia del remolque recogida → destino (por calles cuando hubo motor de rutas). */
   distanceKm: number;
+  /** Minutos del remolque según la ruta; null en asistencias ligeras o solicitudes viejas. */
+  estimatedMinutes: number | null;
+  routeSource: RouteSource | null;
+  /** Polilínea recogida → destino; null si no es grúa o no se guardó. */
+  routeGeometry: LatLngPoint[] | null;
   isMember: boolean;
   quote: Quote;
   priceTotal: number;
@@ -215,6 +229,7 @@ export type OfferView = {
   /** Desde el proveedor hasta el punto de recogida. */
   distanceToPickupKm: number;
   etaToPickupMinutes: number;
+  routeSource?: RouteSource;
   /** Distancia del remolque. */
   towDistanceKm: number;
   payoutQ: number;
@@ -289,6 +304,19 @@ export type PbxOverview = {
     escalationRate7d: number | null;
   };
   serverTime: string;
+};
+
+export type QuoteResponse = {
+  quote: Quote;
+  /** Distancia del remolque por calles (0 en asistencias ligeras). */
+  distanceKm: number;
+  towMinutes: number;
+  routeSource: RouteSource;
+  /** Polilínea recogida → destino para pintar la cotización en el mapa. */
+  geometry: LatLngPoint[];
+  isMember: boolean;
+  /** Proveedor conectado más cercano a la recogida, o null si no hay nadie. */
+  nearestProvider: { etaMinutes: number; distanceKm: number } | null;
 };
 
 export type ApiError = { error: { code: string; message: string; details?: unknown } };
