@@ -53,8 +53,9 @@ export default function PbxApp({ tab }: { tab: Tab }) {
   useEffect(() => {
     if (data) cache = { overview: data, at: Date.now() };
   }, [data]);
-  const cached = !data && cache && Date.now() - cache.at < CACHE_TTL_MS ? cache.overview : null;
-  const overview = session === "authed" ? (data ?? cached) : null;
+  // Semilla para el primer render tras remontar; en cuanto llega el sondeo, manda `data`.
+  const [seed] = useState<PbxOverview | null>(() => (cache && Date.now() - cache.at < CACHE_TTL_MS ? cache.overview : null));
+  const overview = session === "authed" ? (data ?? seed) : null;
 
   const { unseen, markSeen } = useAlertSignals(overview?.alerts);
 

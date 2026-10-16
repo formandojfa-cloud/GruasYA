@@ -92,15 +92,15 @@ export default function ProvidersTab({ providers, onChanged, onOpenRequest }: Pr
             <table className="w-full text-sm">
               <thead className="bg-surface text-xs uppercase tracking-wide text-muted">
                 <tr>
-                  <th className="text-left font-semibold px-3 py-2">Proveedor</th>
-                  <th className="text-left font-semibold px-3 py-2">Tipo</th>
-                  <th className="text-left font-semibold px-3 py-2">Estado</th>
-                  <th className="text-left font-semibold px-3 py-2">Teléfono</th>
-                  <th className="text-left font-semibold px-3 py-2">Vehículo</th>
-                  <th className="text-left font-semibold px-3 py-2">Última señal</th>
-                  <th className="text-left font-semibold px-3 py-2">Calif.</th>
-                  <th className="text-left font-semibold px-3 py-2">Servicio</th>
-                  <th className="text-right font-semibold px-3 py-2 min-w-[300px]">Acciones</th>
+                  <th className="text-left font-semibold px-2 py-2">Proveedor</th>
+                  <th className="text-left font-semibold px-2 py-2 hidden xl:table-cell">Tipo</th>
+                  <th className="text-left font-semibold px-2 py-2">Estado</th>
+                  <th className="text-left font-semibold px-2 py-2">Teléfono</th>
+                  <th className="text-left font-semibold px-2 py-2">Vehículo</th>
+                  <th className="text-left font-semibold px-2 py-2">Última señal</th>
+                  <th className="text-left font-semibold px-2 py-2 hidden xl:table-cell">Calif.</th>
+                  <th className="text-left font-semibold px-2 py-2">Servicio</th>
+                  <th className="text-right font-semibold px-2 py-2 w-[280px]">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -198,7 +198,7 @@ function ProviderTableRow({ p, now, busy, error, rotated, onPatch, onOpenRequest
   return (
     <>
       <tr className={cn("align-top", p.status === "OFFLINE" && "text-muted")}>
-        <td className="px-3 py-2">
+        <td className="px-2 py-2">
           <div className="flex items-center gap-1.5">
             <span aria-hidden>{glyphFor(p.kind)}</span>
             <span className="font-semibold text-foreground">{p.name}</span>
@@ -206,26 +206,26 @@ function ProviderTableRow({ p, now, busy, error, rotated, onPatch, onOpenRequest
           </div>
           <div className="text-[11px] text-muted font-mono">#{shortId(p.id)}</div>
         </td>
-        <td className="px-3 py-2 whitespace-nowrap">{PROVIDER_KIND_LABELS[p.kind]}</td>
-        <td className="px-3 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap hidden xl:table-cell">{PROVIDER_KIND_LABELS[p.kind]}</td>
+        <td className="px-2 py-2 whitespace-nowrap">
           <ProviderStatusPill status={p.status} stale={p.isStale} />
         </td>
-        <td className="px-3 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap">
           <a href={`tel:+502${p.phone}`} className="underline-offset-2 hover:underline text-foreground">
             {formatPhone(p.phone)}
           </a>
         </td>
-        <td className="px-3 py-2">
+        <td className="px-2 py-2">
           <div className="font-mono text-xs text-foreground">{p.plate ?? "—"}</div>
-          <div className="text-xs text-muted max-w-[200px] truncate" title={p.vehicleLabel ?? undefined}>
+          <div className="text-xs text-muted max-w-[150px] truncate" title={p.vehicleLabel ?? undefined}>
             {p.vehicleLabel ?? ""}
           </div>
         </td>
-        <td className="px-3 py-2 whitespace-nowrap text-xs">{p.location ? relativeTime(p.location.updatedAt, now) : <span className="text-muted">nunca</span>}</td>
-        <td className="px-3 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap text-xs">{p.location ? relativeTime(p.location.updatedAt, now) : <span className="text-muted">nunca</span>}</td>
+        <td className="px-2 py-2 whitespace-nowrap hidden xl:table-cell">
           <Rating p={p} />
         </td>
-        <td className="px-3 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap">
           {p.activeRequestId ? (
             <button type="button" onClick={() => onOpenRequest(p.activeRequestId!)} className="text-info font-semibold underline-offset-2 hover:underline text-xs">
               Ver #{shortId(p.activeRequestId)}
@@ -234,7 +234,7 @@ function ProviderTableRow({ p, now, busy, error, rotated, onPatch, onOpenRequest
             <span className="text-muted text-xs">—</span>
           )}
         </td>
-        <td className="px-3 py-2">
+        <td className="px-2 py-2">
           <Actions p={p} busy={busy} onPatch={onPatch} />
         </td>
       </tr>
