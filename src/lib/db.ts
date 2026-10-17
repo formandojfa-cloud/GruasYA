@@ -1,4 +1,4 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
 // Una sola instancia por proceso (en desarrollo, Next recarga módulos y sin
@@ -6,11 +6,11 @@ import { PrismaClient } from "@/generated/prisma/client";
 const globalForPrisma = globalThis as unknown as { __rsPrisma?: PrismaClient };
 
 function createClient(): PrismaClient {
-  const adapter = new PrismaBetterSqlite3({
-    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
-    // better-sqlite3 espera a que se libere el candado de escritura en vez de fallar.
-    timeout: 5_000,
-  });
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("Falta DATABASE_URL (cadena de conexión de PostgreSQL / Supabase)");
+  // Supabase: usa el "Session pooler" (puerto 5432) o el "Transaction pooler" (6543).
+  // Pocas conexiones por proceso: el pooler de Supabase ya reparte entre clientes.
+  const adapter = new PrismaPg({ connectionString, max: Number(process.env.DATABASE_POOL_MAX ?? 5) });
   return new PrismaClient({ adapter });
 }
 

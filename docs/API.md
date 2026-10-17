@@ -108,6 +108,11 @@ El proveedor se baja de un servicio `EN_ROUTE|ARRIVED`. La solicitud vuelve a bu
 
 ---
 
+## Servidor
+
+### `POST /api/tick` → `{ ok, at, advanced, offlined }` — latido externo del despacho
+Cabecera `Authorization: Bearer <TICK_SECRET>`. Hace lo mismo que el ticker interno (`advanceAll`): vence ofertas, pasa a la siguiente grúa, escala a la central y desconecta proveedores sin señal. Lo llama Supabase cada 10 s (`supabase/motor.sql`). Sin `TICK_SECRET` responde 404; con secreto incorrecto, 401.
+
 ## PBX (operador)
 
 ### `POST /api/pbx/auth` → `OperatorSelf` — `{ password, name? }` (`PBX_PASSWORD` del `.env`; en dev `pbx123`). `DELETE` cierra sesión.

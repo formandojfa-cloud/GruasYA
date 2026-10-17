@@ -1,4 +1,4 @@
-# Despliegue de demo en Render (plan gratuito). Pasos en README.md → "Probarlo en línea".
+# Despliegue en Render (plan gratuito) con la base en Supabase. Pasos en README.md → "Probarlo en línea".
 services:
   - type: web
     name: asistencia-vial
@@ -11,8 +11,12 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      # Supabase → Project Settings → Database → Connection string → "Session pooler" (URI).
       - key: DATABASE_URL
-        value: file:./prisma/prod.db
+        sync: false
+      # Secreto que usa supabase/motor.sql para llamar a /api/tick cada 10 s.
+      - key: TICK_SECRET
+        generateValue: true
       - key: AUTH_SECRET
         generateValue: true
       - key: PBX_PASSWORD

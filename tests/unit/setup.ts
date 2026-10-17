@@ -1,14 +1,12 @@
 /**
- * Las pruebas unitarias del motor de despacho usan una base SQLite propia
- * (tests/unit/.test.db) creada con las migraciones reales. Así se prueba la
- * lógica tal cual corre en producción, sin tocar prisma/dev.db.
+ * Las pruebas unitarias del motor de despacho usan una base PostgreSQL propia
+ * (TEST_DATABASE_URL; por defecto la base gruaya_test de un Postgres local en
+ * el puerto 5433) que se recrea con las migraciones reales. Así se prueba la
+ * lógica tal cual corre en producción, sin tocar la base de desarrollo.
  */
-import { execSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
+import { resetDatabase } from "../../scripts/db-reset";
 
-const dbPath = path.resolve(__dirname, ".test.db");
-process.env.DATABASE_URL = `file:${dbPath}`;
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ?? "postgresql://postgres@localhost:5433/gruaya_test";
 process.env.AUTH_SECRET = "test-secret";
 process.env.PBX_PASSWORD = "test-pbx";
 process.env.DISPATCH_TICKER = "off";
@@ -20,11 +18,4 @@ process.env.PRICE_TOW_BASE_Q = "275";
 process.env.PRICE_TOW_INCLUDED_KM = "0";
 process.env.PRICE_TOW_PER_KM_Q = "20";
 
-for (const f of [dbPath, `${dbPath}-journal`, `${dbPath}-wal`, `${dbPath}-shm`]) {
-  if (fs.existsSync(f)) fs.rmSync(f);
-}
-execSync("npx prisma migrate deploy", {
-  cwd: path.resolve(__dirname, "../.."),
-  env: { ...process.env, DATABASE_URL: `file:${dbPath}` },
-  stdio: "pipe",
-});
+await resetDatabase();

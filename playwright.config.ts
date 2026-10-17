@@ -2,8 +2,9 @@ import fs from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Pruebas de extremo a extremo contra el servidor de desarrollo. Usan una base
- * separada (prisma/e2e.db) para no pisar los datos de desarrollo.
+ * Pruebas de extremo a extremo contra la compilación de producción. Usan una
+ * base PostgreSQL separada (E2E_DATABASE_URL; por defecto gruaya_e2e en el
+ * Postgres local del puerto 5433) para no pisar los datos de desarrollo.
  */
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 
@@ -31,12 +32,12 @@ export default defineConfig({
   // Next 16 solo permite un `next dev` por proyecto, así que las e2e usan la
   // compilación de producción en otro puerto (y de paso prueban el build).
   webServer: {
-    command: `rm -f prisma/e2e.db prisma/e2e.db-journal && npx prisma migrate deploy && npx tsx prisma/seed.ts && npx next build && npx next start -p ${PORT}`,
+    command: `npx tsx scripts/db-reset.ts && npx tsx prisma/seed.ts && npx next build && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: false,
     timeout: 300_000,
     env: {
-      DATABASE_URL: "file:./prisma/e2e.db",
+      DATABASE_URL: process.env.E2E_DATABASE_URL ?? "postgresql://postgres@localhost:5433/gruaya_e2e",
       AUTH_SECRET: "e2e-secret",
       PBX_PASSWORD: "e2e-pbx",
       APP_URL: `http://localhost:${PORT}`,

@@ -59,9 +59,10 @@ const cache = new Map<string, { route: Route; expiresAt: number }>();
 let networkDownUntil = 0;
 let lastWarnAt = 0;
 
-function key(from: LatLng, to: LatLng): string {
+function key(from: LatLng, to: LatLng, at: Date): string {
   const r = (n: number) => n.toFixed(4);
-  return `${r(from.lat)},${r(from.lng)}|${r(to.lat)},${r(to.lng)}`;
+  // La hora pico cambia los minutos, así que una ruta en hora pico no sirve fuera de ella (ni al revés).
+  return `${r(from.lat)},${r(from.lng)}|${r(to.lat)},${r(to.lng)}|${isRushHour(at) ? "pico" : "normal"}`;
 }
 
 /** Solo para pruebas: vacía la caché y el enfriamiento de red. */
@@ -176,7 +177,7 @@ async function fetchRemote(from: LatLng, to: LatLng, at: Date): Promise<Route | 
  * factor de hora pico (útil en pruebas).
  */
 export async function getRoute(from: LatLng, to: LatLng, at: Date = new Date()): Promise<Route> {
-  const k = key(from, to);
+  const k = key(from, to, at);
   const hit = cache.get(k);
   const now = Date.now();
   if (hit && hit.expiresAt > now) return hit.route;

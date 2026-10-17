@@ -7,8 +7,6 @@ const nextConfig: NextConfig = {
   // El MAPBOX_TOKEN del servidor (rutas) también alimenta las teselas del mapa en el
   // navegador: los tokens pk.* son públicos por diseño.
   env: { NEXT_PUBLIC_MAPBOX_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? process.env.MAPBOX_TOKEN ?? "" },
-  // Native module: must stay outside the bundle.
-  serverExternalPackages: ["better-sqlite3"],
   turbopack: {
     rules: {
       "*.css": {

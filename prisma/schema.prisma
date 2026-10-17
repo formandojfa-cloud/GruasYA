@@ -1,6 +1,5 @@
 // Esquema de datos de la plataforma de asistencia vial.
-// SQLite en desarrollo; el mismo esquema funciona en PostgreSQL cambiando el
-// provider y el adaptador (ver docs/ARCHITECTURE.md).
+// PostgreSQL (Supabase en producción; un Postgres local para desarrollo y pruebas).
 
 generator client {
   provider = "prisma-client"
@@ -8,10 +7,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
-// ---------- Enums (SQLite no los valida a nivel de BD; Prisma sí) ----------
+// ---------- Enums ----------
 
 enum ServiceKind {
   TOW // grúa

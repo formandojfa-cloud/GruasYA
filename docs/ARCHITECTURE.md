@@ -22,12 +22,12 @@ El cliente nunca nota la diferencia: su app siempre muestra "grúa asignada, lle
 | Capa | Elección | Por qué |
 |---|---|---|
 | App | Next.js 16 (App Router, Turbopack), React 19, TypeScript | una sola base de código para las tres interfaces (PWA instalable) y la API |
-| Datos | Prisma 7 + SQLite (dev) · PostgreSQL (prod) | esquema único, migraciones; SQLite hace el arranque gratis |
+| Datos | Prisma 7 + PostgreSQL en **Supabase** (prod) · Postgres local (dev y pruebas) | datos persistentes entre despliegues, gratis; mismo esquema en todos lados |
 | Mapas | Leaflet + OpenStreetMap | sin llave ni costo; cambiar a Google/Mapbox es un `TileLayer` |
 | Geo | H3 (Uber) para indexar proveedores, haversine × 1.3 para distancia urbana | sin motor de rutas al inicio; `lib/geo.ts` es el punto de cambio |
-| Tiempo real | polling 2–3 s + ticker de servidor 5 s | simple, robusto, funciona en cualquier hosting |
+| Tiempo real | polling 2–3 s + ticker de servidor 5 s + latido externo `/api/tick` desde Supabase (pg_cron) cada 10 s | simple, robusto; la cascada avanza aunque el servidor duerma |
 | Estilos | Tailwind v4 con tokens en `globals.css` | estética alto-contraste tipo Uber, modo oscuro automático |
-| Pruebas | Vitest (unitarias, BD SQLite propia) · Playwright (e2e, móvil) | el motor de despacho se prueba tal cual corre |
+| Pruebas | Vitest (unitarias, Postgres propio) · Playwright (e2e, móvil) | el motor de despacho se prueba tal cual corre |
 
 ## Módulos (`src/lib`)
 
