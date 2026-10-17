@@ -10,13 +10,21 @@ import { prisma } from "./db";
  * WhatsApp (ver docs/ARCHITECTURE.md → Seguridad).
  */
 
-const SECRET = process.env.AUTH_SECRET ?? "dev-only-change-me";
-if (process.env.NODE_ENV === "production" && SECRET === "dev-only-change-me") {
-  throw new Error("AUTH_SECRET debe definirse en producción");
+// Se resuelve en el primer uso (no al importar) para que `next build` no exija
+// AUTH_SECRET, p. ej. al construir la imagen Docker; en ejecución sí es obligatorio.
+let secret: string | undefined;
+function getSecret(): string {
+  if (secret) return secret;
+  const value = process.env.AUTH_SECRET ?? "dev-only-change-me";
+  if (process.env.NODE_ENV === "production" && value === "dev-only-change-me") {
+    throw new Error("AUTH_SECRET debe definirse en producción");
+  }
+  secret = value;
+  return value;
 }
 
 function hmac(value: string): string {
-  return crypto.createHmac("sha256", SECRET).update(value).digest("base64url");
+  return crypto.createHmac("sha256", getSecret()).update(value).digest("base64url");
 }
 
 export function signValue(value: string): string {

@@ -1,0 +1,6 @@
+# Caddy pide y renueva el certificado HTTPS solo. DOMINIO viene del .env
+# (un dominio tuyo apuntando al VPS, o la IP con sslip.io: 203.0.113.5.sslip.io).
+{$DOMINIO} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}

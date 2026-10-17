@@ -1,0 +1,13 @@
+node_modules
+.next
+.next-e2e
+.git
+.env
+.env.*
+!.env.example
+test-results
+playwright-report
+tests
+docs/demo-reference
+*.db
+*.db-journal

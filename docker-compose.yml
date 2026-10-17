@@ -1,0 +1,41 @@
+# GrúaYa en un VPS: la app + Caddy (HTTPS automático con Let's Encrypt).
+# La base de datos es Supabase (DATABASE_URL en .env). Pasos en deploy/README.md.
+services:
+  app:
+    build:
+      context: .
+      args:
+        MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
+        NEXT_PUBLIC_CENTRAL_PHONE: ${NEXT_PUBLIC_CENTRAL_PHONE:-5555-0000}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_URL: https://${DOMINIO}
+      PORT: "3000"
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

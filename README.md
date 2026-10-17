@@ -6,6 +6,16 @@ Plataforma de asistencia vial para Guatemala, con la cara del prototipo GruaYa (
 - **Piloto (gruero / motorista)**: entra con un enlace de WhatsApp, se pone disponible, recibe ofertas con cuenta regresiva, acepta, navega, marca "Llegué" y cobra en efectivo.
 - **Central**: si la app no encuentra grúa (nadie conectado, nadie aceptó, se agotó el tiempo o el cliente pidió hablar con alguien) salta una alerta; la central asigna una grúa de la red o coordina una externa por teléfono y le manda su enlace para que comparta ubicación. El conductor no nota la diferencia.
 
+## Desplegar en tu VPS (Hostinger) — recomendado
+
+Docker + HTTPS automático, siempre despierto, datos en Supabase. Guía paso a paso en [`deploy/README.md`](deploy/README.md). Resumen:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/formandojfa-cloud/GruasYA/claude/roadside-assistance-app-ch0lrd/deploy/instalar.sh | bash
+nano /opt/gruaya/.env                      # DOMINIO, DATABASE_URL (Supabase), PBX_PASSWORD
+cd /opt/gruaya && bash deploy/actualizar.sh
+```
+
 ## Probarlo en línea sin instalar nada (Supabase + Render, gratis)
 
 Los datos viven en **Supabase** (PostgreSQL) y la app corre en **Render**. Así nada se borra al redesplegar.
